@@ -8,3 +8,5 @@
 
 nohup.log
 version
+
+docker-compose.yml
