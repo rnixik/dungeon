@@ -1,0 +1,15 @@
+version: '3.5'
+
+services:
+  dungeon:
+    image: nginx:latest
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+
+    ports:
+      - "9000:80"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"

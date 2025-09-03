@@ -1,0 +1,26 @@
+version: '3.5'
+
+services:
+  dungeon:
+    build:
+      context: ./../
+      dockerfile: ./build/Dockerfile
+
+    container_name: dungeon
+
+    networks:
+      - nginx-proxy
+    restart: always
+
+    environment:
+      VIRTUAL_HOST: "dungeon.getid.org"
+      LETSENCRYPT_HOST: "dungeon.getid.org"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+
+networks:
+  nginx-proxy:
+    external: true
