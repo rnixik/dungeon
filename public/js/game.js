@@ -17,5 +17,5 @@
         scene: [ sceneConfigBoot, sceneConfigPreloader, sceneConfigGame ]
     };
 
-    const game = new Phaser.Game(config);
+    new Phaser.Game(config);
 })();

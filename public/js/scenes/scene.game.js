@@ -2,6 +2,7 @@ class Game extends Phaser.Scene
 {
     player;
     cursors;
+    rt;
 
     constructor ()
     {
@@ -28,6 +29,12 @@ class Game extends Phaser.Scene
         this.cameras.main.startFollow(this.player);
 
         this.cursors = this.input.keyboard.createCursorKeys();
+
+        // https://phaser.io/examples/v3.85.0/tilemap/collision/view/tilemap-spotlight
+        this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
+        //  Make sure it doesn't scroll with the camera
+        this.rt.setOrigin(0, 0);
+        this.rt.setScrollFactor(0, 0);
     }
 
     update (time, delta)
@@ -75,6 +82,20 @@ class Game extends Phaser.Scene
         {
             this.player.anims.stop();
         }
+
+        //  Draw the spotlight on the player
+        const cam = this.cameras.main;
+
+        //  Clear the RenderTexture
+        this.rt.clear();
+
+        //  Fill it in black
+        this.rt.fill(0x000000);
+
+        //  Erase the 'mask' texture from it based on the player position
+        //  We - 107, because the mask image is 213px wide, so this puts it on the middle of the player
+        //  We then minus the scrollX/Y values, because the RenderTexture is pinned to the screen and doesn't scroll
+        this.rt.erase('mask', (this.player.x - 107) - cam.scrollX, (this.player.y - 107) - cam.scrollY);
     }
 }
 

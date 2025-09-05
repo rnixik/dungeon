@@ -14,8 +14,9 @@ var sceneConfigPreloader = {
         this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj');
 
         this.load.spritesheet('player', 'assets/spaceman.png', { frameWidth: 16, frameHeight: 16 });
-
+        this.load.image('mask', 'assets/mask1.png');
     },
+
     create: function() {
         this.anims.create({
             key: 'left',
