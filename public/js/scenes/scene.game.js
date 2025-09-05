@@ -13,8 +13,8 @@ class Game extends Phaser.Scene
 
         const tiles = map.addTilesetImage('tiles_atlas', 'tiles');
 
-        const layer = map.createLayer(1, tiles, 0, 0);
-        const layer2 = map.createLayer(2, tiles, 0, 0);
+        map.createLayer(0, tiles, 0, 0); // floor
+        map.createLayer(1, tiles, 0, 0); // walls
 
         this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
 
