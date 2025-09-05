@@ -13,11 +13,35 @@ var sceneConfigPreloader = {
         this.load.image('tiles', 'assets/atlas.png');
         this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj');
 
-        this.load.image('archer', 'assets/archer.png');
+        this.load.spritesheet('player', 'assets/spaceman.png', { frameWidth: 16, frameHeight: 16 });
 
     },
     create: function() {
-        // a place to create animations if needed in the future
+        this.anims.create({
+            key: 'left',
+            frames: this.anims.generateFrameNumbers('player', { start: 8, end: 9 }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'right',
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 2 }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'up',
+            frames: this.anims.generateFrameNumbers('player', { start: 11, end: 13 }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'down',
+            frames: this.anims.generateFrameNumbers('player', { start: 4, end: 6 }),
+            frameRate: 10,
+            repeat: -1
+        });
+
         // this.scene.switch('MainMenu');
         this.scene.switch('Game');
     }
