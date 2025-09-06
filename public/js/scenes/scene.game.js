@@ -134,19 +134,19 @@ class Game extends Phaser.Scene
         }
 
         // Update the animation last and give left/right animations precedence over up/down animations
-        if (this.cursors.left.isDown)
+        if (this.cursors.left.isDown || this.moveLeft)
         {
             this.player.anims.play('left', true);
         }
-        else if (this.cursors.right.isDown)
+        else if (this.cursors.right.isDown || this.moveRight)
         {
             this.player.anims.play('right', true);
         }
-        else if (this.cursors.up.isDown)
+        else if (this.cursors.up.isDown || this.moveUp)
         {
             this.player.anims.play('up', true);
         }
-        else if (this.cursors.down.isDown)
+        else if (this.cursors.down.isDown || this.moveDown)
         {
             this.player.anims.play('down', true);
         }
