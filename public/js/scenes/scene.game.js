@@ -1,8 +1,32 @@
+// Disable mask and draw geometry
+const DEBUG = false;
+
+// Colors
+const BLACK = 0;
+const WHITE = 0xffffff;
+const FILL_COLOR = BLACK;
+const DEBUG_STROKE_COLOR = WHITE;
+const DEBUG_FILL_COLOR = 0xff0000;
+
+// Shortcuts
+const { Circle, Line, Point, Rectangle } = Phaser.Geom;
+const { EPSILON } = Phaser.Math;
+const { Extend } = Line;
+const { ContainsPoint } = Rectangle;
+const { LineToLine } = Phaser.Geom.Intersects;
+
 class Game extends Phaser.Scene
 {
     player;
     cursors;
     rt;
+    map;
+    layerWalls;
+    layerFloor;
+    vertices;
+    edges;
+    rays;
+    graphics;
 
     constructor ()
     {
@@ -11,21 +35,23 @@ class Game extends Phaser.Scene
 
     create ()
     {
-        const map = this.make.tilemap({ key: 'map' });
+        this.map = this.make.tilemap({ key: 'map' });
 
-        const tiles = map.addTilesetImage('tiles_atlas', 'tiles');
+        const tiles = this.map.addTilesetImage('tiles_atlas', 'tiles');
 
-        map.createLayer(0, tiles, 0, 0); // floor
-        let layerWalls = map.createLayer(1, tiles, 0, 0); // walls
+        this.layerFloor = this.map.createLayer(0, tiles, 0, 0); // floor
+        this.layerWalls = this.map.createLayer(1, tiles, 0, 0); // walls
         // all tiles can collide, we just use collider for layer
-        map.setCollisionBetween(0, 5);
+        this.map.setCollisionBetween(0, 5);
 
-        this.player = this.physics.add.sprite(50, 140, 'player', 1);
+        const mapRects = this.map.getObjectLayer('rects')['objects'];
+
+        this.player = this.physics.add.sprite(120, 140, 'player', 1);
         this.player.setScale(1.5);
 
-        this.physics.add.collider(this.player, layerWalls);
+        this.physics.add.collider(this.player, this.layerWalls);
 
-        this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
+        this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(this.player);
 
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -35,6 +61,46 @@ class Game extends Phaser.Scene
         //  Make sure it doesn't scroll with the camera
         this.rt.setOrigin(0, 0);
         this.rt.setScrollFactor(0, 0);
+
+
+        this.graphics = this.make.graphics({ lineStyle: { color: DEBUG_STROKE_COLOR, width: 0.5 } });
+
+        let mask;
+
+        if (DEBUG) {
+            mask = null;
+            this.graphics.setAlpha(0.5);
+            this.add.existing(this.graphics);
+        } else {
+            mask = new Phaser.Display.Masks.GeometryMask(this, this.graphics);
+        }
+
+        // Mask objects and background.
+        //this.layerWalls.setMask(mask);
+        this.layerFloor.setMask(mask);
+
+        // Create Rectangles from wall tiles
+        const wallsRects = [];
+        for (let i = 0; i < mapRects.length; i++) {
+            const rect = mapRects[i];
+            wallsRects.push(new Rectangle(rect.x, rect.y, rect.width, rect.height));
+        }
+        console.log(wallsRects);
+
+        // Rectangles, will form the edges
+        const rects = wallsRects;
+
+        // Convert rectangles into edges (line segments)
+        this.edges = rects.flatMap(getRectEdges);
+
+        // Convert rectangles into vertices
+        this.vertices = rects.flatMap(getRectVertices);
+
+        // One ray will be sent through each vertex
+        this.rays = this.vertices.map(() => new Line());
+
+        // Draw the mask once
+        draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
     }
 
     update (time, delta)
@@ -83,6 +149,13 @@ class Game extends Phaser.Scene
             this.player.anims.stop();
         }
 
+        this.updateMaskLight();
+        //this.updateMap();
+        this.updateMaskRaycast();
+    }
+
+    updateMaskLight ()
+    {
         //  Draw the spotlight on the player
         const cam = this.cameras.main;
 
@@ -97,6 +170,200 @@ class Game extends Phaser.Scene
         //  We then minus the scrollX/Y values, because the RenderTexture is pinned to the screen and doesn't scroll
         this.rt.erase('mask', (this.player.x - 107) - cam.scrollX, (this.player.y - 107) - cam.scrollY);
     }
+
+    updateMap ()
+    {
+        const cam = this.cameras.main;
+        const origin = this.layerFloor.getTileAtWorldXY(this.player.x, this.player.y, false, cam);
+
+        this.layerFloor.forEachTile(tile =>
+        {
+            const dist = Phaser.Math.Distance.Chebyshev(
+                origin.x,
+                origin.y,
+                tile.x,
+                tile.y
+            );
+
+            tile.setAlpha(1 - 0.2 * dist);
+        });
+
+        this.layerWalls.forEachTile(tile =>
+        {
+            const dist = Phaser.Math.Distance.Chebyshev(
+                origin.x,
+                origin.y,
+                tile.x,
+                tile.y
+            );
+
+            tile.setAlpha(1 - 0.2 * dist);
+        });
+    }
+
+    updateMaskRaycast ()
+    {
+        draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
+    }
 }
 
 var sceneConfigGame = new Game();
+
+
+// Draw the mask shape, from vertices
+function draw (graphics, vertices, rays, edges) {
+    graphics
+        .clear()
+        .fillStyle(FILL_COLOR)
+        .fillPoints(vertices, true);
+
+    if (DEBUG) {
+        // for (const ray of rays) {
+        //     graphics.strokeLineShape(ray);
+        // };
+        // for (const edge of edges) {
+        //     graphics.strokeLineShape(edge);
+        // };
+
+        graphics.fillStyle(DEBUG_FILL_COLOR);
+
+        for (const vert of vertices) {
+            graphics.fillPointShape(vert, 4);
+        };
+    }
+}
+
+// Place the rays, calculate and return intersections.
+function calc (source, vertices, edges, rays) {
+    const sx = source.x;
+    const sy = source.y;
+
+    // Sort clockwise …
+    return sortClockwise(
+        // each ray-edge intersection, or the ray's endpoint if no intersection
+        rays.map((ray, i) => {
+            // placing the ray between the source and one vertex …
+            ray.setTo(sx, sy, vertices[i].x, vertices[i].y);
+
+            // extended through the wall vertex
+            Extend(ray, 0, 1000);
+
+            // placing its endpoint at the intersection with an edge, if any
+            for (const edge of edges) {
+                getRayToEdge(ray, edge);
+            }
+
+            // the new endpoint
+            return ray.getPointB();
+        }),
+        source
+    );
+}
+
+function getSpriteRect (sprite) {
+    const {displayWidth, displayHeight} = sprite;
+
+    return new Rectangle(
+        sprite.x - sprite.originX * displayWidth,
+        sprite.y - sprite.originY * displayHeight,
+        displayWidth,
+        displayHeight
+    );
+}
+
+function getRectEdges (rect) {
+    return [
+        rect.getLineA(),
+        rect.getLineB(),
+        rect.getLineC(),
+        rect.getLineD()
+    ];
+}
+
+function getRectVertices (rect) {
+    const { left, top, right, bottom } = rect;
+
+    const left1 = left + EPSILON;
+    const top1 = top + EPSILON;
+    const right1 = right - EPSILON;
+    const bottom1 = bottom - EPSILON;
+    const left2 = left - EPSILON;
+    const top2 = top - EPSILON;
+    const right2 = right + EPSILON;
+    const bottom2 = bottom + EPSILON;
+
+    return [
+        new Point(left1, top1),
+        new Point(right1, top1),
+        new Point(right1, bottom1),
+        new Point(left1, bottom1),
+        new Point(left2, top2),
+        new Point(right2, top2),
+        new Point(right2, bottom2),
+        new Point(left2, bottom2)
+    ];
+}
+
+// If a ray intersects with an edge, place the ray endpoint there and return the intersection.
+function getRayToEdge (ray, edge, out) {
+    if (!out) out = new Point();
+
+    if (LineToLine(ray, edge, out)) {
+        ray.x2 = out.x;
+        ray.y2 = out.y;
+
+        return out;
+    }
+
+    return null;
+}
+
+function sortClockwise (points, center) {
+    // Adapted from <https://stackoverflow.com/a/6989383/822138> (ciamej)
+
+    var cx = center.x;
+    var cy = center.y;
+
+    var sort = function (a, b) {
+        if (a.x - cx >= 0 && b.x - cx < 0) {
+            return -1;
+        }
+
+        if (a.x - cx < 0 && b.x - cx >= 0) {
+            return 1;
+        }
+
+        if (a.x - cx === 0 && b.x - cx === 0) {
+            if (a.y - cy >= 0 || b.y - cy >= 0) {
+                return (a.y > b.y) ? 1 : -1;
+            }
+
+            return (b.y > a.y) ? 1 : -1;
+        }
+
+        // Compute the cross product of vectors (center -> a) * (center -> b)
+        var det = (a.x - cx) * -(b.y - cy) - (b.x - cx) * -(a.y - cy);
+
+        if (det < 0) {
+            return -1;
+        }
+
+        if (det > 0) {
+            return 1;
+        }
+
+        // Points a and b are on the same line from the center
+        // Check which point is closer to the center
+        var d1 = (a.x - cx) * (a.x - cx) + (a.y - cy) * (a.y - cy);
+        var d2 = (b.x - cx) * (b.x - cx) + (b.y - cy) * (b.y - cy);
+
+        return (d1 > d2) ? -1 : 1;
+    };
+
+    return points.sort(sort);
+}
+
+// eslint-disable-next-line no-unused-vars
+function pointInRectangles (point, rects) {
+    return rects.some((rect) => ContainsPoint(rect, point));
+}
