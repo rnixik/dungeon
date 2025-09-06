@@ -15,6 +15,7 @@ var sceneConfigPreloader = {
 
         this.load.spritesheet('player', 'assets/spaceman.png', { frameWidth: 16, frameHeight: 16 });
         this.load.image('mask', 'assets/mask1.png');
+        this.load.atlas('controls', 'assets/controls.png', 'assets/controls.json');
     },
 
     create: function() {

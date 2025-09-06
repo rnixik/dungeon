@@ -27,6 +27,10 @@ class Game extends Phaser.Scene
     edges;
     rays;
     graphics;
+    moveUp;
+    moveDown;
+    moveLeft;
+    moveRight;
 
     constructor ()
     {
@@ -101,6 +105,8 @@ class Game extends Phaser.Scene
 
         // Draw the mask once
         draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
+
+        this.addMobileButtons();
     }
 
     update (time, delta)
@@ -108,21 +114,21 @@ class Game extends Phaser.Scene
         this.player.body.setVelocity(0);
 
         // Horizontal movement
-        if (this.cursors.left.isDown)
+        if (this.cursors.left.isDown || this.moveLeft)
         {
             this.player.body.setVelocityX(-100);
         }
-        else if (this.cursors.right.isDown)
+        else if (this.cursors.right.isDown || this.moveRight)
         {
             this.player.body.setVelocityX(100);
         }
 
         // Vertical movement
-        if (this.cursors.up.isDown)
+        if (this.cursors.up.isDown || this.moveUp)
         {
             this.player.body.setVelocityY(-100);
         }
-        else if (this.cursors.down.isDown)
+        else if (this.cursors.down.isDown || this.moveDown)
         {
             this.player.body.setVelocityY(100);
         }
@@ -204,6 +210,50 @@ class Game extends Phaser.Scene
     updateMaskRaycast ()
     {
         draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
+    }
+
+    addMobileButtons ()
+    {
+        const ctx = this;
+        const  posLeftX = 100;
+        const  posLeftY = 500;
+        const  alpha = 0.8;
+
+        const buttonLeft = this.add.sprite(posLeftX, posLeftY, 'controls', 'left1');
+        buttonLeft.fixedToCamera = true;
+        buttonLeft.setOrigin(1, 0.5);
+        buttonLeft.alpha = alpha;
+        buttonLeft.setInteractive({ useHandCursor: true });
+        buttonLeft.on('pointerdown', () => this.moveLeft = true);
+        buttonLeft.on('pointerup', () => this.moveLeft = false);
+        buttonLeft.setScrollFactor(0, 0);
+
+        const buttonRight = this.add.sprite(posLeftX, posLeftY, 'controls', 'right1');
+        buttonRight.fixedToCamera = true;
+        buttonRight.setOrigin(0, 0.5);
+        buttonRight.alpha = alpha;
+        buttonRight.setInteractive({ useHandCursor: true });
+        buttonRight.on('pointerdown', () => this.moveRight = true);
+        buttonRight.on('pointerup', () => this.moveRight = false);
+        buttonRight.setScrollFactor(0, 0);
+
+        const buttonDown = this.add.sprite(posLeftX, posLeftY, 'controls', 'down1');
+        buttonDown.fixedToCamera = true;
+        buttonDown.setOrigin(0.5, 0);
+        buttonDown.alpha = alpha;
+        buttonDown.setInteractive({ useHandCursor: true });
+        buttonDown.on('pointerdown', () => this.moveDown = true);
+        buttonDown.on('pointerup', () => this.moveDown = false);
+        buttonDown.setScrollFactor(0, 0);
+
+        const buttonUp = this.add.sprite(posLeftX, posLeftY, 'controls', 'up1');
+        buttonUp.fixedToCamera = true;
+        buttonUp.setOrigin(0.5, 1);
+        buttonUp.alpha = alpha;
+        buttonUp.setInteractive({ useHandCursor: true });
+        buttonUp.on('pointerdown', () => this.moveUp = true);
+        buttonUp.on('pointerup', () => this.moveUp = false);
+        buttonUp.setScrollFactor(0, 0);
     }
 }
 
