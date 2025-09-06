@@ -63,11 +63,17 @@ class Game extends Phaser.Scene
         this.cursors = this.input.keyboard.createCursorKeys();
 
         // https://phaser.io/examples/v3.85.0/tilemap/collision/view/tilemap-spotlight
-        this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
+        //this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
+        // TODO: fix scale
+        this.rt = this.add.renderTexture(0, 0, 1200, 900);
+        // this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
+        //
+        //     this.rt.setSize(1200, 900);
+        // })
+
         //  Make sure it doesn't scroll with the camera
         this.rt.setOrigin(0, 0);
         this.rt.setScrollFactor(0, 0);
-
 
         this.graphics = this.make.graphics({ lineStyle: { color: DEBUG_STROKE_COLOR, width: 0.5 } });
 
