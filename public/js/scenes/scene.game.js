@@ -31,6 +31,8 @@ class Game extends Phaser.Scene
     moveDown;
     moveLeft;
     moveRight;
+    scaleX;
+    scaleY;
 
     constructor ()
     {
@@ -104,6 +106,10 @@ class Game extends Phaser.Scene
 
         // Draw the mask once
         draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
+
+        this.scaleX = this.scale.width / 800;
+        this.scaleY = this.scale.height / 600;
+        console.log('scales', this.scaleX, this.scaleY);
 
         this.addMobileButtons();
     }
@@ -207,61 +213,56 @@ class Game extends Phaser.Scene
 
     addMobileButtons ()
     {
-        const  posLeftX = 100;
-        const  posLeftY = 500;
-        const  alpha = 0.8;
+        const posLeftX = 100;
+        const posBottomY = 600 * this.scaleY - 100;
 
-        const buttonLeft = this.add.sprite(posLeftX, posLeftY, 'controls', 'left1');
+        const container = this.add.container();
+        container.setAlpha(0.6);
+        container.setScrollFactor(0, 0);
+
+        const buttonLeft = this.add.sprite(posLeftX, posBottomY, 'controls', 'left1');
+        container.add(buttonLeft);
         buttonLeft.setOrigin(1, 0.5);
-        buttonLeft.alpha = alpha;
         buttonLeft.setInteractive({ useHandCursor: true });
         buttonLeft.on('pointerdown', () => this.moveLeft = true);
         buttonLeft.on('pointerup', () => this.moveLeft = false);
-        buttonLeft.setScrollFactor(0, 0);
 
-        const buttonRight = this.add.sprite(posLeftX, posLeftY, 'controls', 'right1');
+        const buttonRight = this.add.sprite(posLeftX, posBottomY, 'controls', 'right1');
+        container.add(buttonRight);
         buttonRight.setOrigin(0, 0.5);
-        buttonRight.alpha = alpha;
         buttonRight.setInteractive({ useHandCursor: true });
         buttonRight.on('pointerdown', () => this.moveRight = true);
         buttonRight.on('pointerup', () => this.moveRight = false);
-        buttonRight.setScrollFactor(0, 0);
 
-        const buttonDown = this.add.sprite(posLeftX, posLeftY, 'controls', 'down1');
+        const buttonDown = this.add.sprite(posLeftX, posBottomY, 'controls', 'down1');
+        container.add(buttonDown);
         buttonDown.setOrigin(0.5, 0);
-        buttonDown.alpha = alpha;
         buttonDown.setInteractive({ useHandCursor: true });
         buttonDown.on('pointerdown', () => this.moveDown = true);
         buttonDown.on('pointerup', () => this.moveDown = false);
-        buttonDown.setScrollFactor(0, 0);
 
-        const buttonUp = this.add.sprite(posLeftX, posLeftY, 'controls', 'up1');
+        const buttonUp = this.add.sprite(posLeftX, posBottomY, 'controls', 'up1');
+        container.add(buttonUp);
         buttonUp.setOrigin(0.5, 1);
-        buttonUp.alpha = alpha;
         buttonUp.setInteractive({ useHandCursor: true });
         buttonUp.on('pointerdown', () => this.moveUp = true);
         buttonUp.on('pointerup', () => this.moveUp = false);
-        buttonUp.setScrollFactor(0, 0);
 
-        const buttonFs = this.add.sprite(800 - posLeftX, 60, 'controls', 'fullscreen1');
-        buttonFs.setOrigin(0.5, 0.5);
-        buttonFs.alpha = alpha;
-        buttonFs.setInteractive({ useHandCursor: true });
-        buttonUp.setScrollFactor(0, 0);
+        if (this.sys.game.device.fullscreen.available) {
+            const buttonFs = this.add.sprite(800 * this.scaleX - 30, 30, 'controls', 'fullscreen1');
+            container.add(buttonFs);
+            buttonFs.setOrigin(1, 0);
 
-        buttonFs.on('pointerup', function ()
-        {
-            if (this.scale.isFullscreen)
-            {
-                buttonFs.setFrame('fullscreen1');
-                this.scale.stopFullscreen();
-            }
-            else
-            {
-                buttonFs.setFrame('fullscreen2');
-                this.scale.startFullscreen();
-            }
-        }, this);
+            buttonFs.setInteractive({ useHandCursor: true });
+
+            buttonFs.on('pointerup', function (){
+                if (this.scale.isFullscreen) {
+                    this.scale.stopFullscreen();
+                } else {
+                    this.scale.startFullscreen();
+                }
+            }, this);
+        }
     }
 }
 
