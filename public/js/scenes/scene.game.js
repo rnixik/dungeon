@@ -51,7 +51,7 @@ class Game extends Phaser.Scene
         const mapRects = this.map.getObjectLayer('rects')['objects'];
 
         this.player = this.physics.add.sprite(120, 140, 'player', 1);
-        this.player.setScale(1.5);
+        this.player.setScale(1.4);
 
         this.physics.add.collider(this.player, this.layerWalls);
 
@@ -89,7 +89,6 @@ class Game extends Phaser.Scene
             const rect = mapRects[i];
             wallsRects.push(new Rectangle(rect.x, rect.y, rect.width, rect.height));
         }
-        console.log(wallsRects);
 
         // Rectangles, will form the edges
         const rects = wallsRects;
@@ -155,8 +154,13 @@ class Game extends Phaser.Scene
             this.player.anims.stop();
         }
 
+        // it is light aroung the player but works through walls
         this.updateMaskLight();
-        //this.updateMap();
+
+        // if we want to hide distant walls, we can alt alpha based on distance from player
+        // this.updateAlphaOnMap();
+
+        // it makes dynamic shadows
         this.updateMaskRaycast();
     }
 
@@ -174,25 +178,14 @@ class Game extends Phaser.Scene
         //  Erase the 'mask' texture from it based on the player position
         //  We - 107, because the mask image is 213px wide, so this puts it on the middle of the player
         //  We then minus the scrollX/Y values, because the RenderTexture is pinned to the screen and doesn't scroll
-        this.rt.erase('mask', (this.player.x - 107) - cam.scrollX, (this.player.y - 107) - cam.scrollY);
+        // Upd: offset is half the mask image width
+        this.rt.erase('mask', (this.player.x - 180) - cam.scrollX, (this.player.y - 180) - cam.scrollY);
     }
 
-    updateMap ()
+    updateAlphaOnMap ()
     {
         const cam = this.cameras.main;
         const origin = this.layerFloor.getTileAtWorldXY(this.player.x, this.player.y, false, cam);
-
-        this.layerFloor.forEachTile(tile =>
-        {
-            const dist = Phaser.Math.Distance.Chebyshev(
-                origin.x,
-                origin.y,
-                tile.x,
-                tile.y
-            );
-
-            tile.setAlpha(1 - 0.2 * dist);
-        });
 
         this.layerWalls.forEachTile(tile =>
         {
@@ -214,13 +207,11 @@ class Game extends Phaser.Scene
 
     addMobileButtons ()
     {
-        const ctx = this;
         const  posLeftX = 100;
         const  posLeftY = 500;
         const  alpha = 0.8;
 
         const buttonLeft = this.add.sprite(posLeftX, posLeftY, 'controls', 'left1');
-        buttonLeft.fixedToCamera = true;
         buttonLeft.setOrigin(1, 0.5);
         buttonLeft.alpha = alpha;
         buttonLeft.setInteractive({ useHandCursor: true });
@@ -229,7 +220,6 @@ class Game extends Phaser.Scene
         buttonLeft.setScrollFactor(0, 0);
 
         const buttonRight = this.add.sprite(posLeftX, posLeftY, 'controls', 'right1');
-        buttonRight.fixedToCamera = true;
         buttonRight.setOrigin(0, 0.5);
         buttonRight.alpha = alpha;
         buttonRight.setInteractive({ useHandCursor: true });
@@ -238,7 +228,6 @@ class Game extends Phaser.Scene
         buttonRight.setScrollFactor(0, 0);
 
         const buttonDown = this.add.sprite(posLeftX, posLeftY, 'controls', 'down1');
-        buttonDown.fixedToCamera = true;
         buttonDown.setOrigin(0.5, 0);
         buttonDown.alpha = alpha;
         buttonDown.setInteractive({ useHandCursor: true });
@@ -247,13 +236,32 @@ class Game extends Phaser.Scene
         buttonDown.setScrollFactor(0, 0);
 
         const buttonUp = this.add.sprite(posLeftX, posLeftY, 'controls', 'up1');
-        buttonUp.fixedToCamera = true;
         buttonUp.setOrigin(0.5, 1);
         buttonUp.alpha = alpha;
         buttonUp.setInteractive({ useHandCursor: true });
         buttonUp.on('pointerdown', () => this.moveUp = true);
         buttonUp.on('pointerup', () => this.moveUp = false);
         buttonUp.setScrollFactor(0, 0);
+
+        const buttonFs = this.add.sprite(800 - posLeftX, 60, 'controls', 'fullscreen1');
+        buttonFs.setOrigin(0.5, 0.5);
+        buttonFs.alpha = alpha;
+        buttonFs.setInteractive({ useHandCursor: true });
+        buttonUp.setScrollFactor(0, 0);
+
+        buttonFs.on('pointerup', function ()
+        {
+            if (this.scale.isFullscreen)
+            {
+                buttonFs.setFrame('fullscreen1');
+                this.scale.stopFullscreen();
+            }
+            else
+            {
+                buttonFs.setFrame('fullscreen2');
+                this.scale.startFullscreen();
+            }
+        }, this);
     }
 }
 
