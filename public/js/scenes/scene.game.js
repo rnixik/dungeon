@@ -1,5 +1,5 @@
 // Disable mask and draw geometry
-const DEBUG = false;
+const DEBUG = true;
 
 // Colors
 const BLACK = 0;
@@ -53,7 +53,7 @@ class Game extends Phaser.Scene
         const mapRects = this.map.getObjectLayer('rects')['objects'];
 
         this.player = this.physics.add.sprite(120, 140, 'player', 1);
-        this.player.setScale(1.4);
+        this.player.setScale(4);
 
         this.physics.add.collider(this.player, this.layerWalls);
 
@@ -65,7 +65,7 @@ class Game extends Phaser.Scene
         // https://phaser.io/examples/v3.85.0/tilemap/collision/view/tilemap-spotlight
         //this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
         // TODO: fix scale
-        this.rt = this.add.renderTexture(0, 0, 1200, 900);
+        this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
         // this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
         //
         //     this.rt.setSize(1200, 900);
@@ -111,7 +111,7 @@ class Game extends Phaser.Scene
         this.rays = this.vertices.map(() => new Line());
 
         // Draw the mask once
-        draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
+        //draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
 
         this.scaleX = this.scale.width / 800;
         this.scaleY = this.scale.height / 600;
@@ -123,25 +123,26 @@ class Game extends Phaser.Scene
     update (time, delta)
     {
         this.player.body.setVelocity(0);
+        const moveSpeed = 300;
 
         // Horizontal movement
         if (this.cursors.left.isDown || this.moveLeft)
         {
-            this.player.body.setVelocityX(-100);
+            this.player.body.setVelocityX(-1 * moveSpeed);
         }
         else if (this.cursors.right.isDown || this.moveRight)
         {
-            this.player.body.setVelocityX(100);
+            this.player.body.setVelocityX(moveSpeed);
         }
 
         // Vertical movement
         if (this.cursors.up.isDown || this.moveUp)
         {
-            this.player.body.setVelocityY(-100);
+            this.player.body.setVelocityY(-1 * moveSpeed);
         }
         else if (this.cursors.down.isDown || this.moveDown)
         {
-            this.player.body.setVelocityY(100);
+            this.player.body.setVelocityY(moveSpeed);
         }
 
         // Update the animation last and give left/right animations precedence over up/down animations
@@ -173,7 +174,7 @@ class Game extends Phaser.Scene
         // this.updateAlphaOnMap();
 
         // it makes dynamic shadows
-        this.updateMaskRaycast();
+        //this.updateMaskRaycast();
     }
 
     updateMaskLight ()
@@ -274,6 +275,22 @@ class Game extends Phaser.Scene
 
 var sceneConfigGame = new Game();
 
+function getTilesBigRects(tileLayer) {
+    const rects = [];
+
+    tileLayer.forEachTile((tile) => {
+        if (tile.index === -1) return;
+
+        const worldX = tile.getLeft();
+        const worldY = tile.getTop();
+        const width = tile.width;
+        const height = tile.height;
+
+        rects.push(new Rectangle(worldX, worldY, width, height));
+    });
+
+    return rects;
+}
 
 // Draw the mask shape, from vertices
 function draw (graphics, vertices, rays, edges) {

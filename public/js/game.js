@@ -1,8 +1,8 @@
 (function() {
     const config = {
         type: Phaser.AUTO,
-        width: 800,
-        height: 600,
+        width: 1600,
+        height: 1200,
         pixelArt: true,
         physics: {
             default: 'arcade',
@@ -11,15 +11,15 @@
             }
         },
         scale: {
-            mode: Phaser.Scale.RESIZE,
+            mode: Phaser.Scale.FIT,
             autoCenter: Phaser.Scale.CENTER_BOTH,
             min: {
                 width: 320,
                 height: 240
             },
             max: {
-                width: 1200,
-                height: 900
+                width: 1600,
+                height: 1200
             }
         },
         scene: [ sceneConfigBoot, sceneConfigPreloader, sceneConfigGame ]

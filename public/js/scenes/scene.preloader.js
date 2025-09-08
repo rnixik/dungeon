@@ -11,7 +11,7 @@ var sceneConfigPreloader = {
         });
 
         this.load.image('tiles', 'assets/atlas.png');
-        this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj');
+        this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj?v=2');
 
         this.load.spritesheet('player', 'assets/spaceman.png', { frameWidth: 16, frameHeight: 16 });
         this.load.image('mask', 'assets/mask1.png?v=2');
