@@ -53,7 +53,7 @@ class Game extends Phaser.Scene
         const mapRects = this.map.getObjectLayer('rects')['objects'];
 
         this.player = this.physics.add.sprite(120, 140, 'player', 1);
-        this.player.setScale(4);
+        this.player.setScale(3.5);
 
         this.physics.add.collider(this.player, this.layerWalls);
 
@@ -230,6 +230,7 @@ class Game extends Phaser.Scene
         const buttonLeft = this.add.sprite(posLeftX, posBottomY, 'controls', 'left1');
         container.add(buttonLeft);
         buttonLeft.setOrigin(1, 0.5);
+        buttonLeft.setScrollFactor(0, 0);
         buttonLeft.setInteractive({ useHandCursor: true });
         buttonLeft.on('pointerdown', () => this.moveLeft = true);
         buttonLeft.on('pointerup', () => this.moveLeft = false);
@@ -237,6 +238,7 @@ class Game extends Phaser.Scene
         const buttonRight = this.add.sprite(posLeftX, posBottomY, 'controls', 'right1');
         container.add(buttonRight);
         buttonRight.setOrigin(0, 0.5);
+        buttonRight.setScrollFactor(0, 0);
         buttonRight.setInteractive({ useHandCursor: true });
         buttonRight.on('pointerdown', () => this.moveRight = true);
         buttonRight.on('pointerup', () => this.moveRight = false);
@@ -244,6 +246,7 @@ class Game extends Phaser.Scene
         const buttonDown = this.add.sprite(posLeftX, posBottomY, 'controls', 'down1');
         container.add(buttonDown);
         buttonDown.setOrigin(0.5, 0);
+        buttonDown.setScrollFactor(0, 0);
         buttonDown.setInteractive({ useHandCursor: true });
         buttonDown.on('pointerdown', () => this.moveDown = true);
         buttonDown.on('pointerup', () => this.moveDown = false);
@@ -251,6 +254,7 @@ class Game extends Phaser.Scene
         const buttonUp = this.add.sprite(posLeftX, posBottomY, 'controls', 'up1');
         container.add(buttonUp);
         buttonUp.setOrigin(0.5, 1);
+        buttonUp.setScrollFactor(0, 0);
         buttonUp.setInteractive({ useHandCursor: true });
         buttonUp.on('pointerdown', () => this.moveUp = true);
         buttonUp.on('pointerup', () => this.moveUp = false);
@@ -259,6 +263,7 @@ class Game extends Phaser.Scene
             const buttonFs = this.add.sprite(800 * this.scaleX - 30, 30, 'controls', 'fullscreen1');
             container.add(buttonFs);
             buttonFs.setOrigin(1, 0);
+            buttonFs.setScrollFactor(0, 0);
 
             buttonFs.setInteractive({ useHandCursor: true });
 
