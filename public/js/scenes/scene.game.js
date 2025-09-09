@@ -1,5 +1,5 @@
 // Disable mask and draw geometry
-const DEBUG = true;
+const DEBUG = false;
 
 // Colors
 const BLACK = 0;
@@ -92,14 +92,25 @@ class Game extends Phaser.Scene
         this.layerFloor.setMask(mask);
 
         // Create Rectangles from wall tiles
-        const wallsRects = [];
-        for (let i = 0; i < mapRects.length; i++) {
-            const rect = mapRects[i];
-            wallsRects.push(new Rectangle(rect.x, rect.y, rect.width, rect.height));
-        }
+        const rects = getBigRectsFromWallLayer(this.layerWalls);
 
-        // Rectangles, will form the edges
-        const rects = wallsRects;
+        // fill debug rects
+        if (DEBUG) {
+            const rectGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } });
+            for (const rect of rects) {
+                rectGraphics.fillRectShape(rect);
+            }
+
+            const rectVertGraphics = this.add.graphics({ fillStyle: { color: 0x00aaaa } });
+            for (const rect of rects) {
+                const verts = getRectVertices(rect);
+                for (const vert of verts) {
+                    rectVertGraphics.fillPointShape(vert, 4);
+                }
+            }
+
+            console.log('rect length', rects.length);
+        }
 
         // Convert rectangles into edges (line segments)
         this.edges = rects.flatMap(getRectEdges);
@@ -174,7 +185,7 @@ class Game extends Phaser.Scene
         // this.updateAlphaOnMap();
 
         // it makes dynamic shadows
-        //this.updateMaskRaycast();
+        this.updateMaskRaycast();
     }
 
     updateMaskLight ()
@@ -299,24 +310,29 @@ function getTilesBigRects(tileLayer) {
 
 // Draw the mask shape, from vertices
 function draw (graphics, vertices, rays, edges) {
+    if (vertices.length < 3) {
+        graphics.clear()
+        return;
+    }
+
     graphics
         .clear()
         .fillStyle(FILL_COLOR)
         .fillPoints(vertices, true);
 
     if (DEBUG) {
-        // for (const ray of rays) {
-        //     graphics.strokeLineShape(ray);
-        // };
-        // for (const edge of edges) {
-        //     graphics.strokeLineShape(edge);
-        // };
+        for (const ray of rays) {
+            graphics.strokeLineShape(ray);
+        }
+        for (const edge of edges) {
+            graphics.strokeLineShape(edge);
+        }
 
         graphics.fillStyle(DEBUG_FILL_COLOR);
 
         for (const vert of vertices) {
             graphics.fillPointShape(vert, 4);
-        };
+        }
     }
 }
 
@@ -454,3 +470,88 @@ function sortClockwise (points, center) {
 function pointInRectangles (point, rects) {
     return rects.some((rect) => ContainsPoint(rect, point));
 }
+
+function getRectsFromTilesInRadius(layer, x, y, radius) {
+    const tiles = layer.getTilesWithinWorldXY(x - radius, y - radius, radius * 2, radius * 2);
+    const rects = [];
+
+    tiles.forEach((tile) => {
+        if (tile.index === -1) return;
+
+        const worldX = tile.getLeft();
+        const worldY = tile.getTop();
+        const width = tile.width;
+        const height = tile.height;
+
+        rects.push(new Rectangle(worldX, worldY, width, height));
+    });
+
+    return rects;
+}
+
+function getBigRectsFromWallLayer(layer) {
+    const rects = [];
+    const visited = new Set();
+
+    const width = layer.tilemap.width;
+    const height = layer.tilemap.height;
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const tile = layer.getTileAt(x, y);
+            if (!tile || tile.index === -1) continue;
+
+            const key = `${x},${y}`;
+            if (visited.has(key)) continue;
+
+            // Start a new rectangle
+            let rectWidth = 1;
+            let rectHeight = 1;
+
+            // Expand to the right
+            while (x + rectWidth < width) {
+                const nextTile = layer.getTileAt(x + rectWidth, y);
+                if (nextTile && nextTile.index !== -1) {
+                    visited.add(`${x + rectWidth},${y}`);
+                    rectWidth++;
+                } else {
+                    break;
+                }
+            }
+
+            // Expand downwards
+            let canExpandDown = true;
+            while (canExpandDown && (y + rectHeight) < height) {
+                for (let i = 0; i < rectWidth; i++) {
+                    const nextTile = layer.getTileAt(x + i, y + rectHeight);
+                    if (!nextTile || nextTile.index === -1) {
+                        canExpandDown = false;
+                        break;
+                    }
+                }
+                if (canExpandDown) {
+                    for (let i = 0; i < rectWidth; i++) {
+                        visited.add(`${x + i},${y + rectHeight}`);
+                    }
+                    rectHeight++;
+                }
+            }
+
+            // Mark all tiles in the rectangle as visited
+            for (let dy = 0; dy < rectHeight; dy++) {
+                for (let dx = 0; dx < rectWidth; dx++) {
+                    visited.add(`${x + dx},${y + dy}`);
+                }
+            }
+
+            // Add the rectangle to the list
+            const worldX = tile.getLeft();
+            const worldY = tile.getTop();
+            const worldWidth = rectWidth * tile.width;
+            const worldHeight = rectHeight * tile.height;
+
+            rects.push(new Rectangle(worldX, worldY, worldWidth, worldHeight));
+        }
+    }
+
+    return rects;}
