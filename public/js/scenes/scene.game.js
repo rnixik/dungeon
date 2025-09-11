@@ -34,6 +34,7 @@ class Game extends Phaser.Scene
     scaleX;
     scaleY;
     controlsContainer;
+    joystick;
 
     constructor ()
     {
@@ -135,8 +136,6 @@ class Game extends Phaser.Scene
         // Draw the mask once
         //draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
 
-
-
         this.addMobileButtons();
     }
 
@@ -144,41 +143,42 @@ class Game extends Phaser.Scene
     {
         this.player.body.setVelocity(0);
         const moveSpeed = 300;
+        const joystick = this.joystick.createCursorKeys();
 
         // Horizontal movement
-        if (this.cursors.left.isDown || this.moveLeft)
+        if (this.cursors.left.isDown || this.moveLeft || joystick.left.isDown)
         {
             this.player.body.setVelocityX(-1 * moveSpeed);
         }
-        else if (this.cursors.right.isDown || this.moveRight)
+        else if (this.cursors.right.isDown || this.moveRight || joystick.right.isDown)
         {
             this.player.body.setVelocityX(moveSpeed);
         }
 
         // Vertical movement
-        if (this.cursors.up.isDown || this.moveUp)
+        if (this.cursors.up.isDown || this.moveUp || joystick.up.isDown)
         {
             this.player.body.setVelocityY(-1 * moveSpeed);
         }
-        else if (this.cursors.down.isDown || this.moveDown)
+        else if (this.cursors.down.isDown || this.moveDown || joystick.down.isDown)
         {
             this.player.body.setVelocityY(moveSpeed);
         }
 
         // Update the animation last and give left/right animations precedence over up/down animations
-        if (this.cursors.left.isDown || this.moveLeft)
+        if (this.cursors.left.isDown || this.moveLeft || joystick.left.isDown)
         {
             this.player.anims.play('left', true);
         }
-        else if (this.cursors.right.isDown || this.moveRight)
+        else if (this.cursors.right.isDown || this.moveRight || joystick.right.isDown)
         {
             this.player.anims.play('right', true);
         }
-        else if (this.cursors.up.isDown || this.moveUp)
+        else if (this.cursors.up.isDown || this.moveUp || joystick.up.isDown)
         {
             this.player.anims.play('up', true);
         }
-        else if (this.cursors.down.isDown || this.moveDown)
+        else if (this.cursors.down.isDown || this.moveDown || joystick.down.isDown)
         {
             this.player.anims.play('down', true);
         }
@@ -240,67 +240,21 @@ class Game extends Phaser.Scene
 
     addMobileButtons ()
     {
-        if (this.controlsContainer) {
-            this.controlsContainer.destroy(true, true);
+        if (this.joystick) {
+            this.joystick.destroy(true, true);
         }
 
-        const posLeftX = 100;
-        const posBottomY = 600 * this.scaleY - 100;
+        const radiusFactor = Math.min(this.scaleX, this.scaleY);
+        const joyStickConfig = {
+            x: 100,
+            y: 600 * this.scaleY - 100,
+            radius: 150,
+            base: this.add.circle(0, 0, 90, 0x888888, 0.5),
+            thumb: this.add.circle(0, 0, 50, 0xcccccc, 0.5),
+            dir: '8dir'
+        };
 
-        const container = this.add.container();
-        container.setAlpha(0.6);
-        container.setScrollFactor(0, 0);
-
-        const buttonLeft = this.add.sprite(posLeftX, posBottomY, 'controls', 'left1');
-        container.add(buttonLeft);
-        buttonLeft.setOrigin(1, 0.5);
-        buttonLeft.setScrollFactor(0, 0);
-        buttonLeft.setInteractive({ useHandCursor: true });
-        buttonLeft.on('pointerdown', () => this.moveLeft = true);
-        buttonLeft.on('pointerup', () => this.moveLeft = false);
-
-        const buttonRight = this.add.sprite(posLeftX, posBottomY, 'controls', 'right1');
-        container.add(buttonRight);
-        buttonRight.setOrigin(0, 0.5);
-        buttonRight.setScrollFactor(0, 0);
-        buttonRight.setInteractive({ useHandCursor: true });
-        buttonRight.on('pointerdown', () => this.moveRight = true);
-        buttonRight.on('pointerup', () => this.moveRight = false);
-
-        const buttonDown = this.add.sprite(posLeftX, posBottomY, 'controls', 'down1');
-        container.add(buttonDown);
-        buttonDown.setOrigin(0.5, 0);
-        buttonDown.setScrollFactor(0, 0);
-        buttonDown.setInteractive({ useHandCursor: true });
-        buttonDown.on('pointerdown', () => this.moveDown = true);
-        buttonDown.on('pointerup', () => this.moveDown = false);
-
-        const buttonUp = this.add.sprite(posLeftX, posBottomY, 'controls', 'up1');
-        container.add(buttonUp);
-        buttonUp.setOrigin(0.5, 1);
-        buttonUp.setScrollFactor(0, 0);
-        buttonUp.setInteractive({ useHandCursor: true });
-        buttonUp.on('pointerdown', () => this.moveUp = true);
-        buttonUp.on('pointerup', () => this.moveUp = false);
-
-        if (this.sys.game.device.fullscreen.available) {
-            const buttonFs = this.add.sprite(800 * this.scaleX - 30, 30, 'controls', 'fullscreen1');
-            container.add(buttonFs);
-            buttonFs.setOrigin(1, 0);
-            buttonFs.setScrollFactor(0, 0);
-
-            buttonFs.setInteractive({ useHandCursor: true });
-
-            buttonFs.on('pointerup', function (){
-                if (this.scale.isFullscreen) {
-                    this.scale.stopFullscreen();
-                } else {
-                    this.scale.startFullscreen();
-                }
-            }, this);
-        }
-
-        this.controlsContainer = container;
+        this.joystick = this.plugins.get('rexvirtualjoystickplugin').add(this, joyStickConfig);
     }
 }
 
