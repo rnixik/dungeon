@@ -1,13 +1,13 @@
 (function() {
     const config = {
         type: Phaser.AUTO,
-        width: 1600,
-        height: 1200,
+        width: 800,
+        height: 600,
         pixelArt: true,
         physics: {
             default: 'arcade',
             arcade: {
-                debug: true
+                debug: false
             }
         },
         scale: {
@@ -18,8 +18,8 @@
                 height: 240
             },
             max: {
-                width: 1600,
-                height: 1200
+                width: 800,
+                height: 600
             }
         },
         scene: [ sceneConfigBoot, sceneConfigPreloader, sceneConfigGame ]

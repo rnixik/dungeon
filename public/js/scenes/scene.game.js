@@ -33,6 +33,7 @@ class Game extends Phaser.Scene
     moveRight;
     scaleX;
     scaleY;
+    controlsContainer;
 
     constructor ()
     {
@@ -41,6 +42,10 @@ class Game extends Phaser.Scene
 
     create ()
     {
+        this.scaleX = this.scale.width / 800;
+        this.scaleY = this.scale.height / 600;
+        console.log('scales', this.scaleX, this.scaleY);
+
         this.map = this.make.tilemap({ key: 'map' });
 
         const tiles = this.map.addTilesetImage('tiles_atlas', 'tiles');
@@ -63,17 +68,23 @@ class Game extends Phaser.Scene
         this.cursors = this.input.keyboard.createCursorKeys();
 
         // https://phaser.io/examples/v3.85.0/tilemap/collision/view/tilemap-spotlight
-        //this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
-        // TODO: fix scale
         this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
-        // this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
-        //
-        //     this.rt.setSize(1200, 900);
-        // })
-
-        //  Make sure it doesn't scroll with the camera
         this.rt.setOrigin(0, 0);
         this.rt.setScrollFactor(0, 0);
+
+        this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
+            console.log('new size', this.scale.width, this.scale.height);
+            //this.rt.setSize(this.scale.width, this.scale.height);
+
+            // setting new size doesn't work properly, so we destroy and create new
+            this.rt.destroy();
+            this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
+            this.rt.setOrigin(0, 0);
+            this.rt.setScrollFactor(0, 0);
+
+            // buttons need to be repositioned because they will be hidden by light mask
+            this.addMobileButtons();
+        })
 
         this.graphics = this.make.graphics({ lineStyle: { color: DEBUG_STROKE_COLOR, width: 0.5 } });
 
@@ -124,9 +135,7 @@ class Game extends Phaser.Scene
         // Draw the mask once
         //draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
 
-        this.scaleX = this.scale.width / 800;
-        this.scaleY = this.scale.height / 600;
-        console.log('scales', this.scaleX, this.scaleY);
+
 
         this.addMobileButtons();
     }
@@ -231,6 +240,10 @@ class Game extends Phaser.Scene
 
     addMobileButtons ()
     {
+        if (this.controlsContainer) {
+            this.controlsContainer.destroy(true, true);
+        }
+
         const posLeftX = 100;
         const posBottomY = 600 * this.scaleY - 100;
 
@@ -286,6 +299,8 @@ class Game extends Phaser.Scene
                 }
             }, this);
         }
+
+        this.controlsContainer = container;
     }
 }
 
@@ -554,4 +569,5 @@ function getBigRectsFromWallLayer(layer) {
         }
     }
 
-    return rects;}
+    return rects;
+}
