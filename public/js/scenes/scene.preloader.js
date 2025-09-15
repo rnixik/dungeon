@@ -16,6 +16,7 @@ var sceneConfigPreloader = {
         this.load.spritesheet('player', 'assets/spaceman.png', { frameWidth: 16, frameHeight: 16 });
         this.load.image('mask', 'assets/mask1.png?v=2');
         this.load.atlas('controls', 'assets/controls.png', 'assets/controls.json');
+        this.load.image('bullet', 'assets/bullet7.png');
 
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },

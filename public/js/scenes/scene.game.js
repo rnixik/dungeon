@@ -27,14 +27,11 @@ class Game extends Phaser.Scene
     edges;
     rays;
     graphics;
-    moveUp;
-    moveDown;
-    moveLeft;
-    moveRight;
+    direction = 'right';
     scaleX;
     scaleY;
-    controlsContainer;
     joystick;
+    bullets;
 
     constructor ()
     {
@@ -65,6 +62,8 @@ class Game extends Phaser.Scene
 
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(this.player);
+
+        this.bullets = new Bullets(this, this.layerWalls);
 
         this.cursors = this.input.keyboard.createCursorKeys();
 
@@ -137,6 +136,9 @@ class Game extends Phaser.Scene
         //draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
 
         this.addMobileButtons();
+
+        const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        spaceBar.on('down', () => this.bullets.fireBullet(this.player.x, this.player.y, this.direction));
     }
 
     update (time, delta)
@@ -146,41 +148,45 @@ class Game extends Phaser.Scene
         const joystick = this.joystick.createCursorKeys();
 
         // Horizontal movement
-        if (this.cursors.left.isDown || this.moveLeft || joystick.left.isDown)
+        if (this.cursors.left.isDown || joystick.left.isDown)
         {
             this.player.body.setVelocityX(-1 * moveSpeed);
         }
-        else if (this.cursors.right.isDown || this.moveRight || joystick.right.isDown)
+        else if (this.cursors.right.isDown || joystick.right.isDown)
         {
             this.player.body.setVelocityX(moveSpeed);
         }
 
         // Vertical movement
-        if (this.cursors.up.isDown || this.moveUp || joystick.up.isDown)
+        if (this.cursors.up.isDown || joystick.up.isDown)
         {
             this.player.body.setVelocityY(-1 * moveSpeed);
         }
-        else if (this.cursors.down.isDown || this.moveDown || joystick.down.isDown)
+        else if (this.cursors.down.isDown || joystick.down.isDown)
         {
             this.player.body.setVelocityY(moveSpeed);
         }
 
         // Update the animation last and give left/right animations precedence over up/down animations
-        if (this.cursors.left.isDown || this.moveLeft || joystick.left.isDown)
+        if (this.cursors.left.isDown || joystick.left.isDown)
         {
             this.player.anims.play('left', true);
+            this.direction = 'left';
         }
-        else if (this.cursors.right.isDown || this.moveRight || joystick.right.isDown)
+        else if (this.cursors.right.isDown || joystick.right.isDown)
         {
             this.player.anims.play('right', true);
+            this.direction = 'right';
         }
-        else if (this.cursors.up.isDown || this.moveUp || joystick.up.isDown)
+        else if (this.cursors.up.isDown || joystick.up.isDown)
         {
             this.player.anims.play('up', true);
+            this.direction = 'up';
         }
-        else if (this.cursors.down.isDown || this.moveDown || joystick.down.isDown)
+        else if (this.cursors.down.isDown || joystick.down.isDown)
         {
             this.player.anims.play('down', true);
+            this.direction = 'down';
         }
         else
         {
@@ -260,9 +266,7 @@ class Game extends Phaser.Scene
         buttonFire.setScrollFactor(0, 0);
         buttonFire.setScale(Math.max(this.scaleX, this.scaleY));
         buttonFire.setInteractive({ useHandCursor: true });
-        buttonFire.on('pointerdown', function () {
-
-        });
+        buttonFire.on('pointerdown', () => this.bullets.fireBullet(this.player.x, this.player.y, this.direction));
 
         if (this.sys.game.device.fullscreen.available) {
             const buttonFs = this.add.sprite(this.scale.width - 85 * this.scaleX, 40 * this.scaleY, 'controls', 'fullscreen1');
