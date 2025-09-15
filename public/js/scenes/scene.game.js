@@ -244,17 +244,40 @@ class Game extends Phaser.Scene
             this.joystick.destroy(true, true);
         }
 
-        const radiusFactor = Math.min(this.scaleX, this.scaleY);
         const joyStickConfig = {
-            x: 100,
-            y: 600 * this.scaleY - 100,
-            radius: 150,
-            base: this.add.circle(0, 0, 90, 0x888888, 0.5),
-            thumb: this.add.circle(0, 0, 50, 0xcccccc, 0.5),
+            x: 85,
+            y: 600 * this.scaleY - 85,
+            radius: 100,
+            base: this.add.circle(0, 0, 80, 0x888888, 0.3),
+            thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.3),
             dir: '8dir'
         };
 
         this.joystick = this.plugins.get('rexvirtualjoystickplugin').add(this, joyStickConfig);
+
+        const buttonFire = this.add.sprite(this.scale.width - 85 * this.scaleX, this.scale.height - 85 * this.scaleY, 'controls', 'fire2');
+        buttonFire.setAlpha(0.3);
+        buttonFire.setScrollFactor(0, 0);
+        buttonFire.setScale(Math.max(this.scaleX, this.scaleY));
+        buttonFire.setInteractive({ useHandCursor: true });
+        buttonFire.on('pointerdown', function () {
+
+        });
+
+        if (this.sys.game.device.fullscreen.available) {
+            const buttonFs = this.add.sprite(this.scale.width - 85 * this.scaleX, 40 * this.scaleY, 'controls', 'fullscreen1');
+            buttonFs.setAlpha(0.3);
+            buttonFs.setScrollFactor(0, 0);
+            buttonFs.setInteractive({ useHandCursor: true });
+
+            buttonFs.on('pointerup', function (){
+                if (this.scale.isFullscreen) {
+                    this.scale.stopFullscreen();
+                } else {
+                    this.scale.startFullscreen();
+                }
+            }, this);
+        }
     }
 }
 
