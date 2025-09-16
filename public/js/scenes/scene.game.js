@@ -32,6 +32,8 @@ class Game extends Phaser.Scene
     scaleY;
     joystick;
     bullets;
+    otherPlayer;
+    otherPlayer2;
 
     constructor ()
     {
@@ -57,6 +59,12 @@ class Game extends Phaser.Scene
 
         this.player = this.physics.add.sprite(120, 140, 'player', 1);
         this.player.setScale(3.5);
+
+        this.otherPlayer = this.add.sprite(1000, 100, 'player', 1);
+        this.otherPlayer.setScale(3.5);
+
+        this.otherPlayer2 = this.add.sprite(400, 400, 'player', 1);
+        this.otherPlayer2.setScale(3.5);
 
         this.physics.add.collider(this.player, this.layerWalls);
 
@@ -101,6 +109,8 @@ class Game extends Phaser.Scene
         // Mask objects and background.
         //this.layerWalls.setMask(mask);
         this.layerFloor.setMask(mask);
+        this.otherPlayer.setMask(mask);
+        this.otherPlayer2.setMask(mask);
 
         // Create Rectangles from wall tiles
         const rects = getBigRectsFromWallLayer(this.layerWalls);
@@ -219,6 +229,10 @@ class Game extends Phaser.Scene
         //  We then minus the scrollX/Y values, because the RenderTexture is pinned to the screen and doesn't scroll
         // Upd: offset is half the mask image width
         this.rt.erase('mask', (this.player.x - 180) - cam.scrollX, (this.player.y - 180) - cam.scrollY);
+
+        // erase more masks for other players
+        this.rt.erase('mask', (this.otherPlayer.x - 180) - cam.scrollX, (this.otherPlayer.y - 180) - cam.scrollY);
+        this.rt.erase('mask', (this.otherPlayer2.x - 180) - cam.scrollX, (this.otherPlayer2.y - 180) - cam.scrollY);
     }
 
     updateAlphaOnMap ()
