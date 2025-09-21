@@ -7,14 +7,13 @@ class MainMenu extends Phaser.Scene
     menuBackground = null;
     loadingSpinner = null;
     connectingText = null;
-    waitingForPlayersText = null;
-    addBotButton = null;
 
     game = null;
     onIncomingGameEventCallback = function () {};
 
     myClientId = null;
     nickname = 'default';
+    roomName = 'default';
 
     constructor ()
     {
@@ -35,33 +34,6 @@ class MainMenu extends Phaser.Scene
                 color: '#ffffff',
             },
             add: true
-        });
-
-        this.waitingForPlayersText = this.make.text({
-            x: 10000,
-            y: 60,
-            text: "Waiting for players...",
-            style: {
-                fontFamily: 'Arial',
-                color: '#00bb00',
-            },
-            add: true
-        });
-        this.addBotButton = this.make.text({
-            x: 10000,
-            y: 80,
-            text: "Click here to play with bot",
-            style: {
-                fontFamily: 'Arial',
-                color: '#00bbbb',
-            },
-            add: true
-        });
-
-        const self = this;
-        this.addBotButton.setInteractive();
-        this.addBotButton.on('pointerdown', function () {
-            self.wsConnection.send(JSON.stringify({type: 'room', subType: 'addBot'}))
         });
 
         const savedNickname = localStorage.getItem("nickname");
@@ -104,8 +76,6 @@ class MainMenu extends Phaser.Scene
     {
         if (this.wsConnection) {
             this.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'makeMatch'}));
-            this.waitingForPlayersText.x = 0;
-            this.addBotButton.x = 0;
 
             return;
         }
@@ -116,7 +86,7 @@ class MainMenu extends Phaser.Scene
             self.wsConnection = new WebSocket(WEBSOCKET_URL);
             self.wsConnection.onopen = function () {
                 self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'join', data: nickname}));
-                self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'createRoom'}));
+                self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'makeMatch', data: {roomName: self.roomName}}));
             };
             self.wsConnection.onclose = () => {
                 window.setTimeout(function () {
@@ -147,23 +117,15 @@ class MainMenu extends Phaser.Scene
         if (json.name !== 'PositionUpdateEvent') {
             console.log('INCOMING', json);
         }
-        
+
         if (json.name === 'ClientJoinedEvent') {
             this.myClientId = json.data.yourId;
             console.log('My client id = ' + this.myClientId);
             this.connectingText.x = 10000;
-            this.waitingForPlayersText.x = 0;
-            this.addBotButton.x = 0;
             return;
         }
         if (json.name === 'GameStartedEvent') {
-            this.waitingForPlayersText.x = 10000;
-            this.addBotButton.x = 10000;
             this.startGame(this.myClientId, json.data.room.members);
-            return;
-        }
-        if (json.name === 'RoomJoinedEvent') {
-            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'startGame'}));
             return;
         }
 

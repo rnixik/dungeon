@@ -235,7 +235,7 @@ func (r *Room) setPlayerStatus(memberId uint64, playerStatus bool) {
 	r.broadcastEvent(roomMemberChangedPlayerStatusEvent, nil)
 }
 
-func (r *Room) onStartGameCommand(c ClientPlayer) {
+func (r *Room) OnStartGameCommand(c ClientPlayer) {
 	pls := r.getPlayers()
 	if len(pls) < r.lobby.minPlayersInRoom {
 		errEvent := &ClientCommandError{errorNeedMorePlayers}
@@ -311,10 +311,10 @@ func (r *Room) onAddBotCommand(c ClientPlayer) {
 		return
 	}
 
-	r.createBot()
+	r.CreateBot()
 }
 
-func (r *Room) createBot() ClientPlayer {
+func (r *Room) CreateBot() ClientPlayer {
 	atomic.AddUint64(&lastClientId, 1)
 	lastBotIdSafe := atomic.LoadUint64(&lastClientId)
 	clientPlayer := r.lobby.newBotFunc(lastBotIdSafe, r, func(client ClientPlayer, eventName string, eventData json.RawMessage) {
@@ -361,7 +361,7 @@ func (r *Room) onClientCommand(cc *ClientCommand) {
 		}
 		r.onSetPlayerStatusCommand(cc.client, statusData.MemberId, statusData.Status)
 	case ClientCommandRoomSubTypeStartGame:
-		r.onStartGameCommand(cc.client)
+		r.OnStartGameCommand(cc.client)
 	case ClientCommandRoomSubTypeDeleteGame:
 		r.onDeleteGameCommand(cc.client)
 	case ClientCommandRoomSubTypeAddBot:

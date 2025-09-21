@@ -97,6 +97,7 @@ func (g *Game) OnClientRemoved(client lobby.ClientPlayer) {
 	if g.isGameEnded() {
 		return
 	}
+	log.Printf("client '%s' removed from game\n", client.Nickname())
 }
 
 func (g *Game) OnClientJoined(client lobby.ClientPlayer) {

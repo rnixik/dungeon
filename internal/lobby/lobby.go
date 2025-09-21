@@ -21,8 +21,14 @@ type GameEventsDispatcher interface {
 type NewGameFunc func(playersClients []ClientPlayer, room *Room, broadcastEventFunc func(event interface{})) GameEventsDispatcher
 type NewBotFunc func(botId uint64, room *Room, sendGameEvent func(client ClientPlayer, eventName string, eventData json.RawMessage)) ClientPlayer
 
+type MatchMakerSettings map[string]interface{}
+
 type MatchMaker interface {
-	MakeMatch(client ClientPlayer, foundFunc func(clients []ClientPlayer), notFoundFunc func(), addBotFunc func() ClientPlayer)
+	MakeMatch(
+		lobby *Lobby,
+		client *ClientPlayer,
+		settings MatchMakerSettings,
+	)
 	Cancel(client ClientPlayer)
 }
 
@@ -182,12 +188,12 @@ func (l *Lobby) onClientLeft(client ClientPlayer) {
 	l.broadcastEvent(leftEvent)
 }
 
-func (l *Lobby) createNewRoomCommand(c ClientPlayer) {
+func (l *Lobby) CreateNewRoomCommand(c ClientPlayer) *Room {
 	_, roomExists := l.roomsCreatedByClients[c]
 	if roomExists {
 		errEvent := &ClientCommandError{errorYouCanCreateOneRoomOnly}
 		c.SendEvent(errEvent)
-		return
+		return nil
 	}
 
 	oldRoomJoined := l.clientsJoinedRooms[c]
@@ -206,6 +212,8 @@ func (l *Lobby) createNewRoomCommand(c ClientPlayer) {
 
 	roomJoinedEvent := &RoomJoinedEvent{room.toRoomInfo()}
 	c.SendEvent(roomJoinedEvent)
+
+	return room
 }
 
 func (l *Lobby) getRoomById(roomId uint64) (room *Room, err error) {
@@ -235,7 +243,7 @@ func (l *Lobby) onLeftRoom(c ClientPlayer, room *Room) {
 	l.broadcastEvent(roomInListUpdatedEvent)
 }
 
-func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
+func (l *Lobby) JoinRoomCommand(c ClientPlayer, roomId uint64) {
 	oldRoomJoined := l.clientsJoinedRooms[c]
 	if oldRoomJoined != nil && oldRoomJoined.ID() == roomId {
 		return
@@ -255,52 +263,11 @@ func (l *Lobby) joinRoomCommand(c ClientPlayer, roomId uint64) {
 	}
 }
 
-func (l *Lobby) makeMatch(c ClientPlayer) {
-	// create a room in case we want to play with bots
-	// create new room in case we are not owner (cannot start game with bots)
-	r := l.clientsJoinedRooms[c]
-	if r != nil {
-		l.onLeftRoom(c, r)
-	}
-	l.createNewRoomCommand(c)
-
+func (l *Lobby) makeMatch(c ClientPlayer, mmSettings MatchMakerSettings) {
 	l.matchMaker.MakeMatch(
-		c,
-		func(clients []ClientPlayer) {
-			// put all players to the same room of the first player
-			firstClient := clients[0]
-			roomOfFirstPlayer := l.clientsJoinedRooms[firstClient]
-			if roomOfFirstPlayer == nil {
-				l.createNewRoomCommand(firstClient)
-				roomOfFirstPlayer = l.roomsCreatedByClients[firstClient]
-			}
-
-			for i, client := range clients {
-				if i == 0 {
-					continue
-				}
-				if l.clientsJoinedRooms[client] != roomOfFirstPlayer {
-					oldRoomJoined := l.clientsJoinedRooms[client]
-					if oldRoomJoined != nil {
-						l.onLeftRoom(client, oldRoomJoined)
-					}
-					l.clientsJoinedRooms[client] = roomOfFirstPlayer
-					roomOfFirstPlayer.addClient(client)
-				}
-			}
-
-			roomOfFirstPlayer.onStartGameCommand(firstClient)
-		},
-		func() {},
-		func() ClientPlayer {
-			room := l.clientsJoinedRooms[c]
-			if room == nil {
-				l.createNewRoomCommand(c)
-				room = l.roomsCreatedByClients[c]
-			}
-
-			return room.createBot()
-		},
+		l,
+		&c,
+		mmSettings,
 	)
 }
 
@@ -313,15 +280,19 @@ func (l *Lobby) onClientCommand(cc *ClientCommand) {
 			}
 			l.joinLobbyCommand(cc.client, nickname)
 		} else if cc.SubType == ClientCommandLobbySubTypeCreateRoom {
-			l.createNewRoomCommand(cc.client)
+			l.CreateNewRoomCommand(cc.client)
 		} else if cc.SubType == ClientCommandLobbySubTypeJoinRoom {
 			var roomId uint64
 			if err := json.Unmarshal(cc.Data, &roomId); err != nil {
 				return
 			}
-			l.joinRoomCommand(cc.client, roomId)
+			l.JoinRoomCommand(cc.client, roomId)
 		} else if cc.SubType == ClientCommandLobbySubTypeMakeMatch {
-			l.makeMatch(cc.client)
+			var mmSettings MatchMakerSettings
+			if err := json.Unmarshal(cc.Data, &mmSettings); err != nil {
+				return
+			}
+			l.makeMatch(cc.client, mmSettings)
 		}
 	} else if cc.Type == ClientCommandTypeRoom {
 		if l.clientsJoinedRooms[cc.client] == nil {

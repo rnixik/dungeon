@@ -28,3 +28,6 @@ type PositionUpdateEvent struct {
 type EndGameEvent struct {
 	WinnerPlayerId uint64 `json:"winnerPlayerId"`
 }
+
+type JoinToStartedGameEvent struct {
+}

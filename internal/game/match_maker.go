@@ -2,33 +2,46 @@ package game
 
 import (
 	"dungeon/internal/lobby"
+	"log"
 )
 
 type MatchMaker struct {
-	waitingClient *lobby.ClientPlayer
+	roomByName map[string]*lobby.Room
 }
 
 func NewMatchMaker() *MatchMaker {
-	return &MatchMaker{}
+	return &MatchMaker{
+		roomByName: make(map[string]*lobby.Room),
+	}
 }
 
-func (mm *MatchMaker) MakeMatch(client lobby.ClientPlayer, foundFunc func(clientsIds []lobby.ClientPlayer), notFoundFunc func(), addBotFunc func() lobby.ClientPlayer) {
-	// only with bots
-	//botClient := addBotFunc()
-	//foundFunc([]lobby.ClientPlayer{client, botClient})
+func (mm *MatchMaker) MakeMatch(
+	lobby *lobby.Lobby,
+	client *lobby.ClientPlayer,
+	settings lobby.MatchMakerSettings,
+) {
+	roomName, ok := settings["roomName"].(string)
+	if !ok {
+		roomName = "default"
+	}
+	room, ok := mm.roomByName[roomName]
+	if ok {
+		lobby.JoinRoomCommand(*client, room.ID())
+	} else {
+		room = lobby.CreateNewRoomCommand(*client)
+		mm.roomByName[roomName] = room
+	}
 
-	// game with players
-	if mm.waitingClient != nil && (*mm.waitingClient).ID() != client.ID() {
-		foundFunc([]lobby.ClientPlayer{*mm.waitingClient, client})
-		mm.waitingClient = nil
+	if room == nil {
+		log.Println("cannot create or join room")
+
 		return
 	}
 
-	mm.waitingClient = &client
+	if room.Game() == nil {
+		room.OnStartGameCommand(*client)
+	}
 }
 
 func (mm *MatchMaker) Cancel(client lobby.ClientPlayer) {
-	if mm.waitingClient != nil && (*mm.waitingClient).ID() == client.ID() {
-		mm.waitingClient = nil
-	}
 }
