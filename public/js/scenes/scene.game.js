@@ -62,11 +62,27 @@ class Game extends Phaser.Scene {
     uiScaleX;
     uiScaleY;
 
+    // server connection
+    myClientId;
+    myNickname;
+    sendGameCommand;
+    lastMoveSentTime = 0;
+    isMoving = false;
+
     constructor () {
         super({ key: 'Game' });
     }
 
-    create () {
+    create (data) {
+        this.myClientId = data.myClientId;
+        this.myNickname = data.myNickname;
+        console.log("Game started. My client id: " + this.myClientId + ", my nickname: " + this.myNickname);
+        this.sendGameCommand = data.sendGameCommand;
+        const self = this;
+        data.setOnIncomingGameEventCallback(function (name, data) {
+            self.onIncomingGameEvent(name, data);
+        });
+
         // viewport scale for UI placement
         this.uiScaleX = this.scale.width / 800;
         this.uiScaleY = this.scale.height / 600;
@@ -156,17 +172,72 @@ class Game extends Phaser.Scene {
         if (this.cursors.up.isDown || joy.up.isDown)      this.player.body.setVelocityY(-move);
         else if (this.cursors.down.isDown || joy.down.isDown) this.player.body.setVelocityY(move);
 
-        if (this.cursors.left.isDown || joy.left.isDown)      { this.player.anims.play('left', true);  this.direction='left'; }
-        else if (this.cursors.right.isDown || joy.right.isDown){ this.player.anims.play('right',true);  this.direction='right';}
-        else if (this.cursors.up.isDown || joy.up.isDown)      { this.player.anims.play('up',   true);  this.direction='up';   }
-        else if (this.cursors.down.isDown || joy.down.isDown)  { this.player.anims.play('down', true);  this.direction='down'; }
-        else { this.player.anims.stop(); }
+        if (this.cursors.left.isDown || joy.left.isDown)
+        {
+            this.player.anims.play('left', true);
+            this.direction='left';
+            this.isMoving = true;
+        }
+        else if (this.cursors.right.isDown || joy.right.isDown)
+        {
+            this.player.anims.play('right',true);
+            this.direction='right';
+            this.isMoving = true;
+        }
+        else if (this.cursors.up.isDown || joy.up.isDown)
+        {
+            this.player.anims.play('up',   true);
+            this.direction='up';
+            this.isMoving = true;
+        }
+        else if (this.cursors.down.isDown || joy.down.isDown)
+        {
+            this.player.anims.play('down', true);
+            this.direction='down';
+            this.isMoving = true;
+        }
+        else
+        {
+            this.player.anims.stop();
+            this.isMoving = false;
+        }
 
         // Lighting (spotlights + bullet glow)
         this.updateMaskLight();
 
         // Raycast dynamic shadows
         this.updateMaskRaycast();
+
+        if (this.lastMoveSentTime + 50 < time) {
+            this.sendGameCommand('PlayerMoveCommand', {
+                x: this.player.x,
+                y: this.player.y,
+                direction: this.direction,
+                isMoving: this.isMoving
+            });
+            this.lastMoveSentTime = time;
+        }
+    }
+
+    onIncomingGameEvent (name, data) {
+        if (name === 'PositionUpdateEvent') {
+            this.otherPlayer.x = data.positions[0].x;
+            this.otherPlayer.y = data.positions[0].y;
+            const direction = data.positions[0].direction;
+            switch (direction) {
+                case 'up': this.otherPlayer.anims.play('up', true); break;
+                case 'down': this.otherPlayer.anims.play('down', true); break;
+                case 'left': this.otherPlayer.anims.play('left', true); break;
+                case 'right': this.otherPlayer.anims.play('right', true); break;
+            }
+
+            if (!data.positions[0].isMoving) {
+                this.otherPlayer.anims.stop();
+            }
+
+            return;
+        }
+        console.log('INCOMING GAME EVENT', name, data);
     }
 
     // --- Darkness RenderTexture setup ---
