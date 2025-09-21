@@ -41,8 +41,6 @@ class Game extends Phaser.Scene {
     map;
     layerWalls;
     layerFloor;
-    otherPlayer;
-    otherPlayer2;
     bullets; // external bullets manager passed/constructed elsewhere in your code
 
     // lighting
@@ -68,6 +66,8 @@ class Game extends Phaser.Scene {
     sendGameCommand;
     lastMoveSentTime = 0;
     isMoving = false;
+
+    players = {};
 
     constructor () {
         super({ key: 'Game' });
@@ -97,8 +97,6 @@ class Game extends Phaser.Scene {
 
         // --- Sprites ---
         this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(3.5);
-        this.otherPlayer  = this.add.sprite(1000, 100, 'player', 1).setScale(3.5);
-        this.otherPlayer2 = this.add.sprite(400,  400, 'player', 1).setScale(3.5);
         this.physics.add.collider(this.player, this.layerWalls);
 
         // Camera
@@ -137,8 +135,6 @@ class Game extends Phaser.Scene {
 
         // Apply (optional) geometric mask to world layers/actors (not UI)
         this.layerFloor.setMask(mask);
-        this.otherPlayer.setMask(mask);
-        this.otherPlayer2.setMask(mask);
 
         // --- Build occluder rectangles from wall tiles ---
         const rects = getBigRectsFromWallLayer(this.layerWalls);
@@ -220,19 +216,35 @@ class Game extends Phaser.Scene {
     }
 
     onIncomingGameEvent (name, data) {
-        if (name === 'PositionUpdateEvent') {
-            this.otherPlayer.x = data.positions[0].x;
-            this.otherPlayer.y = data.positions[0].y;
-            const direction = data.positions[0].direction;
-            switch (direction) {
-                case 'up': this.otherPlayer.anims.play('up', true); break;
-                case 'down': this.otherPlayer.anims.play('down', true); break;
-                case 'left': this.otherPlayer.anims.play('left', true); break;
-                case 'right': this.otherPlayer.anims.play('right', true); break;
-            }
+        if (name === 'PlayerPositionsUpdateEvent') {
+            for (const p of data.players) {
+                const id = p.clientId;
+                if (id === this.myClientId) {
+                    continue;
+                }
+                if (!this.players[id]) {
+                    // spawn new player
+                    const np = this.add.sprite(p.x, p.y, 'player', 1).setScale(3.5);
+                    np.setTint(Math.random() * 0xffffff);
+                    this.players[id] = np;
+                    console.log('spawn player', id, Object.keys(this.players).length);
+                }
 
-            if (!data.positions[0].isMoving) {
-                this.otherPlayer.anims.stop();
+                const pSprite = this.players[id];
+
+                pSprite.x = p.x;
+                pSprite.y = p.y;
+                const direction = p.direction;
+                switch (direction) {
+                    case 'up': pSprite.anims.play('up', true); break;
+                    case 'down': pSprite.anims.play('down', true); break;
+                    case 'left': pSprite.anims.play('left', true); break;
+                    case 'right': pSprite.anims.play('right', true); break;
+                }
+
+                if (!p.isMoving) {
+                    pSprite.anims.stop();
+                }
             }
 
             return;
@@ -262,8 +274,6 @@ class Game extends Phaser.Scene {
         };
 
         eraseAt(LIGHT_MASK_PLAYER, this.player.x,     this.player.y,     LIGHT_DIAMETER);
-        eraseAt(LIGHT_MASK_PLAYER, this.otherPlayer.x,  this.otherPlayer.y,  LIGHT_DIAMETER);
-        eraseAt(LIGHT_MASK_PLAYER, this.otherPlayer2.x, this.otherPlayer2.y, LIGHT_DIAMETER);
 
         // Sample bullets periodically to build a short-lived glow trail
         const now = this.time.now;

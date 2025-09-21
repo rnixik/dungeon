@@ -102,6 +102,10 @@ func (g *Game) OnClientRemoved(client lobby.ClientPlayer) {
 
 func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 	log.Printf("client '%s' joined game\n", client.Nickname())
+	g.mutex.Lock()
+	g.players[client.ID()] = newPlayer(client)
+	g.mutex.Unlock()
+	client.SendEvent(JoinToStartedGameEvent{})
 }
 
 func (g *Game) StartMainLoop() {
@@ -115,18 +119,19 @@ func (g *Game) StartMainLoop() {
 			}
 
 			g.mutex.Lock()
-			p := make([]Position, 0, len(g.players))
+			p := make([]PlayerPosition, 0, len(g.players))
 			for _, pl := range g.players {
-				p = append(p, Position{
+				p = append(p, PlayerPosition{
 					ClientID:  pl.client.ID(),
+					Nickname:  pl.client.Nickname(),
 					X:         pl.x,
 					Y:         pl.y,
 					Direction: pl.direction,
 					IsMoving:  pl.isMoving,
 				})
 			}
-			g.broadcastEventFunc(PositionUpdateEvent{
-				Positions: p,
+			g.broadcastEventFunc(PlayerPositionsUpdateEvent{
+				Players: p,
 			})
 			g.mutex.Unlock()
 		}

@@ -13,16 +13,17 @@ type DamageEvent struct {
 	ShieldWorked   bool   `json:"shieldWorked"`
 }
 
-type Position struct {
+type PlayerPosition struct {
 	ClientID  uint64 `json:"clientId"`
+	Nickname  string `json:"nickname"`
 	X         int    `json:"x"`
 	Y         int    `json:"y"`
 	Direction string `json:"direction"`
 	IsMoving  bool   `json:"isMoving"`
 }
 
-type PositionUpdateEvent struct {
-	Positions []Position `json:"positions"`
+type PlayerPositionsUpdateEvent struct {
+	Players []PlayerPosition `json:"players"`
 }
 
 type EndGameEvent struct {

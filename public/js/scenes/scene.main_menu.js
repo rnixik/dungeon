@@ -114,7 +114,7 @@ class MainMenu extends Phaser.Scene
 
     onIncomingMessage(json, evt)
     {
-        if (json.name !== 'PositionUpdateEvent') {
+        if (json.name !== 'PlayerPositionsUpdateEvent') {
             console.log('INCOMING', json);
         }
 
@@ -124,32 +124,20 @@ class MainMenu extends Phaser.Scene
             this.connectingText.x = 10000;
             return;
         }
-        if (json.name === 'GameStartedEvent') {
-            this.startGame(this.myClientId, json.data.room.members);
+        if (json.name === 'GameStartedEvent' || json.name === 'JoinToStartedGameEvent') {
+            this.startGame();
             return;
         }
 
         this.onIncomingGameEventCallback(json.name, json.data);
     };
 
-    startGame(myClientId, players)
+    startGame()
     {
-        console.log('Starting game with my client id = ' + myClientId);
-
-        let myNickname = 'Unknown';
-        for (let i = 0; i < players.length; i++) {
-            if (!players[i].isPlayer) {
-                continue;
-            }
-            if (players[i].id === myClientId) {
-                myNickname = players[i].nickname;
-            }
-        }
-
         const self = this;
         this.scene.start('Game', {
-            myClientId: myClientId,
-            myNickname: myNickname,
+            myClientId: this.myClientId,
+            myNickname: this.nickname,
             sendGameCommand: function (type, data) {
                 self.wsConnection.send(JSON.stringify({type: 'game', subType: type, data: data}));
             },

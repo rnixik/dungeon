@@ -45,3 +45,12 @@ func (mm *MatchMaker) MakeMatch(
 
 func (mm *MatchMaker) Cancel(client lobby.ClientPlayer) {
 }
+
+func (mm *MatchMaker) OnRoomRemoved(room *lobby.Room) {
+	for name, r := range mm.roomByName {
+		if r.ID() == room.ID() {
+			delete(mm.roomByName, name)
+			break
+		}
+	}
+}

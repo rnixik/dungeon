@@ -30,6 +30,7 @@ type MatchMaker interface {
 		settings MatchMakerSettings,
 	)
 	Cancel(client ClientPlayer)
+	OnRoomRemoved(room *Room)
 }
 
 // Lobby is the first place for connected clients. It passes commands to games.
@@ -229,10 +230,12 @@ func (l *Lobby) onLeftRoom(c ClientPlayer, room *Room) {
 	changedOwner, roomBecameEmpty := room.removeClient(c)
 	delete(l.clientsJoinedRooms, c)
 	if roomBecameEmpty {
+		l.matchMaker.OnRoomRemoved(room)
 		roomInListRemovedEvent := &RoomInListRemovedEvent{room.ID()}
 		l.broadcastEvent(roomInListRemovedEvent)
 		l.roomsCreatedByClients[c] = nil
 		delete(l.roomsCreatedByClients, c)
+
 		return
 	}
 	if changedOwner {
