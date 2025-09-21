@@ -10,7 +10,7 @@ var sceneConfigPreloader = {
             preloadBar.setCrop(0, 0, preloadBar.width * value, preloadBar.height);
         });
 
-        this.load.image('tiles', 'assets/atlas.png');
+        this.load.image('tiles', 'assets/environment.png');
         this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj?v=2');
 
         this.load.spritesheet('player', 'assets/spaceman.png', { frameWidth: 16, frameHeight: 16 });

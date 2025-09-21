@@ -8,6 +8,13 @@ const FILL_COLOR = BLACK;
 const DEBUG_STROKE_COLOR = WHITE;
 const DEBUG_FILL_COLOR = 0xff0000;
 
+// Mask
+const LIGHT_RADIUS   = 320;
+const LIGHT_FEATHER  = 128;    // thikness of shade
+const LIGHT_ALPHA    = 0.85;      // density of darkness
+const DARKNESS_DEPTH = 9000;  // darkness below
+const UI_DEPTH       = 10000; // UI above everything
+
 // Shortcuts
 const { Circle, Line, Point, Rectangle } = Phaser.Geom;
 const { EPSILON } = Phaser.Math;
@@ -46,32 +53,35 @@ class Game extends Phaser.Scene
         this.scaleY = this.scale.height / 600;
         console.log('scales', this.scaleX, this.scaleY);
 
+        //#region Setup environment
         this.map = this.make.tilemap({ key: 'map' });
+        const tiles = this.map.addTilesetImage('environment', 'tiles');
 
-        const tiles = this.map.addTilesetImage('tiles_atlas', 'tiles');
+        this.layerFloor = this.map.createLayer('floor', tiles, 0, 0);
+        this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
 
-        this.layerFloor = this.map.createLayer(0, tiles, 0, 0); // floor
-        this.layerWalls = this.map.createLayer(1, tiles, 0, 0); // walls
-        // all tiles can collide, we just use collider for layer
-        this.map.setCollisionBetween(0, 5);
+        this.layerWalls.setCollisionByProperty({ collides: true });
+        //#endregion
 
-        const mapRects = this.map.getObjectLayer('rects')['objects'];
-
+        //#region Setup player
         this.player = this.physics.add.sprite(120, 140, 'player', 1);
         this.player.setScale(3.5);
+
+        this.physics.add.collider(this.player, this.layerWalls);
+        this.bullets = new Bullets(this, this.layerWalls);
 
         this.otherPlayer = this.add.sprite(1000, 100, 'player', 1);
         this.otherPlayer.setScale(3.5);
 
         this.otherPlayer2 = this.add.sprite(400, 400, 'player', 1);
         this.otherPlayer2.setScale(3.5);
+        //#endregion
 
-        this.physics.add.collider(this.player, this.layerWalls);
 
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(this.player);
 
-        this.bullets = new Bullets(this, this.layerWalls);
+
 
         this.cursors = this.input.keyboard.createCursorKeys();
 
@@ -79,6 +89,25 @@ class Game extends Phaser.Scene
         this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
         this.rt.setOrigin(0, 0);
         this.rt.setScrollFactor(0, 0);
+
+        this.rt.setDepth(this.DARKNESS_DEPTH);
+        this.rt.setAlpha(LIGHT_ALPHA);
+        this.rt.setDepth(1000);
+
+        this.lightRadius = LIGHT_RADIUS;
+
+        const d = this.lightRadius;
+        const canvas = this.textures.createCanvas('lightCanvas', d, d).getContext();
+        const gradient = canvas.createRadialGradient(d/2, d/2, d/2 - LIGHT_FEATHER, d/2, d/2, d/2);
+
+        gradient.addColorStop(0, 'rgba(255,255,255,1)');
+        gradient.addColorStop(1, 'rgba(255,255,255,0)'); //funny if comment this line
+
+        canvas.fillStyle = gradient;
+        canvas.fillRect(0, 0, d, d);
+
+        this.textures.get('lightCanvas').refresh();
+        this.maskKey = 'lightCanvas';
 
         this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
             console.log('new size', this.scale.width, this.scale.height);
@@ -89,6 +118,7 @@ class Game extends Phaser.Scene
             this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
             this.rt.setOrigin(0, 0);
             this.rt.setScrollFactor(0, 0);
+            this.rt.setDepth(DARKNESS_DEPTH);
 
             // buttons need to be repositioned because they will be hidden by light mask
             this.addMobileButtons();
@@ -107,7 +137,6 @@ class Game extends Phaser.Scene
         }
 
         // Mask objects and background.
-        //this.layerWalls.setMask(mask);
         this.layerFloor.setMask(mask);
         this.otherPlayer.setMask(mask);
         this.otherPlayer2.setMask(mask);
@@ -133,10 +162,8 @@ class Game extends Phaser.Scene
             console.log('rect length', rects.length);
         }
 
-        // Convert rectangles into edges (line segments)
+        // Convert rectangles into edges and vertices (line segments)
         this.edges = rects.flatMap(getRectEdges);
-
-        // Convert rectangles into vertices
         this.vertices = rects.flatMap(getRectVertices);
 
         // One ray will be sent through each vertex
@@ -213,26 +240,16 @@ class Game extends Phaser.Scene
         this.updateMaskRaycast();
     }
 
-    updateMaskLight ()
-    {
-        //  Draw the spotlight on the player
-        const cam = this.cameras.main;
+    updateMaskLight() {
+        const cam  = this.cameras.main;
+        const half = this.lightRadius / 2;
 
-        //  Clear the RenderTexture
         this.rt.clear();
+        this.rt.fill(0x000000, 1);
 
-        //  Fill it in black
-        this.rt.fill(0x000000);
-
-        //  Erase the 'mask' texture from it based on the player position
-        //  We - 107, because the mask image is 213px wide, so this puts it on the middle of the player
-        //  We then minus the scrollX/Y values, because the RenderTexture is pinned to the screen and doesn't scroll
-        // Upd: offset is half the mask image width
-        this.rt.erase('mask', (this.player.x - 180) - cam.scrollX, (this.player.y - 180) - cam.scrollY);
-
-        // erase more masks for other players
-        this.rt.erase('mask', (this.otherPlayer.x - 180) - cam.scrollX, (this.otherPlayer.y - 180) - cam.scrollY);
-        this.rt.erase('mask', (this.otherPlayer2.x - 180) - cam.scrollX, (this.otherPlayer2.y - 180) - cam.scrollY);
+        this.rt.erase(this.maskKey, (this.player.x - half) - cam.scrollX, (this.player.y - half) - cam.scrollY);
+        this.rt.erase(this.maskKey, (this.otherPlayer.x - half) - cam.scrollX, (this.otherPlayer.y - half) - cam.scrollY);
+        this.rt.erase(this.maskKey, (this.otherPlayer2.x - half) - cam.scrollX, (this.otherPlayer2.y - half) - cam.scrollY);
     }
 
     updateAlphaOnMap ()
@@ -268,8 +285,8 @@ class Game extends Phaser.Scene
             x: 85,
             y: 600 * this.scaleY - 85,
             radius: 100,
-            base: this.add.circle(0, 0, 80, 0x888888, 0.3),
-            thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.3),
+            base: this.add.circle(0, 0, 80, 0x888888, 0.3).setDepth(UI_DEPTH),
+            thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.3).setDepth(UI_DEPTH),
             dir: '8dir'
         };
 
@@ -281,12 +298,14 @@ class Game extends Phaser.Scene
         buttonFire.setScale(Math.max(this.scaleX, this.scaleY));
         buttonFire.setInteractive({ useHandCursor: true });
         buttonFire.on('pointerdown', () => this.bullets.fireBullet(this.player.x, this.player.y, this.direction));
+        buttonFire.setDepth(UI_DEPTH);
 
         if (this.sys.game.device.fullscreen.available) {
             const buttonFs = this.add.sprite(this.scale.width - 85 * this.scaleX, 40 * this.scaleY, 'controls', 'fullscreen1');
             buttonFs.setAlpha(0.3);
             buttonFs.setScrollFactor(0, 0);
             buttonFs.setInteractive({ useHandCursor: true });
+            buttonFs.setDepth(UI_DEPTH);
 
             buttonFs.on('pointerup', function (){
                 if (this.scale.isFullscreen) {
@@ -501,66 +520,50 @@ function getRectsFromTilesInRadius(layer, x, y, radius) {
 
 function getBigRectsFromWallLayer(layer) {
     const rects = [];
-    const visited = new Set();
 
-    const width = layer.tilemap.width;
-    const height = layer.tilemap.height;
+    const mapW = layer.layer.width;
+    const mapH = layer.layer.height;
 
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
+    const visited = Array.from({ length: mapH }, () => Array(mapW).fill(false));
+
+    const isSolidAt = (x, y) => {
+        const t = layer.getTileAt(x, y);
+        // Phaser marks tile.collides = true, plus consider properties.collides
+        return !!t && (t.collides === true || t.properties?.collides === true);
+    };
+
+    for (let y = 0; y < mapH; y++) {
+        for (let x = 0; x < mapW; x++) {
+            if (visited[y][x] || !isSolidAt(x, y)) continue;
+
+            // going right
+            let w = 1;
+            while (x + w < mapW && !visited[y][x + w] && isSolidAt(x + w, y)) w++;
+
+            // going down, while tile is solid
+            let h = 1;
+            outer: while (y + h < mapH) {
+                for (let i = 0; i < w; i++) {
+                    if (visited[y + h][x + i] || !isSolidAt(x + i, y + h)) break outer;
+                }
+                h++;
+            }
+
+            // mark as visited
+            for (let dy = 0; dy < h; dy++) {
+                for (let dx = 0; dx < w; dx++) {
+                    visited[y + dy][x + dx] = true;
+                }
+            }
+
+            // adding rect in coordinates
             const tile = layer.getTileAt(x, y);
-            if (!tile || tile.index === -1) continue;
-
-            const key = `${x},${y}`;
-            if (visited.has(key)) continue;
-
-            // Start a new rectangle
-            let rectWidth = 1;
-            let rectHeight = 1;
-
-            // Expand to the right
-            while (x + rectWidth < width) {
-                const nextTile = layer.getTileAt(x + rectWidth, y);
-                if (nextTile && nextTile.index !== -1) {
-                    visited.add(`${x + rectWidth},${y}`);
-                    rectWidth++;
-                } else {
-                    break;
-                }
-            }
-
-            // Expand downwards
-            let canExpandDown = true;
-            while (canExpandDown && (y + rectHeight) < height) {
-                for (let i = 0; i < rectWidth; i++) {
-                    const nextTile = layer.getTileAt(x + i, y + rectHeight);
-                    if (!nextTile || nextTile.index === -1) {
-                        canExpandDown = false;
-                        break;
-                    }
-                }
-                if (canExpandDown) {
-                    for (let i = 0; i < rectWidth; i++) {
-                        visited.add(`${x + i},${y + rectHeight}`);
-                    }
-                    rectHeight++;
-                }
-            }
-
-            // Mark all tiles in the rectangle as visited
-            for (let dy = 0; dy < rectHeight; dy++) {
-                for (let dx = 0; dx < rectWidth; dx++) {
-                    visited.add(`${x + dx},${y + dy}`);
-                }
-            }
-
-            // Add the rectangle to the list
-            const worldX = tile.getLeft();
-            const worldY = tile.getTop();
-            const worldWidth = rectWidth * tile.width;
-            const worldHeight = rectHeight * tile.height;
-
-            rects.push(new Rectangle(worldX, worldY, worldWidth, worldHeight));
+            rects.push(new Phaser.Geom.Rectangle(
+                tile.getLeft(),
+                tile.getTop(),
+                w * tile.width,
+                h * tile.height
+            ));
         }
     }
 
