@@ -5,8 +5,11 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
         super(scene, x, y, 'bullet');
     }
 
-    fire (x, y, direction)
+    fire (clientId, x, y, direction)
     {
+        this.clientId = clientId;
+
+        this.enableBody();
         this.body.reset(x, y);
 
         this.setActive(true);
@@ -49,11 +52,16 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
 
 class Bullets extends Phaser.Physics.Arcade.Group
 {
-    constructor (scene, layerWalls)
+    sprites;
+    onBulletHitPlayer;
+    onBulletHitMonster;
+    gameScene;
+
+    constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
         super(scene.physics.world, scene);
 
-        const bullets = this.createMultiple({
+        this.sprites = this.createMultiple({
             frameQuantity: 50,
             key: 'bullet',
             active: false,
@@ -61,23 +69,55 @@ class Bullets extends Phaser.Physics.Arcade.Group
             classType: Bullet
         });
 
-        scene.physics.add.collider(bullets, layerWalls, this.bulletHitWall, null, this);
+        scene.physics.add.collider(this.sprites, layerWalls, this.bulletHitWall, null, this);
+
+        this.gameScene = scene;
+        this.onBulletHitPlayer = onBulletHitPlayer;
+        this.onBulletHitMonster = onBulletHitMonster;
+    }
+
+    addPlayer (player)
+    {
+        this.scene.physics.add.overlap(this.sprites, player, this.bulletHitPlayer, null, this);
+    }
+
+    addMonster (monster)
+    {
+        this.scene.physics.add.overlap(this.sprites, monster, this.bulletHitMonster, null, this);
     }
 
     bulletHitWall (bullet, wall)
     {
-        console.log('hit');
-        bullet.setActive(false);
-        bullet.setVisible(false);
+        console.log('hit wall');
+        this.hideBullet(bullet);
     }
 
-    fireBullet (x, y, direction)
+    bulletHitPlayer (bullet, player)
+    {
+        this.hideBullet(bullet);
+        this.onBulletHitPlayer.apply(this.gameScene, [bullet, player]);
+    }
+
+    bulletHitMonster (bullet, monster)
+    {
+        this.hideBullet(bullet);
+        this.onBulletHitMonster.apply(this.gameScene, [bullet, monster]);
+    }
+
+    hideBullet (bullet)
+    {
+        bullet.setActive(false);
+        bullet.setVisible(false);
+        bullet.disableBody();
+    }
+
+    fireBullet (clientId, x, y, direction)
     {
         const bullet = this.getFirstDead(false);
 
         if (bullet)
         {
-            bullet.fire(x, y, direction);
+            bullet.fire(clientId, x, y, direction);
         }
     }
 }

@@ -1,16 +1,9 @@
 package game
 
-type CastEvent struct {
-	SpellId        string `json:"spellId"`
-	OriginPlayerId uint64 `json:originPlayerId`
-}
-
 type DamageEvent struct {
-	SpellId        string `json:"spellId"`
-	Damage         int    `json:"damage"`
-	TargetPlayerId uint64 `json:"targetPlayerId"`
-	TargetPlayerHp int    `json:"targetPlayerHp"`
-	ShieldWorked   bool   `json:"shieldWorked"`
+	TargetPlayerId  uint64 `json:"targetPlayerId"`
+	TargetMonsterID int    `json:"targetMonsterId"`
+	Damage          int    `json:"damage"`
 }
 
 type PlayerPosition struct {
@@ -20,16 +13,29 @@ type PlayerPosition struct {
 	Y         int    `json:"y"`
 	Direction string `json:"direction"`
 	IsMoving  bool   `json:"isMoving"`
+	HP        int    `json:"hp"`
+}
+
+type MonsterPosition struct {
+	ID        int    `json:"id"`
+	Kind      string `json:"kind"`
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Direction string `json:"direction"`
+	IsMoving  bool   `json:"isMoving"`
+	HP        int    `json:"hp"`
 }
 
 type FireballEvent struct {
+	ClientID  uint64 `json:"clientId"`
 	X         int    `json:"x"`
 	Y         int    `json:"y"`
 	Direction string `json:"direction"`
 }
 
 type PlayerPositionsUpdateEvent struct {
-	Players []PlayerPosition `json:"players"`
+	Players  []PlayerPosition  `json:"players"`
+	Monsters []MonsterPosition `json:"monsters"`
 }
 
 type EndGameEvent struct {
@@ -37,4 +43,12 @@ type EndGameEvent struct {
 }
 
 type JoinToStartedGameEvent struct {
+}
+
+type PlayerDeathEvent struct {
+	ClientID uint64 `json:"clientID"`
+}
+
+type MonsterDeathEvent struct {
+	ID int `json:"id"`
 }

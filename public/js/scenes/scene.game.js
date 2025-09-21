@@ -70,6 +70,7 @@ class Game extends Phaser.Scene {
     moveCommandInterval = 1000 / 60; // ms
 
     players = {};
+    monsters = {};
 
     constructor () {
         super({ key: 'Game' });
@@ -106,7 +107,7 @@ class Game extends Phaser.Scene {
         this.cameras.main.startFollow(this.player);
 
         // Bullets manager (assumes you have a Bullets class)
-        this.bullets = new Bullets(this, this.layerWalls);
+        this.bullets = new Bullets(this, this.layerWalls, this.onBulletHitPlayer, this.onBulletHitMonster);
 
         // Input
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -226,9 +227,11 @@ class Game extends Phaser.Scene {
                 }
                 if (!this.players[id]) {
                     // spawn new player
-                    const np = this.add.sprite(p.x, p.y, 'player', 1).setScale(3.5);
+                    const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(3.5);
+                    np.id = id;
                     np.setTint(Math.random() * 0xffffff);
                     this.players[id] = np;
+                    this.bullets.addPlayer(np);
                     console.log('spawn player', id, Object.keys(this.players).length);
                 }
 
@@ -249,11 +252,28 @@ class Game extends Phaser.Scene {
                 }
             }
 
+            for (const m of data.monsters) {
+                const id = m.id;
+                if (!this.monsters[id]) {
+                    // spawn new monster
+                    const nm = this.physics.add.sprite(m.x, m.y, m.kind, 1).setScale(2);
+                    nm.id = id;
+                    nm.setTint(Math.random() * 0xffffff);
+                    this.monsters[id] = nm;
+                    this.bullets.addMonster(nm);
+                    console.log('spawn monster', id, Object.keys(this.monsters).length);
+                }
+
+                const mSprite = this.monsters[id];
+                mSprite.x = m.x;
+                mSprite.y = m.y;
+            }
+
             return;
         }
 
         if (name === 'FireballEvent') {
-            this.bullets.fireBullet(data.x, data.y, data.direction)
+            this.bullets.fireBullet(data.clientId, data.x, data.y, data.direction)
         }
 
         console.log('INCOMING GAME EVENT', name, data);
@@ -265,6 +285,31 @@ class Game extends Phaser.Scene {
             y: this.player.y,
             direction: this.direction,
         });
+    }
+
+    onBulletHitPlayer(bullet, player)
+    {
+        console.log('hit player', bullet.clientId, player.id);
+        if (bullet.clientId !== this.myClientId) {
+            return; // only report hits caused by our own bullets
+        }
+        this.sendGameCommand('HitPlayerCommand', {
+            originClientId: bullet.clientId,
+            targetClientId: player.id
+        });
+    }
+
+    onBulletHitMonster(bullet, monster)
+    {
+        console.log('hit monster', bullet.clientId, monster.id, this.myClientId);
+        if (bullet.clientId !== this.myClientId) {
+            return; // only report hits caused by our own bullets
+        }
+        this.sendGameCommand('HitMonsterCommand', {
+            originClientId: bullet.clientId,
+            monsterId: monster.id
+        });
+        console.log('monster hit command sent');
     }
 
     // --- Darkness RenderTexture setup ---

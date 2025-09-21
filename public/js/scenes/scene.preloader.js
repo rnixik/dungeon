@@ -18,6 +18,7 @@ var sceneConfigPreloader = {
         this.load.atlas('controls', 'assets/controls.png', 'assets/controls.json');
         this.load.image('bullet', 'assets/bullet7.png');
         this.load.image('spinner', 'assets/spinner.png');
+        this.load.image('archer', 'assets/archer.png');
 
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },
