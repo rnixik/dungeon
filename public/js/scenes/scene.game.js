@@ -229,6 +229,8 @@ class Game extends Phaser.Scene {
                     // spawn new player
                     const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(3.5);
                     np.id = id;
+                    np.hp = p.hp;
+                    np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
                     np.setTint(Math.random() * 0xffffff);
                     this.players[id] = np;
                     this.bullets.addPlayer(np);
@@ -250,14 +252,23 @@ class Game extends Phaser.Scene {
                 if (!p.isMoving) {
                     pSprite.anims.stop();
                 }
+
+                if (pSprite.hp !== p.hp) {
+                    pSprite.hp = p.hp;
+                    if (pSprite.hpText) {
+                        pSprite.hpText.setText(p.hp + '/100');
+                    }
+                }
             }
 
             for (const m of data.monsters) {
                 const id = m.id;
                 if (!this.monsters[id]) {
                     // spawn new monster
-                    const nm = this.physics.add.sprite(m.x, m.y, m.kind, 1).setScale(2);
+                    const nm = this.physics.add.sprite(m.x, m.y, m.kind, 0).setScale(2);
                     nm.id = id;
+                    nm.hp = m.hp;
+                    nm.hpText = this.add.text(m.x, m.y, m.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
                     nm.setTint(Math.random() * 0xffffff);
                     this.monsters[id] = nm;
                     this.bullets.addMonster(nm);
@@ -267,6 +278,13 @@ class Game extends Phaser.Scene {
                 const mSprite = this.monsters[id];
                 mSprite.x = m.x;
                 mSprite.y = m.y;
+
+                if (mSprite.hp !== m.hp) {
+                    mSprite.hp = m.hp;
+                    if (mSprite.hpText) {
+                        mSprite.hpText.setText(m.hp + '/100');
+                    }
+                }
             }
 
             return;
