@@ -160,7 +160,7 @@ class Game extends Phaser.Scene {
         this.addMobileButtons();
     }
 
-    update () {
+    update (time, delta) {
         // Movement
         const move = 300;
         const joy = this.joystick?.createCursorKeys?.() || {left:{isDown:false},right:{isDown:false},up:{isDown:false},down:{isDown:false}};
