@@ -54,7 +54,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
         super(scene.physics.world, scene);
 
         const bullets = this.createMultiple({
-            frameQuantity: 5,
+            frameQuantity: 50,
             key: 'bullet',
             active: false,
             visible: false,

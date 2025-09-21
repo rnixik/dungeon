@@ -22,6 +22,12 @@ type PlayerPosition struct {
 	IsMoving  bool   `json:"isMoving"`
 }
 
+type FireballEvent struct {
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Direction string `json:"direction"`
+}
+
 type PlayerPositionsUpdateEvent struct {
 	Players []PlayerPosition `json:"players"`
 }

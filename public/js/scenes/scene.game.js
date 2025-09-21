@@ -111,7 +111,7 @@ class Game extends Phaser.Scene {
         // Input
         this.cursors = this.input.keyboard.createCursorKeys();
         const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        spaceBar.on('down', () => this.bullets.fireBullet(this.player.x, this.player.y, this.direction));
+        spaceBar.on('down', () => this.castFireball());
 
         // Darkness RT + masks
         this._initDarknessRT();
@@ -251,7 +251,20 @@ class Game extends Phaser.Scene {
 
             return;
         }
+
+        if (name === 'FireballEvent') {
+            this.bullets.fireBullet(data.x, data.y, data.direction)
+        }
+
         console.log('INCOMING GAME EVENT', name, data);
+    }
+
+    castFireball() {
+        this.sendGameCommand('CastFireballCommand', {
+            x: this.player.x,
+            y: this.player.y,
+            direction: this.direction,
+        });
     }
 
     // --- Darkness RenderTexture setup ---
@@ -318,7 +331,7 @@ class Game extends Phaser.Scene {
 
         const buttonFire = this.add.sprite(this.scale.width - 85 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
         buttonFire.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
-        buttonFire.on('pointerdown', () => this.bullets.fireBullet(this.player.x, this.player.y, this.direction));
+        buttonFire.on('pointerdown', () => this.castFireball());
 
         if (this.sys.game.device.fullscreen.available) {
             const buttonFs = this.add.sprite(this.scale.width - 85 * this.uiScaleX, 40 * this.uiScaleY, 'controls', 'fullscreen1');

@@ -14,3 +14,9 @@ type MoveCommand struct {
 	Direction string `json:"direction"`
 	IsMoving  bool   `json:"isMoving"`
 }
+
+type CastFireballCommand struct {
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Direction string `json:"direction"`
+}

@@ -86,11 +86,20 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 	case "PlayerMoveCommand":
 		var c MoveCommand
 		if err := json.Unmarshal(eventDataJson, &c); err != nil {
-			log.Printf("cannot decode MoveCommand: %v\n", err)
+			log.Printf("cannot decode PlayerMoveCommand: %v\n", err)
 
 			return
 		}
 		g.movePlayerTo(client.ID(), c.X, c.Y, c.Direction, c.IsMoving)
+		break
+	case "CastFireballCommand":
+		var c CastFireballCommand
+		if err := json.Unmarshal(eventDataJson, &c); err != nil {
+			log.Printf("cannot decode CastFireballCommand: %v\n", err)
+
+			return
+		}
+		g.castFireball(client.ID(), c.X, c.Y, c.Direction)
 		break
 	}
 }
@@ -156,6 +165,14 @@ func (g *Game) movePlayerTo(clientID uint64, x int, y int, direction string, isM
 		p.direction = direction
 		p.isMoving = isMoving
 	}
+}
+
+func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
+	g.broadcastEventFunc(FireballEvent{
+		X:         x,
+		Y:         y,
+		Direction: direction,
+	})
 }
 
 func (g *Game) endGame(winnerPlayerId uint64) {
