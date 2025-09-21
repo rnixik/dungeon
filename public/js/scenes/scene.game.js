@@ -64,8 +64,10 @@ class Game extends Phaser.Scene {
     myClientId;
     myNickname;
     sendGameCommand;
-    lastMoveSentTime = 0;
     isMoving = false;
+
+    lastMoveSentTime = 0;
+    moveCommandInterval = 1000 / 60; // ms
 
     players = {};
 
@@ -204,7 +206,7 @@ class Game extends Phaser.Scene {
         // Raycast dynamic shadows
         this.updateMaskRaycast();
 
-        if (this.lastMoveSentTime + 50 < time) {
+        if (this.lastMoveSentTime + this.moveCommandInterval < time) {
             this.sendGameCommand('PlayerMoveCommand', {
                 x: this.player.x,
                 y: this.player.y,

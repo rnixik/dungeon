@@ -13,6 +13,8 @@ const StatusEnded = "ended"
 
 const maxHP = 1000
 
+const updateTickPeriod = time.Second / 60
+
 type Player struct {
 	client             lobby.ClientPlayer
 	lastSpellId        string
@@ -109,7 +111,7 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 }
 
 func (g *Game) StartMainLoop() {
-	ticker := time.NewTicker(50 * time.Millisecond)
+	ticker := time.NewTicker(updateTickPeriod)
 	defer ticker.Stop()
 	for {
 		select {
