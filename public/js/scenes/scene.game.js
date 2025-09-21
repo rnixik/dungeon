@@ -34,14 +34,28 @@ class Game extends Phaser.Scene
     bullets;
     otherPlayer;
     otherPlayer2;
+    myClientId;
+    myNickname;
+    sendGameCommand;
+    lastMoveSentTime = 0;
+    isMoving = false;
 
     constructor ()
     {
         super({ key: 'Game' });
     }
 
-    create ()
+    create (data)
     {
+        this.myClientId = data.myClientId;
+        this.myNickname = data.myNickname;
+        console.log("Game started. My client id: " + this.myClientId + ", my nickname: " + this.myNickname);
+        this.sendGameCommand = data.sendGameCommand;
+        const self = this;
+        data.setOnIncomingGameEventCallback(function (name, data) {
+            self.onIncomingGameEvent(name, data);
+        });
+
         this.scaleX = this.scale.width / 800;
         this.scaleY = this.scale.height / 600;
         console.log('scales', this.scaleX, this.scaleY);
@@ -182,25 +196,30 @@ class Game extends Phaser.Scene
         {
             this.player.anims.play('left', true);
             this.direction = 'left';
+            this.isMoving = true;
         }
         else if (this.cursors.right.isDown || joystick.right.isDown)
         {
             this.player.anims.play('right', true);
             this.direction = 'right';
+            this.isMoving = true;
         }
         else if (this.cursors.up.isDown || joystick.up.isDown)
         {
             this.player.anims.play('up', true);
             this.direction = 'up';
+            this.isMoving = true;
         }
         else if (this.cursors.down.isDown || joystick.down.isDown)
         {
             this.player.anims.play('down', true);
             this.direction = 'down';
+            this.isMoving = true;
         }
         else
         {
             this.player.anims.stop();
+            this.isMoving = false;
         }
 
         // it is light aroung the player but works through walls
@@ -211,6 +230,37 @@ class Game extends Phaser.Scene
 
         // it makes dynamic shadows
         this.updateMaskRaycast();
+
+        if (this.lastMoveSentTime + 50 < time) {
+            this.sendGameCommand('PlayerMoveCommand', {
+                x: this.player.x,
+                y: this.player.y,
+                direction: this.direction,
+                isMoving: this.isMoving
+            });
+            this.lastMoveSentTime = time;
+        }
+    }
+
+    onIncomingGameEvent (name, data) {
+        if (name === 'PositionUpdateEvent') {
+            this.otherPlayer.x = data.positions[0].x;
+            this.otherPlayer.y = data.positions[0].y;
+            const direction = data.positions[0].direction;
+            switch (direction) {
+                case 'up': this.otherPlayer.anims.play('up', true); break;
+                case 'down': this.otherPlayer.anims.play('down', true); break;
+                case 'left': this.otherPlayer.anims.play('left', true); break;
+                case 'right': this.otherPlayer.anims.play('right', true); break;
+            }
+
+            if (!data.positions[0].isMoving) {
+                this.otherPlayer.anims.stop();
+            }
+
+            return;
+        }
+        console.log('INCOMING GAME EVENT', name, data);
     }
 
     updateMaskLight ()

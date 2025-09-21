@@ -17,6 +17,7 @@ var sceneConfigPreloader = {
         this.load.image('mask', 'assets/mask1.png?v=2');
         this.load.atlas('controls', 'assets/controls.png', 'assets/controls.json');
         this.load.image('bullet', 'assets/bullet7.png');
+        this.load.image('spinner', 'assets/spinner.png');
 
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },
@@ -47,7 +48,6 @@ var sceneConfigPreloader = {
             repeat: -1
         });
 
-        // this.scene.switch('MainMenu');
-        this.scene.switch('Game');
+        this.scene.switch('MainMenu');
     }
 };
