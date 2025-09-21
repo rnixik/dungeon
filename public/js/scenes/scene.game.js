@@ -1,142 +1,116 @@
-// Disable mask and draw geometry
 const DEBUG = false;
 
-// Colors
-const BLACK = 0;
+// Layering (z-index)
+const DEPTH_DARKNESS = 9000;
+const DEPTH_UI       = 10000;
+
+// Global darkness opacity (0..1)
+const DARKNESS_ALPHA = 0.9;
+
+// Player light (soft)
+const LIGHT_DIAMETER    = 420;   // px
+const LIGHT_FEATHER     = 100;    // px soft edge
+const LIGHT_MASK_PLAYER = 'mask_player';
+
+// Bullet glow (soft)
+const BULLET_DIAMETER     = 170; // px
+const BULLET_FEATHER      = 40;  // px
+const LIGHT_MASK_BULLET   = 'mask_bullet';
+const BULLET_SAMPLE_MS    = 40;  // position sampling interval
+const BULLET_POINT_TTL_MS = 150; // lifetime of a glow point
+const BULLET_TRAIL_CAP    = 256; // safety cap
+
+// Colors (for debug raycast fill)
+const BLACK = 0x000000;
 const WHITE = 0xffffff;
 const FILL_COLOR = BLACK;
 const DEBUG_STROKE_COLOR = WHITE;
 const DEBUG_FILL_COLOR = 0xff0000;
 
-// Mask
-const LIGHT_RADIUS   = 320;
-const LIGHT_FEATHER  = 128;    // thikness of shade
-const LIGHT_ALPHA    = 0.85;      // density of darkness
-const DARKNESS_DEPTH = 9000;  // darkness below
-const UI_DEPTH       = 10000; // UI above everything
-const LIGHT_MASK_PLAYER      = 'lightMask'
-
-const BULLET_LIGHT_RADIUS = 150;
-const BULLET_LIGHT_FEATHER= 80;
-const LIGHT_MASK_BULLET   = 'bulletLightMask';
-const BULLET_LIGHT_LIFE   = 100;   // ttl of glow
-const BULLET_SAMPLE_MS    = 10;    // sampling bullet interval
-const BULLET_TRAIL_CAP    = 256;   // overflow guard
-
-// Shortcuts
+// Phaser shortcuts
 const { Circle, Line, Point, Rectangle } = Phaser.Geom;
 const { EPSILON } = Phaser.Math;
 const { Extend } = Line;
-const { ContainsPoint } = Rectangle;
 const { LineToLine } = Phaser.Geom.Intersects;
 
-class Game extends Phaser.Scene
-{
+class Game extends Phaser.Scene {
+    // runtime fields
     player;
     cursors;
-    rt;
+    joystick;
     map;
     layerWalls;
     layerFloor;
+    otherPlayer;
+    otherPlayer2;
+    bullets; // external bullets manager passed/constructed elsewhere in your code
+
+    // lighting
+    rt;               // RenderTexture for darkness
+    lightDiameter = LIGHT_DIAMETER;
+    bulletGlowTrail = [];
+    _lastBulletSampleAt = 0;
+
+    // raycast data
+    graphics;
     vertices;
     edges;
     rays;
-    graphics;
     direction = 'right';
-    scaleX;
-    scaleY;
-    joystick;
-    bullets;
-    otherPlayer;
-    otherPlayer2;
 
-    constructor ()
-    {
+    // UI scale helpers
+    uiScaleX;
+    uiScaleY;
+
+    constructor () {
         super({ key: 'Game' });
     }
 
-    create ()
-    {
-        this.scaleX = this.scale.width / 800;
-        this.scaleY = this.scale.height / 600;
-        console.log('scales', this.scaleX, this.scaleY);
+    create () {
+        // viewport scale for UI placement
+        this.uiScaleX = this.scale.width / 800;
+        this.uiScaleY = this.scale.height / 600;
 
-        //#region Setup environment
+        // --- Tilemap & layers ---
         this.map = this.make.tilemap({ key: 'map' });
         const tiles = this.map.addTilesetImage('environment', 'tiles');
 
         this.layerFloor = this.map.createLayer('floor', tiles, 0, 0);
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
-
         this.layerWalls.setCollisionByProperty({ collides: true });
-        //#endregion
 
-        //#region Setup player
-        this.player = this.physics.add.sprite(120, 140, 'player', 1);
-        this.player.setScale(3.5);
-
+        // --- Sprites ---
+        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(3.5);
+        this.otherPlayer  = this.add.sprite(1000, 100, 'player', 1).setScale(3.5);
+        this.otherPlayer2 = this.add.sprite(400,  400, 'player', 1).setScale(3.5);
         this.physics.add.collider(this.player, this.layerWalls);
-        this.bullets = new Bullets(this, this.layerWalls);
 
-        this.otherPlayer = this.add.sprite(1000, 100, 'player', 1);
-        this.otherPlayer.setScale(3.5);
-
-        this.otherPlayer2 = this.add.sprite(400, 400, 'player', 1);
-        this.otherPlayer2.setScale(3.5);
-        //#endregion
-
-
+        // Camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(this.player);
 
-        if (!this.bulletGlowTrail) this.bulletGlowTrail = [];
-        if (!this.lastBulletSampleAt) this.lastBulletSampleAt = 0;
+        // Bullets manager (assumes you have a Bullets class)
+        this.bullets = new Bullets(this, this.layerWalls);
 
+        // Input
         this.cursors = this.input.keyboard.createCursorKeys();
+        const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        spaceBar.on('down', () => this.bullets.fireBullet(this.player.x, this.player.y, this.direction));
 
-        // https://phaser.io/examples/v3.85.0/tilemap/collision/view/tilemap-spotlight
-        this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
-        this.rt.setOrigin(0, 0);
-        this.rt.setScrollFactor(0, 0);
+        // Darkness RT + masks
+        this._initDarknessRT();
+        createRadialMaskTexture(this, LIGHT_MASK_PLAYER,  LIGHT_DIAMETER,  LIGHT_FEATHER);
+        createRadialMaskTexture(this, LIGHT_MASK_BULLET,  BULLET_DIAMETER, BULLET_FEATHER);
 
-        this.rt.setDepth(this.DARKNESS_DEPTH);
-        this.rt.setAlpha(LIGHT_ALPHA);
-        this.rt.setDepth(1000);
-
-        this.lightRadius = LIGHT_RADIUS;
-        this.makeSoftCircleMask(LIGHT_MASK_PLAYER, LIGHT_RADIUS, LIGHT_FEATHER);
-        this.makeSoftCircleMask(LIGHT_MASK_BULLET, BULLET_LIGHT_RADIUS, BULLET_LIGHT_FEATHER);
-
-        const d = this.lightRadius;
-        const canvas = this.textures.createCanvas('lightCanvas', d, d).getContext();
-        const gradient = canvas.createRadialGradient(d/2, d/2, d/2 - LIGHT_FEATHER, d/2, d/2, d/2);
-
-        gradient.addColorStop(0, 'rgba(255,255,255,1)');
-        gradient.addColorStop(1, 'rgba(255,255,255,0)'); //funny if comment this line
-
-        canvas.fillStyle = gradient;
-        canvas.fillRect(0, 0, d, d);
-
-        this.textures.get('lightCanvas').refresh();
-
-        this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
-            console.log('new size', this.scale.width, this.scale.height);
-
-            // setting new size doesn't work properly, so we destroy and create new
-            this.rt.destroy();
-            this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
-            this.rt.setOrigin(0, 0);
-            this.rt.setScrollFactor(0, 0);
-            this.rt.setDepth(DARKNESS_DEPTH);
-
-            // buttons need to be repositioned because they will be hidden by light mask
+        // Resize handler: rebuild RT & reposition UI
+        this.scale.on('resize', () => {
+            this._initDarknessRT();
             this.addMobileButtons();
-        })
+        });
 
+        // Debug polyline graphics for raycast mask
         this.graphics = this.make.graphics({ lineStyle: { color: DEBUG_STROKE_COLOR, width: 0.5 } });
-
         let mask;
-
         if (DEBUG) {
             mask = null;
             this.graphics.setAlpha(0.5);
@@ -145,242 +119,145 @@ class Game extends Phaser.Scene
             mask = new Phaser.Display.Masks.GeometryMask(this, this.graphics);
         }
 
-        // Mask objects and background.
+        // Apply (optional) geometric mask to world layers/actors (not UI)
         this.layerFloor.setMask(mask);
         this.otherPlayer.setMask(mask);
         this.otherPlayer2.setMask(mask);
 
-        // Create Rectangles from wall tiles
+        // --- Build occluder rectangles from wall tiles ---
         const rects = getBigRectsFromWallLayer(this.layerWalls);
 
-        // fill debug rects
         if (DEBUG) {
-            const rectGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } });
-            for (const rect of rects) {
-                rectGraphics.fillRectShape(rect);
-            }
-
-            const rectVertGraphics = this.add.graphics({ fillStyle: { color: 0x00aaaa } });
-            for (const rect of rects) {
-                const verts = getRectVertices(rect);
-                for (const vert of verts) {
-                    rectVertGraphics.fillPointShape(vert, 4);
-                }
-            }
-
-            console.log('rect length', rects.length);
+            const rectGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } }).setDepth(DEPTH_UI - 1);
+            for (const r of rects) rectGraphics.fillRectShape(r);
+            const rectVertGraphics = this.add.graphics({ fillStyle: { color: 0x00aaaa } }).setDepth(DEPTH_UI - 1);
+            for (const r of rects) for (const v of getRectVertices(r)) rectVertGraphics.fillPointShape(v, 4);
+            console.log('rect count', rects.length);
         }
 
-        // Convert rectangles into edges and vertices (line segments)
+        // Convert rectangles to edges/vertices for raycast
         this.edges = rects.flatMap(getRectEdges);
         this.vertices = rects.flatMap(getRectVertices);
-
-        // One ray will be sent through each vertex
         this.rays = this.vertices.map(() => new Line());
 
-        // Draw the mask once
-        //draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
-
+        // UI
         this.addMobileButtons();
-
-        const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        spaceBar.on('down', () => this.bullets.fireBullet(this.player.x, this.player.y, this.direction));
     }
 
-    update (time, delta)
-    {
+    update () {
+        // Movement
+        const move = 300;
+        const joy = this.joystick?.createCursorKeys?.() || {left:{isDown:false},right:{isDown:false},up:{isDown:false},down:{isDown:false}};
+
         this.player.body.setVelocity(0);
-        const moveSpeed = 300;
-        const joystick = this.joystick.createCursorKeys();
+        if (this.cursors.left.isDown || joy.left.isDown)  this.player.body.setVelocityX(-move);
+        else if (this.cursors.right.isDown || joy.right.isDown) this.player.body.setVelocityX(move);
 
-        // Horizontal movement
-        if (this.cursors.left.isDown || joystick.left.isDown)
-        {
-            this.player.body.setVelocityX(-1 * moveSpeed);
-        }
-        else if (this.cursors.right.isDown || joystick.right.isDown)
-        {
-            this.player.body.setVelocityX(moveSpeed);
-        }
+        if (this.cursors.up.isDown || joy.up.isDown)      this.player.body.setVelocityY(-move);
+        else if (this.cursors.down.isDown || joy.down.isDown) this.player.body.setVelocityY(move);
 
-        // Vertical movement
-        if (this.cursors.up.isDown || joystick.up.isDown)
-        {
-            this.player.body.setVelocityY(-1 * moveSpeed);
-        }
-        else if (this.cursors.down.isDown || joystick.down.isDown)
-        {
-            this.player.body.setVelocityY(moveSpeed);
-        }
+        if (this.cursors.left.isDown || joy.left.isDown)      { this.player.anims.play('left', true);  this.direction='left'; }
+        else if (this.cursors.right.isDown || joy.right.isDown){ this.player.anims.play('right',true);  this.direction='right';}
+        else if (this.cursors.up.isDown || joy.up.isDown)      { this.player.anims.play('up',   true);  this.direction='up';   }
+        else if (this.cursors.down.isDown || joy.down.isDown)  { this.player.anims.play('down', true);  this.direction='down'; }
+        else { this.player.anims.stop(); }
 
-        // Update the animation last and give left/right animations precedence over up/down animations
-        if (this.cursors.left.isDown || joystick.left.isDown)
-        {
-            this.player.anims.play('left', true);
-            this.direction = 'left';
-        }
-        else if (this.cursors.right.isDown || joystick.right.isDown)
-        {
-            this.player.anims.play('right', true);
-            this.direction = 'right';
-        }
-        else if (this.cursors.up.isDown || joystick.up.isDown)
-        {
-            this.player.anims.play('up', true);
-            this.direction = 'up';
-        }
-        else if (this.cursors.down.isDown || joystick.down.isDown)
-        {
-            this.player.anims.play('down', true);
-            this.direction = 'down';
-        }
-        else
-        {
-            this.player.anims.stop();
-        }
-
-        // it is light aroung the player but works through walls
+        // Lighting (spotlights + bullet glow)
         this.updateMaskLight();
 
-        // if we want to hide distant walls, we can alt alpha based on distance from player
-        // this.updateAlphaOnMap();
-
-        // it makes dynamic shadows
+        // Raycast dynamic shadows
         this.updateMaskRaycast();
     }
 
-    updateMaskLight() {
-        const cam  = this.cameras.main;
-        const half = this.lightRadius / 2;
+    // --- Darkness RenderTexture setup ---
+    _initDarknessRT() {
+        if (this.rt) this.rt.destroy();
+        this.rt = this.add.renderTexture(0, 0, this.scale.width, this.scale.height);
+        this.rt.setOrigin(0, 0);
+        this.rt.setScrollFactor(0, 0);
+        this.rt.setDepth(DEPTH_DARKNESS);
+        this.rt.setAlpha(DARKNESS_ALPHA);
+    }
 
+    // --- Lighting pass: fill darkness, erase soft masks at actors & bullet glow ---
+    updateMaskLight () {
+        const cam = this.cameras.main;
         this.rt.clear();
         this.rt.fill(0x000000, 1);
 
-        this.rt.erase(LIGHT_MASK_PLAYER, (this.player.x - half) - cam.scrollX, (this.player.y - half) - cam.scrollY);
-        this.rt.erase(LIGHT_MASK_PLAYER, (this.otherPlayer.x - half) - cam.scrollX,  (this.otherPlayer.y - half) - cam.scrollY);
-        this.rt.erase(LIGHT_MASK_PLAYER, (this.otherPlayer2.x - half) - cam.scrollX, (this.otherPlayer2.y - half) - cam.scrollY);
+        const eraseAt = (key, x, y, diameter) => {
+            const h = diameter / 2;
+            this.rt.erase(key, (x - h) - cam.scrollX, (y - h) - cam.scrollY);
+        };
 
+        eraseAt(LIGHT_MASK_PLAYER, this.player.x,     this.player.y,     LIGHT_DIAMETER);
+        eraseAt(LIGHT_MASK_PLAYER, this.otherPlayer.x,  this.otherPlayer.y,  LIGHT_DIAMETER);
+        eraseAt(LIGHT_MASK_PLAYER, this.otherPlayer2.x, this.otherPlayer2.y, LIGHT_DIAMETER);
+
+        // Sample bullets periodically to build a short-lived glow trail
         const now = this.time.now;
-        if (now - this.lastBulletSampleAt >= BULLET_SAMPLE_MS) {
-            this.lastBulletSampleAt = now;
-            const bullets = this.iterateAliveBullets();
-            for (const s of bullets) {
-                this.pushBulletLight(s.x, s.y, now + BULLET_LIGHT_LIFE);
-                }
+        if (now - this._lastBulletSampleAt >= BULLET_SAMPLE_MS) {
+            this._lastBulletSampleAt = now;
+            for (const s of this._iterateAliveBullets()) {
+                this._pushBulletLight(s.x, s.y, now + BULLET_POINT_TTL_MS);
             }
-            const halfBullet = BULLET_LIGHT_RADIUS / 2;
+        }
+
         for (let i = this.bulletGlowTrail.length - 1; i >= 0; i--) {
             const p = this.bulletGlowTrail[i];
             if (p.expiresAt <= now) { this.bulletGlowTrail.splice(i, 1); continue; }
-            this.rt.erase(LIGHT_MASK_BULLET, p.x - halfBullet - cam.scrollX, p.y - halfBullet - cam.scrollY);
-            }
+            eraseAt(LIGHT_MASK_BULLET, p.x, p.y, BULLET_DIAMETER);
+        }
     }
 
-    updateAlphaOnMap ()
-    {
-        const cam = this.cameras.main;
-        const origin = this.layerFloor.getTileAtWorldXY(this.player.x, this.player.y, false, cam);
-
-        this.layerWalls.forEachTile(tile =>
-        {
-            const dist = Phaser.Math.Distance.Chebyshev(
-                origin.x,
-                origin.y,
-                tile.x,
-                tile.y
-            );
-
-            tile.setAlpha(1 - 0.2 * dist);
-        });
-    }
-
-    updateMaskRaycast ()
-    {
+    // --- Raycast visibility mask (draws into this.graphics used as GeometryMask) ---
+    updateMaskRaycast () {
         draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
     }
 
-    addMobileButtons ()
-    {
-        if (this.joystick) {
-            this.joystick.destroy(true, true);
-        }
+    addMobileButtons () {
+        if (this.joystick) this.joystick.destroy(true, true);
 
         const joyStickConfig = {
             x: 85,
-            y: 600 * this.scaleY - 85,
+            y: 600 * this.uiScaleY - 85,
             radius: 100,
-            base: this.add.circle(0, 0, 80, 0x888888, 0.3).setDepth(UI_DEPTH),
-            thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.3).setDepth(UI_DEPTH),
+            base: this.add.circle(0, 0, 80, 0x888888, 0.3).setDepth(DEPTH_UI),
+            thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.3).setDepth(DEPTH_UI),
             dir: '8dir'
         };
 
         this.joystick = this.plugins.get('rexvirtualjoystickplugin').add(this, joyStickConfig);
+        if (this.joystick.base?.setDepth)  this.joystick.base.setDepth(DEPTH_UI);
+        if (this.joystick.thumb?.setDepth) this.joystick.thumb.setDepth(DEPTH_UI);
 
-        const buttonFire = this.add.sprite(this.scale.width - 85 * this.scaleX, this.scale.height - 85 * this.scaleY, 'controls', 'fire2');
-        buttonFire.setAlpha(0.3);
-        buttonFire.setScrollFactor(0, 0);
-        buttonFire.setScale(Math.max(this.scaleX, this.scaleY));
-        buttonFire.setInteractive({ useHandCursor: true });
+        const btnScale = Math.max(this.uiScaleX, this.uiScaleY);
+
+        const buttonFire = this.add.sprite(this.scale.width - 85 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
+        buttonFire.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
         buttonFire.on('pointerdown', () => this.bullets.fireBullet(this.player.x, this.player.y, this.direction));
-        buttonFire.setDepth(UI_DEPTH);
 
         if (this.sys.game.device.fullscreen.available) {
-            const buttonFs = this.add.sprite(this.scale.width - 85 * this.scaleX, 40 * this.scaleY, 'controls', 'fullscreen1');
-            buttonFs.setAlpha(0.3);
-            buttonFs.setScrollFactor(0, 0);
-            buttonFs.setInteractive({ useHandCursor: true });
-            buttonFs.setDepth(UI_DEPTH);
-
-            buttonFs.on('pointerup', function (){
-                if (this.scale.isFullscreen) {
-                    this.scale.stopFullscreen();
-                } else {
-                    this.scale.startFullscreen();
-                }
-            }, this);
+            const buttonFs = this.add.sprite(this.scale.width - 85 * this.uiScaleX, 40 * this.uiScaleY, 'controls', 'fullscreen1');
+            buttonFs.setAlpha(0.3).setScrollFactor(0, 0).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
+            buttonFs.on('pointerup', () => {
+                if (this.scale.isFullscreen) this.scale.stopFullscreen();
+                else this.scale.startFullscreen();
+            });
         }
     }
 
-    // --- helpers ---
-    makeSoftCircleMask(key, diameter, feather) {
-        if (this.textures.exists(key)) return;
-        const d = Math.max(8, Math.floor(diameter));
-        const f = Math.max(0, Math.floor(feather));
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
-        const R  = d / 2;
-        const Ri = Math.max(0, R - f);
-        g.clear();
-        // center full transparence
-        g.fillStyle(0xffffff, 1);
-        g.fillCircle(R, R, Ri);
-        // feather - circles with decreasing alpha
-        const steps = Math.max(1, f ? 20 : 1);
-        for (let i = 0; i < steps; i++) {
-            const r0 = Ri + (i    ) * (f / steps);
-            const r1 = Ri + (i + 1) * (f / steps);
-            const r  = (r0 + r1) / 2;
-            const a  = 1 - (i + 1) / (steps + 1);
-            g.fillStyle(0xffffff, a);
-            g.fillCircle(R, R, r);
-        }
-        g.generateTexture(key, d, d);
-        g.destroy();
-    }
-
-    iterateAliveBullets() {
+    // --- bullets helpers ---
+    _iterateAliveBullets() {
         const out = [];
         const b = this.bullets;
         if (!b) return out;
-        if (b.group?.getChildren) {
-            for (const s of b.group.getChildren()) if (s?.active) out.push(s);
-            return out;
-        }
-        const arr = b.children?.entries || b.children || b.getChildren?.() || [];
+        const arr = b.group?.getChildren?.() ?? b.children?.entries ?? b.children ?? b.getChildren?.() ?? [];
         for (const s of arr) if (s?.active) out.push(s);
         return out;
     }
 
-    pushBulletLight(x, y, expiresAt) {
+    _pushBulletLight(x, y, expiresAt) {
         this.bulletGlowTrail.push({ x, y, expiresAt });
         if (this.bulletGlowTrail.length > BULLET_TRAIL_CAP) {
             this.bulletGlowTrail.splice(0, this.bulletGlowTrail.length - BULLET_TRAIL_CAP);
@@ -388,258 +265,10 @@ class Game extends Phaser.Scene
     }
 }
 
+// --- Scene export/usage ---
 var sceneConfigGame = new Game();
 
-function getTilesBigRects(tileLayer) {
-    const rects = [];
-
-    tileLayer.forEachTile((tile) => {
-        if (tile.index === -1) return;
-
-        const worldX = tile.getLeft();
-        const worldY = tile.getTop();
-        const width = tile.width;
-        const height = tile.height;
-
-        rects.push(new Rectangle(worldX, worldY, width, height));
-    });
-
-    return rects;
-}
-
-// Draw the mask shape, from vertices
-function draw (graphics, vertices, rays, edges) {
-    if (vertices.length < 3) {
-        graphics.clear()
-        return;
-    }
-
-    graphics
-        .clear()
-        .fillStyle(FILL_COLOR)
-        .fillPoints(vertices, true);
-
-    if (DEBUG) {
-        for (const ray of rays) {
-            graphics.strokeLineShape(ray);
-        }
-        for (const edge of edges) {
-            graphics.strokeLineShape(edge);
-        }
-
-        graphics.fillStyle(DEBUG_FILL_COLOR);
-
-        for (const vert of vertices) {
-            graphics.fillPointShape(vert, 4);
-        }
-    }
-}
-
-// Place the rays, calculate and return intersections.
-function calc (source, vertices, edges, rays) {
-    const sx = source.x;
-    const sy = source.y;
-
-    // Sort clockwise …
-    return sortClockwise(
-        // each ray-edge intersection, or the ray's endpoint if no intersection
-        rays.map((ray, i) => {
-            // placing the ray between the source and one vertex …
-            ray.setTo(sx, sy, vertices[i].x, vertices[i].y);
-
-            // extended through the wall vertex
-            Extend(ray, 0, 1000);
-
-            // placing its endpoint at the intersection with an edge, if any
-            for (const edge of edges) {
-                getRayToEdge(ray, edge);
-            }
-
-            // the new endpoint
-            return ray.getPointB();
-        }),
-        source
-    );
-}
-
-function getSpriteRect (sprite) {
-    const {displayWidth, displayHeight} = sprite;
-
-    return new Rectangle(
-        sprite.x - sprite.originX * displayWidth,
-        sprite.y - sprite.originY * displayHeight,
-        displayWidth,
-        displayHeight
-    );
-}
-
-function getRectEdges (rect) {
-    return [
-        rect.getLineA(),
-        rect.getLineB(),
-        rect.getLineC(),
-        rect.getLineD()
-    ];
-}
-
-function getRectVertices (rect) {
-    const { left, top, right, bottom } = rect;
-
-    const left1 = left + EPSILON;
-    const top1 = top + EPSILON;
-    const right1 = right - EPSILON;
-    const bottom1 = bottom - EPSILON;
-    const left2 = left - EPSILON;
-    const top2 = top - EPSILON;
-    const right2 = right + EPSILON;
-    const bottom2 = bottom + EPSILON;
-
-    return [
-        new Point(left1, top1),
-        new Point(right1, top1),
-        new Point(right1, bottom1),
-        new Point(left1, bottom1),
-        new Point(left2, top2),
-        new Point(right2, top2),
-        new Point(right2, bottom2),
-        new Point(left2, bottom2)
-    ];
-}
-
-// If a ray intersects with an edge, place the ray endpoint there and return the intersection.
-function getRayToEdge (ray, edge, out) {
-    if (!out) out = new Point();
-
-    if (LineToLine(ray, edge, out)) {
-        ray.x2 = out.x;
-        ray.y2 = out.y;
-
-        return out;
-    }
-
-    return null;
-}
-
-function sortClockwise (points, center) {
-    // Adapted from <https://stackoverflow.com/a/6989383/822138> (ciamej)
-
-    var cx = center.x;
-    var cy = center.y;
-
-    var sort = function (a, b) {
-        if (a.x - cx >= 0 && b.x - cx < 0) {
-            return -1;
-        }
-
-        if (a.x - cx < 0 && b.x - cx >= 0) {
-            return 1;
-        }
-
-        if (a.x - cx === 0 && b.x - cx === 0) {
-            if (a.y - cy >= 0 || b.y - cy >= 0) {
-                return (a.y > b.y) ? 1 : -1;
-            }
-
-            return (b.y > a.y) ? 1 : -1;
-        }
-
-        // Compute the cross product of vectors (center -> a) * (center -> b)
-        var det = (a.x - cx) * -(b.y - cy) - (b.x - cx) * -(a.y - cy);
-
-        if (det < 0) {
-            return -1;
-        }
-
-        if (det > 0) {
-            return 1;
-        }
-
-        // Points a and b are on the same line from the center
-        // Check which point is closer to the center
-        var d1 = (a.x - cx) * (a.x - cx) + (a.y - cy) * (a.y - cy);
-        var d2 = (b.x - cx) * (b.x - cx) + (b.y - cy) * (b.y - cy);
-
-        return (d1 > d2) ? -1 : 1;
-    };
-
-    return points.sort(sort);
-}
-
-// eslint-disable-next-line no-unused-vars
-function pointInRectangles (point, rects) {
-    return rects.some((rect) => ContainsPoint(rect, point));
-}
-
-function getRectsFromTilesInRadius(layer, x, y, radius) {
-    const tiles = layer.getTilesWithinWorldXY(x - radius, y - radius, radius * 2, radius * 2);
-    const rects = [];
-
-    tiles.forEach((tile) => {
-        if (tile.index === -1) return;
-
-        const worldX = tile.getLeft();
-        const worldY = tile.getTop();
-        const width = tile.width;
-        const height = tile.height;
-
-        rects.push(new Rectangle(worldX, worldY, width, height));
-    });
-
-    return rects;
-}
-
-function getBigRectsFromWallLayer(layer) {
-    const rects = [];
-
-    const mapW = layer.layer.width;
-    const mapH = layer.layer.height;
-
-    const visited = Array.from({ length: mapH }, () => Array(mapW).fill(false));
-
-    const isSolidAt = (x, y) => {
-        const t = layer.getTileAt(x, y);
-        // Phaser marks tile.collides = true, plus consider properties.collides
-        return !!t && (t.collides === true || t.properties?.collides === true);
-    };
-
-    for (let y = 0; y < mapH; y++) {
-        for (let x = 0; x < mapW; x++) {
-            if (visited[y][x] || !isSolidAt(x, y)) continue;
-
-            // going right
-            let w = 1;
-            while (x + w < mapW && !visited[y][x + w] && isSolidAt(x + w, y)) w++;
-
-            // going down, while tile is solid
-            let h = 1;
-            outer: while (y + h < mapH) {
-                for (let i = 0; i < w; i++) {
-                    if (visited[y + h][x + i] || !isSolidAt(x + i, y + h)) break outer;
-                }
-                h++;
-            }
-
-            // mark as visited
-            for (let dy = 0; dy < h; dy++) {
-                for (let dx = 0; dx < w; dx++) {
-                    visited[y + dy][x + dx] = true;
-                }
-            }
-
-            // adding rect in coordinates
-            const tile = layer.getTileAt(x, y);
-            rects.push(new Phaser.Geom.Rectangle(
-                tile.getLeft(),
-                tile.getTop(),
-                w * tile.width,
-                h * tile.height
-            ));
-        }
-    }
-
-    return rects;
-}
-
+// ===================== Utils: Lights =====================
 function createRadialMaskTexture(scene, key, diameter, feather) {
     if (scene.textures.exists(key)) return;
     const d = Math.max(8, Math.floor(diameter));
@@ -654,4 +283,121 @@ function createRadialMaskTexture(scene, key, diameter, feather) {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, d, d);
     tex.refresh();
+}
+
+// ===================== Utils: Raycast mask =====================
+function draw (graphics, vertices, rays, edges) {
+    if (!vertices || vertices.length < 3) { graphics.clear(); return; }
+    graphics.clear().fillStyle(FILL_COLOR).fillPoints(vertices, true);
+    if (DEBUG) {
+        for (const ray of rays)  graphics.strokeLineShape(ray);
+        for (const edge of edges) graphics.strokeLineShape(edge);
+        graphics.fillStyle(DEBUG_FILL_COLOR);
+        for (const vert of vertices) graphics.fillPointShape(vert, 4);
+    }
+}
+
+function calc (source, vertices, edges, rays) {
+    const sx = source.x, sy = source.y;
+    return sortClockwise(
+        rays.map((ray, i) => {
+            ray.setTo(sx, sy, vertices[i].x, vertices[i].y);
+            Extend(ray, 0, 1000);
+            for (const edge of edges) getRayToEdge(ray, edge);
+            return ray.getPointB();
+        }),
+        source
+    );
+}
+
+function getRectEdges (rect) { return [rect.getLineA(), rect.getLineB(), rect.getLineC(), rect.getLineD()]; }
+
+function getRectVertices (rect) {
+    const { left, top, right, bottom } = rect;
+    const left1 = left + EPSILON,  top1 = top + EPSILON,  right1 = right - EPSILON,  bottom1 = bottom - EPSILON;
+    const left2 = left - EPSILON,  top2 = top - EPSILON,  right2 = right + EPSILON,  bottom2 = bottom + EPSILON;
+    return [
+        new Point(left1,  top1),    new Point(right1, top1),
+        new Point(right1, bottom1), new Point(left1,  bottom1),
+        new Point(left2,  top2),    new Point(right2, top2),
+        new Point(right2, bottom2), new Point(left2,  bottom2)
+    ];
+}
+
+function getRayToEdge (ray, edge, out) {
+    if (!out) out = new Point();
+    if (LineToLine(ray, edge, out)) { ray.x2 = out.x; ray.y2 = out.y; return out; }
+    return null;
+}
+
+function sortClockwise (points, center) {
+    const cx = center.x, cy = center.y;
+    return points.sort((a, b) => {
+        if (a.x - cx >= 0 && b.x - cx < 0) return -1;
+        if (a.x - cx < 0 && b.x - cx >= 0) return 1;
+        if (a.x - cx === 0 && b.x - cx === 0) {
+            if (a.y - cy >= 0 || b.y - cy >= 0) return (a.y > b.y) ? 1 : -1;
+            return (b.y > a.y) ? 1 : -1;
+        }
+        const det = (a.x - cx) * -(b.y - cy) - (b.x - cx) * -(a.y - cy);
+        if (det < 0) return -1; if (det > 0) return 1;
+        const d1 = (a.x - cx) ** 2 + (a.y - cy) ** 2;
+        const d2 = (b.x - cx) ** 2 + (b.y - cy) ** 2;
+        return (d1 > d2) ? -1 : 1;
+    });
+}
+
+// ===================== Utils: Walls to rects =====================
+function getBigRectsFromWallLayer(layer) {
+    const mapW = layer.layer.width;
+    const mapH = layer.layer.height;
+    const tw = layer.tilemap.tileWidth;
+    const th = layer.tilemap.tileHeight;
+
+    const isSolidAt = (x, y) => {
+        const t = layer.getTileAt(x, y);
+        return !!t && (t.collides === true || t.properties?.collides === true);
+    };
+
+    // 1) horizontal runs per row
+    const runs = Array.from({ length: mapH }, () => []);
+    for (let y = 0; y < mapH; y++) {
+        let x = 0;
+        while (x < mapW) {
+            if (!isSolidAt(x, y)) { x++; continue; }
+            const x0 = x;
+            while (x < mapW && isSolidAt(x, y)) x++;
+            runs[y].push({ x: x0, w: x - x0 });
+        }
+    }
+
+    // 2) vertical merge of identical runs
+    const rects = [];
+    const used = runs.map(row => row.map(() => false));
+
+    for (let y = 0; y < mapH; y++) {
+        for (let i = 0; i < runs[y].length; i++) {
+            if (used[y][i]) continue;
+            const { x: rx, w: rw } = runs[y][i];
+            let h = 1;
+            // try to extend downwards while the exact same run exists and not used
+            let yy = y + 1;
+            while (yy < mapH) {
+                let foundIdx = -1;
+                for (let j = 0; j < runs[yy].length; j++) {
+                    if (!used[yy][j] && runs[yy][j].x === rx && runs[yy][j].w === rw) { foundIdx = j; break; }
+                }
+                if (foundIdx === -1) break;
+                used[yy][foundIdx] = true;
+                h++;
+                yy++;
+            }
+            used[y][i] = true;
+
+            const t0 = layer.getTileAt(rx, y);
+            rects.push(new Rectangle(t0.getLeft(), t0.getTop(), rw * tw, h * th));
+        }
+    }
+
+    return rects;
 }
