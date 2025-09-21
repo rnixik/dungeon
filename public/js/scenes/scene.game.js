@@ -14,6 +14,14 @@ const LIGHT_FEATHER  = 128;    // thikness of shade
 const LIGHT_ALPHA    = 0.85;      // density of darkness
 const DARKNESS_DEPTH = 9000;  // darkness below
 const UI_DEPTH       = 10000; // UI above everything
+const LIGHT_MASK_PLAYER      = 'lightMask'
+
+const BULLET_LIGHT_RADIUS = 150;
+const BULLET_LIGHT_FEATHER= 80;
+const LIGHT_MASK_BULLET   = 'bulletLightMask';
+const BULLET_LIGHT_LIFE   = 100;   // ttl of glow
+const BULLET_SAMPLE_MS    = 10;    // sampling bullet interval
+const BULLET_TRAIL_CAP    = 256;   // overflow guard
 
 // Shortcuts
 const { Circle, Line, Point, Rectangle } = Phaser.Geom;
@@ -81,7 +89,8 @@ class Game extends Phaser.Scene
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(this.player);
 
-
+        if (!this.bulletGlowTrail) this.bulletGlowTrail = [];
+        if (!this.lastBulletSampleAt) this.lastBulletSampleAt = 0;
 
         this.cursors = this.input.keyboard.createCursorKeys();
 
@@ -95,6 +104,8 @@ class Game extends Phaser.Scene
         this.rt.setDepth(1000);
 
         this.lightRadius = LIGHT_RADIUS;
+        this.makeSoftCircleMask(LIGHT_MASK_PLAYER, LIGHT_RADIUS, LIGHT_FEATHER);
+        this.makeSoftCircleMask(LIGHT_MASK_BULLET, BULLET_LIGHT_RADIUS, BULLET_LIGHT_FEATHER);
 
         const d = this.lightRadius;
         const canvas = this.textures.createCanvas('lightCanvas', d, d).getContext();
@@ -107,11 +118,9 @@ class Game extends Phaser.Scene
         canvas.fillRect(0, 0, d, d);
 
         this.textures.get('lightCanvas').refresh();
-        this.maskKey = 'lightCanvas';
 
         this.scale.on('resize', (gameSize, baseSize, displaySize, resolution) => {
             console.log('new size', this.scale.width, this.scale.height);
-            //this.rt.setSize(this.scale.width, this.scale.height);
 
             // setting new size doesn't work properly, so we destroy and create new
             this.rt.destroy();
@@ -247,9 +256,24 @@ class Game extends Phaser.Scene
         this.rt.clear();
         this.rt.fill(0x000000, 1);
 
-        this.rt.erase(this.maskKey, (this.player.x - half) - cam.scrollX, (this.player.y - half) - cam.scrollY);
-        this.rt.erase(this.maskKey, (this.otherPlayer.x - half) - cam.scrollX, (this.otherPlayer.y - half) - cam.scrollY);
-        this.rt.erase(this.maskKey, (this.otherPlayer2.x - half) - cam.scrollX, (this.otherPlayer2.y - half) - cam.scrollY);
+        this.rt.erase(LIGHT_MASK_PLAYER, (this.player.x - half) - cam.scrollX, (this.player.y - half) - cam.scrollY);
+        this.rt.erase(LIGHT_MASK_PLAYER, (this.otherPlayer.x - half) - cam.scrollX,  (this.otherPlayer.y - half) - cam.scrollY);
+        this.rt.erase(LIGHT_MASK_PLAYER, (this.otherPlayer2.x - half) - cam.scrollX, (this.otherPlayer2.y - half) - cam.scrollY);
+
+        const now = this.time.now;
+        if (now - this.lastBulletSampleAt >= BULLET_SAMPLE_MS) {
+            this.lastBulletSampleAt = now;
+            const bullets = this.iterateAliveBullets();
+            for (const s of bullets) {
+                this.pushBulletLight(s.x, s.y, now + BULLET_LIGHT_LIFE);
+                }
+            }
+            const halfBullet = BULLET_LIGHT_RADIUS / 2;
+        for (let i = this.bulletGlowTrail.length - 1; i >= 0; i--) {
+            const p = this.bulletGlowTrail[i];
+            if (p.expiresAt <= now) { this.bulletGlowTrail.splice(i, 1); continue; }
+            this.rt.erase(LIGHT_MASK_BULLET, p.x - halfBullet - cam.scrollX, p.y - halfBullet - cam.scrollY);
+            }
     }
 
     updateAlphaOnMap ()
@@ -314,6 +338,52 @@ class Game extends Phaser.Scene
                     this.scale.startFullscreen();
                 }
             }, this);
+        }
+    }
+
+    // --- helpers ---
+    makeSoftCircleMask(key, diameter, feather) {
+        if (this.textures.exists(key)) return;
+        const d = Math.max(8, Math.floor(diameter));
+        const f = Math.max(0, Math.floor(feather));
+        const g = this.make.graphics({ x: 0, y: 0, add: false });
+        const R  = d / 2;
+        const Ri = Math.max(0, R - f);
+        g.clear();
+        // center full transparence
+        g.fillStyle(0xffffff, 1);
+        g.fillCircle(R, R, Ri);
+        // feather - circles with decreasing alpha
+        const steps = Math.max(1, f ? 20 : 1);
+        for (let i = 0; i < steps; i++) {
+            const r0 = Ri + (i    ) * (f / steps);
+            const r1 = Ri + (i + 1) * (f / steps);
+            const r  = (r0 + r1) / 2;
+            const a  = 1 - (i + 1) / (steps + 1);
+            g.fillStyle(0xffffff, a);
+            g.fillCircle(R, R, r);
+        }
+        g.generateTexture(key, d, d);
+        g.destroy();
+    }
+
+    iterateAliveBullets() {
+        const out = [];
+        const b = this.bullets;
+        if (!b) return out;
+        if (b.group?.getChildren) {
+            for (const s of b.group.getChildren()) if (s?.active) out.push(s);
+            return out;
+        }
+        const arr = b.children?.entries || b.children || b.getChildren?.() || [];
+        for (const s of arr) if (s?.active) out.push(s);
+        return out;
+    }
+
+    pushBulletLight(x, y, expiresAt) {
+        this.bulletGlowTrail.push({ x, y, expiresAt });
+        if (this.bulletGlowTrail.length > BULLET_TRAIL_CAP) {
+            this.bulletGlowTrail.splice(0, this.bulletGlowTrail.length - BULLET_TRAIL_CAP);
         }
     }
 }
@@ -568,4 +638,20 @@ function getBigRectsFromWallLayer(layer) {
     }
 
     return rects;
+}
+
+function createRadialMaskTexture(scene, key, diameter, feather) {
+    if (scene.textures.exists(key)) return;
+    const d = Math.max(8, Math.floor(diameter));
+    const f = Math.max(0, Math.floor(feather));
+    const tex = scene.textures.createCanvas(key, d, d);
+    const ctx = tex.getContext();
+    const R  = d / 2;
+    const inner = Math.max(0, R - f);
+    const grad = ctx.createRadialGradient(R, R, inner, R, R, R);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, d, d);
+    tex.refresh();
 }
