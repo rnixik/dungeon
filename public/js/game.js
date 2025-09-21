@@ -22,7 +22,7 @@
                 height: 600
             }
         },
-        scene: [ sceneConfigBoot, sceneConfigPreloader, sceneConfigGame ]
+        scene: [ sceneConfigBoot, sceneConfigPreloader, sceneConfigMainMenu, sceneConfigGame ]
     };
 
     new Phaser.Game(config);
