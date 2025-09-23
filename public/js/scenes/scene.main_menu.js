@@ -114,7 +114,7 @@ class MainMenu extends Phaser.Scene
 
     onIncomingMessage(json, evt)
     {
-        if (json.name !== 'PlayerPositionsUpdateEvent') {
+        if (json.name !== 'CreaturesPosUpdateEvent' && json.name !== 'CreaturesStatsUpdateEvent') {
             console.log('INCOMING', json);
         }
 

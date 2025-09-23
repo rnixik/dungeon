@@ -65,6 +65,7 @@ class Game extends Phaser.Scene {
     myNickname;
     sendGameCommand;
     isMoving = false;
+    isDead = false;
 
     lastMoveSentTime = 0;
     moveCommandInterval = 1000 / 60; // ms
@@ -216,75 +217,100 @@ class Game extends Phaser.Scene {
             });
             this.lastMoveSentTime = time;
         }
+
+        for (const id in this.players) {
+            const p = this.players[id];
+            if (p.hpText) {
+                p.hpText.x = p.x;
+                p.hpText.y = p.y;
+            }
+        }
     }
 
     onIncomingGameEvent (name, data) {
-        if (name === 'PlayerPositionsUpdateEvent') {
+        if (name === 'CreaturesStatsUpdateEvent') {
             for (const p of data.players) {
                 const id = p.clientId;
                 if (id === this.myClientId) {
                     continue;
                 }
+                let justSpawned = false;
                 if (!this.players[id]) {
                     // spawn new player
                     const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(3.5);
                     np.id = id;
                     np.hp = p.hp;
-                    np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
+
                     np.setTint(Math.random() * 0xffffff);
+
+                    np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
+
                     this.players[id] = np;
                     this.bullets.addPlayer(np);
+
+                    justSpawned = true;
                     console.log('spawn player', id, Object.keys(this.players).length);
                 }
 
+                this.updatePlayerPos(p);
+
                 const pSprite = this.players[id];
-
-                pSprite.x = p.x;
-                pSprite.y = p.y;
-                const direction = p.direction;
-                switch (direction) {
-                    case 'up': pSprite.anims.play('up', true); break;
-                    case 'down': pSprite.anims.play('down', true); break;
-                    case 'left': pSprite.anims.play('left', true); break;
-                    case 'right': pSprite.anims.play('right', true); break;
-                }
-
-                if (!p.isMoving) {
-                    pSprite.anims.stop();
-                }
-
-                if (pSprite.hp !== p.hp) {
+                if (pSprite.hp !== p.hp || justSpawned) {
                     pSprite.hp = p.hp;
                     if (pSprite.hpText) {
                         pSprite.hpText.setText(p.hp + '/100');
+                    }
+                    if (p.hp === 0) {
+                        if (pSprite.hpText) {
+                            pSprite.hpText.destroy();
+                            pSprite.setTint(0xff3333);
+                        }
                     }
                 }
             }
 
             for (const m of data.monsters) {
                 const id = m.id;
+                let justSpawned = false;
                 if (!this.monsters[id]) {
                     // spawn new monster
                     const nm = this.physics.add.sprite(m.x, m.y, m.kind, 0).setScale(2);
                     nm.id = id;
                     nm.hp = m.hp;
                     nm.hpText = this.add.text(m.x, m.y, m.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
-                    nm.setTint(Math.random() * 0xffffff);
                     this.monsters[id] = nm;
                     this.bullets.addMonster(nm);
+                    justSpawned = true;
                     console.log('spawn monster', id, Object.keys(this.monsters).length);
                 }
 
-                const mSprite = this.monsters[id];
-                mSprite.x = m.x;
-                mSprite.y = m.y;
+                this.updateMonsterPos(m);
 
-                if (mSprite.hp !== m.hp) {
+                const mSprite = this.monsters[id];
+
+                if (mSprite.hp !== m.hp || justSpawned) {
                     mSprite.hp = m.hp;
                     if (mSprite.hpText) {
                         mSprite.hpText.setText(m.hp + '/100');
                     }
+                    if (m.hp === 0) {
+                        if (mSprite.hpText) {
+                            mSprite.hpText.destroy();
+                            mSprite.setTint(0x333333);
+                        }
+                    }
                 }
+            }
+
+            return;
+        }
+        if (name === 'CreaturesPosUpdateEvent') {
+            for (const p of data.players) {
+                this.updatePlayerPos(p)
+            }
+
+            for (const m of data.monsters) {
+                this.updateMonsterPos(m);
             }
 
             return;
@@ -294,7 +320,55 @@ class Game extends Phaser.Scene {
             this.bullets.fireBullet(data.clientId, data.x, data.y, data.direction)
         }
 
+        if (name === 'PlayerDeathEvent') {
+            if (data.clientId === this.myClientId) {
+                this.add.text(this.scale.width / 2, this.scale.height / 2, 'YOU DIED', { font: '24px Arial', fill: '#ff0000' })
+                    .setOrigin(0.5, 0.5)
+                    .setScrollFactor(0, 0)
+                    .setDepth(DEPTH_UI);
+                this.isDead = true;
+                console.log('this is my death');
+            }
+        }
+
         console.log('INCOMING GAME EVENT', name, data);
+    }
+
+    updatePlayerPos(p)
+    {
+        if (p.clientId === this.myClientId) {
+            return;
+        }
+
+        const pSprite = this.players[p.clientId];
+        if (!pSprite) {
+            return;
+        }
+
+        pSprite.x = p.x;
+        pSprite.y = p.y;
+        const direction = p.direction;
+        switch (direction) {
+            case 'up': pSprite.anims.play('up', true); break;
+            case 'down': pSprite.anims.play('down', true); break;
+            case 'left': pSprite.anims.play('left', true); break;
+            case 'right': pSprite.anims.play('right', true); break;
+        }
+
+        if (!p.isMoving) {
+            pSprite.anims.stop();
+        }
+    }
+
+    updateMonsterPos(m)
+    {
+        const mSprite = this.monsters[m.id];
+        if (!mSprite) {
+            return;
+        }
+
+        mSprite.x = m.x;
+        mSprite.y = m.y;
     }
 
     castFireball() {
@@ -346,6 +420,12 @@ class Game extends Phaser.Scene {
         this.rt.clear();
         this.rt.fill(0x000000, 1);
 
+        if (this.isDead) {
+            this.rt.setAlpha(1)
+
+            return;
+        }
+
         const eraseAt = (key, x, y, diameter) => {
             const h = diameter / 2;
             this.rt.erase(key, (x - h) - cam.scrollX, (y - h) - cam.scrollY);
@@ -371,6 +451,9 @@ class Game extends Phaser.Scene {
 
     // --- Raycast visibility mask (draws into this.graphics used as GeometryMask) ---
     updateMaskRaycast () {
+        if (this.isDead) {
+            return;
+        }
         draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
     }
 

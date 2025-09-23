@@ -13,7 +13,8 @@ const StatusEnded = "ended"
 
 const maxHP = 100
 const fireballDamage = 25
-const updateTickPeriod = time.Second / 60
+const positionsUpdateTickPeriod = time.Second / 60
+const commonUpdateTickPeriod = time.Second / 3
 
 const monsterKindArcher = "archer"
 
@@ -141,6 +142,9 @@ func (g *Game) OnClientRemoved(client lobby.ClientPlayer) {
 		return
 	}
 	log.Printf("client '%s' removed from game\n", client.Nickname())
+	g.mutex.Lock()
+	g.killPlayer(client.ID())
+	g.mutex.Unlock()
 }
 
 func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
@@ -152,11 +156,13 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 }
 
 func (g *Game) StartMainLoop() {
-	ticker := time.NewTicker(updateTickPeriod)
-	defer ticker.Stop()
+	tickerPositions := time.NewTicker(positionsUpdateTickPeriod)
+	tickerCommon := time.NewTicker(commonUpdateTickPeriod)
+	defer tickerPositions.Stop()
+	defer tickerCommon.Stop()
 	for {
 		select {
-		case <-ticker.C:
+		case <-tickerPositions.C:
 			if g.isGameEnded() {
 				return
 			}
@@ -167,28 +173,65 @@ func (g *Game) StartMainLoop() {
 			for _, pl := range g.players {
 				p = append(p, PlayerPosition{
 					ClientID:  pl.client.ID(),
-					Nickname:  pl.client.Nickname(),
 					X:         pl.x,
 					Y:         pl.y,
 					Direction: pl.direction,
 					IsMoving:  pl.isMoving,
-					HP:        pl.hp,
 				})
 			}
 			m := make([]MonsterPosition, 0, len(g.monsters))
 			for _, mon := range g.monsters {
 				m = append(m, MonsterPosition{
 					ID:        mon.id,
-					Kind:      mon.kind,
 					X:         mon.x,
 					Y:         mon.y,
 					Direction: mon.direction,
 					IsMoving:  mon.isMoving,
-					HP:        mon.hp,
 				})
 			}
 
-			g.broadcastEventFunc(PlayerPositionsUpdateEvent{
+			g.broadcastEventFunc(CreaturesPosUpdateEvent{
+				Players:  p,
+				Monsters: m,
+			})
+
+			g.mutex.Unlock()
+		case <-tickerCommon.C:
+			if g.isGameEnded() {
+				return
+			}
+			g.mutex.Lock()
+
+			p := make([]PlayerStats, 0, len(g.players))
+			for _, pl := range g.players {
+				p = append(p, PlayerStats{
+					PlayerPosition: PlayerPosition{
+						ClientID:  pl.client.ID(),
+						X:         pl.x,
+						Y:         pl.y,
+						Direction: pl.direction,
+						IsMoving:  pl.isMoving,
+					},
+					Nickname: pl.client.Nickname(),
+					HP:       pl.hp,
+				})
+			}
+			m := make([]MonsterStats, 0, len(g.monsters))
+			for _, mon := range g.monsters {
+				m = append(m, MonsterStats{
+					MonsterPosition: MonsterPosition{
+						ID:        mon.id,
+						X:         mon.x,
+						Y:         mon.y,
+						Direction: mon.direction,
+						IsMoving:  mon.isMoving,
+					},
+					Kind: mon.kind,
+					HP:   mon.hp,
+				})
+			}
+
+			g.broadcastEventFunc(CreaturesStatsUpdateEvent{
 				Players:  p,
 				Monsters: m,
 			})
@@ -217,6 +260,20 @@ func (g *Game) movePlayerTo(clientID uint64, x int, y int, direction string, isM
 }
 
 func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
+	isDead := false
+
+	g.mutex.Lock()
+	if p, ok := g.players[clientID]; ok {
+		if p.hp <= 0 {
+			isDead = true
+		}
+	}
+	g.mutex.Unlock()
+
+	if isDead {
+		return
+	}
+
 	g.broadcastEventFunc(FireballEvent{
 		ClientID:  clientID,
 		X:         x,
@@ -229,6 +286,10 @@ func (g *Game) hitPlayer(originClientID uint64, targetClientID uint64) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	if p, ok := g.players[targetClientID]; ok {
+		if p.hp == 0 {
+			return
+		}
+
 		p.hp -= fireballDamage
 		if p.hp < 0 {
 			p.hp = 0
@@ -240,8 +301,16 @@ func (g *Game) hitPlayer(originClientID uint64, targetClientID uint64) {
 		})
 
 		if p.hp == 0 {
-			g.broadcastEventFunc(PlayerDeathEvent{ClientID: targetClientID})
+			g.killPlayer(targetClientID)
 		}
+	}
+}
+
+func (g *Game) killPlayer(clientID uint64) {
+	if p, ok := g.players[clientID]; ok {
+		p.hp = 0
+
+		g.broadcastEventFunc(PlayerDeathEvent{ClientID: clientID})
 	}
 }
 
@@ -249,7 +318,7 @@ func (g *Game) hitMonster(originClientID uint64, monsterID int) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	for _, m := range g.monsters {
-		if m.id == monsterID {
+		if m.id == monsterID && m.hp > 0 {
 			m.hp -= fireballDamage
 			if m.hp < 0 {
 				m.hp = 0
@@ -259,19 +328,6 @@ func (g *Game) hitMonster(originClientID uint64, monsterID int) {
 				TargetMonsterID: monsterID,
 				Damage:          fireballDamage,
 			})
-
-			if m.hp == 0 {
-				// Monster is dead, remove it from the list
-				newMonsters := make([]*Monster, 0, len(g.monsters)-1)
-				for _, mon := range g.monsters {
-					if mon.id != monsterID {
-						newMonsters = append(newMonsters, mon)
-					}
-				}
-				g.monsters = newMonsters
-
-				g.broadcastEventFunc(MonsterDeathEvent{ID: monsterID})
-			}
 
 			break
 		}
