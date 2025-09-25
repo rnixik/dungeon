@@ -19,6 +19,9 @@ func (g *Game) startIntellect() {
 			g.mutex.Lock()
 
 			for _, mon := range g.monsters {
+				if mon.hp <= 0 {
+					continue
+				}
 				for _, player := range g.players {
 					if player.hp <= 0 {
 						continue
