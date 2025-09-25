@@ -381,7 +381,7 @@ func getInitialMonsters() []*Monster {
 			isMoving:  false,
 		},
 		{
-			id:        3,
+			id:        4,
 			kind:      monsterKindArcher,
 			hp:        100,
 			x:         39 * tileSize,
