@@ -330,6 +330,19 @@ class Game extends Phaser.Scene {
                 console.log('this is my death');
             }
         }
+        if (name === 'ArrowEvent') {
+            const ar = this.physics.add.sprite(data.x1, data.y1, 'archer', 0).setScale(0.4);
+            const dir = new Phaser.Math.Vector2(data.x2 - data.x1, data.y2 - data.y1).normalize();
+            ar.setVelocity(dir.x * 400, dir.y * 400);
+            this.physics.add.collider(ar, this.layerWalls, () => ar.destroy(), null, this);
+            this.physics.add.overlap(ar, this.player, () => {
+                ar.destroy();
+                this.sendGameCommand('HitPlayerCommand', {
+                    monsterId: data.monsterId,
+                    targetClientId: this.myClientId
+                });
+            }, null, this);
+        }
 
         console.log('INCOMING GAME EVENT', name, data);
     }

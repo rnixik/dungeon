@@ -23,6 +23,7 @@ type CastFireballCommand struct {
 
 type HitPlayerCommand struct {
 	OriginClientID uint64 `json:"originClientId"`
+	MonsterID      int    `json:"monsterId"`
 	TargetClientID uint64 `json:"targetClientId"`
 }
 

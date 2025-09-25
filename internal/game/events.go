@@ -13,6 +13,15 @@ type FireballEvent struct {
 	Direction string `json:"direction"`
 }
 
+type ArrowEvent struct {
+	ClientID  uint64 `json:"clientId"`
+	MonsterID int    `json:"MonsterID"`
+	X1        int    `json:"x1"`
+	Y1        int    `json:"y1"`
+	X2        int    `json:"x2"`
+	Y2        int    `json:"y2"`
+}
+
 type PlayerPosition struct {
 	ClientID  uint64 `json:"clientId"`
 	X         int    `json:"x"`

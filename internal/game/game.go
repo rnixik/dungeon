@@ -156,6 +156,7 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 }
 
 func (g *Game) StartMainLoop() {
+	go g.startIntellect()
 	tickerPositions := time.NewTicker(positionsUpdateTickPeriod)
 	tickerCommon := time.NewTicker(commonUpdateTickPeriod)
 	defer tickerPositions.Stop()
