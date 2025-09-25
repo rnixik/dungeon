@@ -359,7 +359,7 @@ func getInitialMonsters() []*Monster {
 			hp:        100,
 			x:         38 * tileSize,
 			y:         13 * tileSize,
-			direction: "down",
+			direction: "left",
 			isMoving:  false,
 		},
 		{
@@ -377,7 +377,7 @@ func getInitialMonsters() []*Monster {
 			hp:        100,
 			x:         42 * tileSize,
 			y:         13 * tileSize,
-			direction: "down",
+			direction: "left",
 			isMoving:  false,
 		},
 		{
@@ -386,7 +386,7 @@ func getInitialMonsters() []*Monster {
 			hp:        100,
 			x:         39 * tileSize,
 			y:         10 * tileSize,
-			direction: "down",
+			direction: "left",
 			isMoving:  false,
 		},
 	}
