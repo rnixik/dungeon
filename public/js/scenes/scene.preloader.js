@@ -13,7 +13,7 @@ var sceneConfigPreloader = {
         this.load.image('tiles', 'assets/environment.png');
         this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj?v=2');
 
-        this.load.spritesheet('player', 'assets/spaceman.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('player', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('mask', 'assets/mask1.png?v=2');
         this.load.atlas('controls', 'assets/controls.png', 'assets/controls.json');
         this.load.image('bullet', 'assets/bullet7.png');
@@ -26,25 +26,25 @@ var sceneConfigPreloader = {
     create: function() {
         this.anims.create({
             key: 'left',
-            frames: this.anims.generateFrameNumbers('player', { start: 8, end: 9 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 12 }),
             frameRate: 10,
             repeat: -1
         });
         this.anims.create({
             key: 'right',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 2 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 12 }),
             frameRate: 10,
             repeat: -1
         });
         this.anims.create({
             key: 'up',
-            frames: this.anims.generateFrameNumbers('player', { start: 11, end: 13 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 12 }),
             frameRate: 10,
             repeat: -1
         });
         this.anims.create({
             key: 'down',
-            frames: this.anims.generateFrameNumbers('player', { start: 4, end: 6 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 12 }),
             frameRate: 10,
             repeat: -1
         });
