@@ -52,8 +52,13 @@ func main() {
 	indexPageContent = bytes.Replace(indexPageContentRaw, []byte("%APP_ENV%"), []byte(*appEnv), 1)
 	indexPageContent = bytes.Replace(indexPageContent, []byte("%APP_VERSION%"), bytes.TrimSpace([]byte(version)), 2)
 
+	gameMap, err := game.LoadMap("./public/assets/dungeon1.tmj")
+	if err != nil {
+		log.Fatal("Load map error: ", err)
+	}
+
 	newGameFunc := func(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{})) lobby.GameEventsDispatcher {
-		return game.NewGame(playersClients, room, broadcastEventFunc)
+		return game.NewGame(playersClients, room, broadcastEventFunc, gameMap)
 	}
 
 	newBotFunc := func(botId uint64, room *lobby.Room, sendGameCommand func(client lobby.ClientPlayer, commandName string, commandData json.RawMessage)) lobby.ClientPlayer {

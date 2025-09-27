@@ -66,9 +66,10 @@ type Game struct {
 	statusMx           sync.Mutex
 	room               *lobby.Room
 	monsters           []*Monster
+	gameMap            *Map
 }
 
-func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{})) *Game {
+func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map) *Game {
 	players := make(map[uint64]*Player, len(playersClients))
 	for _, client := range playersClients {
 		players[client.ID()] = newPlayer(client)
@@ -82,7 +83,8 @@ func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEve
 		broadcastEventFunc: broadcastEventFunc,
 		mutex:              sync.Mutex{},
 		room:               room,
-		monsters:           getInitialMonsters(),
+		monsters:           []*Monster{},
+		gameMap:            gameMap,
 	}
 }
 
@@ -156,6 +158,7 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 }
 
 func (g *Game) StartMainLoop() {
+	g.spawnInitialMonsters()
 	go g.startIntellect()
 	tickerPositions := time.NewTicker(positionsUpdateTickPeriod)
 	tickerCommon := time.NewTicker(commonUpdateTickPeriod)
@@ -351,43 +354,24 @@ func (g *Game) isGameEnded() bool {
 	return g.status == StatusEnded
 }
 
-func getInitialMonsters() []*Monster {
-	return []*Monster{
-		{
-			id:        1,
-			kind:      monsterKindArcher,
-			hp:        100,
-			x:         38 * tileSize,
-			y:         13 * tileSize,
-			direction: "left",
-			isMoving:  false,
-		},
-		{
-			id:        2,
-			kind:      monsterKindArcher,
-			hp:        100,
-			x:         400,
-			y:         300,
-			direction: "left",
-			isMoving:  false,
-		},
-		{
-			id:        3,
-			kind:      monsterKindArcher,
-			hp:        100,
-			x:         42 * tileSize,
-			y:         13 * tileSize,
-			direction: "left",
-			isMoving:  false,
-		},
-		{
-			id:        4,
-			kind:      monsterKindArcher,
-			hp:        100,
-			x:         39 * tileSize,
-			y:         10 * tileSize,
-			direction: "left",
-			isMoving:  false,
-		},
+func (g *Game) spawnInitialMonsters() {
+	spawnLayer := g.gameMap.getLayerByName("spawns")
+	if spawnLayer == nil {
+		log.Println("no spawn layer found in map")
+		return
+	}
+
+	for _, obj := range spawnLayer.Objects {
+		if obj.Name == "archer" {
+			g.monsters = append(g.monsters, &Monster{
+				id:        len(g.monsters) + 1,
+				kind:      monsterKindArcher,
+				hp:        100,
+				x:         int(obj.X),
+				y:         int(obj.Y),
+				direction: "left",
+				isMoving:  false,
+			})
+		}
 	}
 }
