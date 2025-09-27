@@ -1,6 +1,9 @@
 const DEBUG = false;
 
 // Layering (z-index)
+const DEPTH_DEAD = 25;
+const DEPTH_PLAYER   = 30;
+const DEPTH_MONSTER   = 40;
 const DEPTH_DARKNESS = 9000;
 const DEPTH_UI       = 10000;
 
@@ -100,10 +103,10 @@ class Game extends Phaser.Scene {
         this.layerWalls.setCollisionByProperty({ collides: true });
 
         // --- Sprites ---
-        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(3.5);
+        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(3.5).setDepth(DEPTH_PLAYER);
         this.physics.add.collider(this.player, this.layerWalls);
         this.player.hp = 100;
-        this.player.hpText = this.add.text(0, 0, '100/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
+        this.player.hpText = this.add.text(0, 0, '100/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
 
         // Camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -250,13 +253,13 @@ class Game extends Phaser.Scene {
                 let justSpawned = false;
                 if (!this.players[id]) {
                     // spawn new player
-                    const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(3.5);
+                    const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(3.5).setDepth(DEPTH_PLAYER);
                     np.id = id;
                     np.hp = p.hp;
 
                     np.setTint(Math.random() * 0xffffff);
 
-                    np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
+                    np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
 
                     this.players[id] = np;
                     this.bullets.addPlayer(np);
@@ -277,6 +280,8 @@ class Game extends Phaser.Scene {
                         if (pSprite.hpText) {
                             pSprite.hpText.destroy();
                             pSprite.setTint(0xff3333);
+                            pSprite.setDepth(DEPTH_DEAD);
+                            pSprite.disableBody();
                         }
                     }
                 }
@@ -287,10 +292,10 @@ class Game extends Phaser.Scene {
                 let justSpawned = false;
                 if (!this.monsters[id]) {
                     // spawn new monster
-                    const nm = this.physics.add.sprite(m.x, m.y, m.kind, 0).setScale(2);
+                    const nm = this.physics.add.sprite(m.x, m.y, m.kind, 0).setScale(2).setDepth(DEPTH_MONSTER);
                     nm.id = id;
                     nm.hp = m.hp;
-                    nm.hpText = this.add.text(m.x, m.y, m.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
+                    nm.hpText = this.add.text(m.x, m.y, m.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_MONSTER + 1);
                     this.monsters[id] = nm;
                     this.bullets.addMonster(nm);
                     justSpawned = true;
@@ -310,6 +315,8 @@ class Game extends Phaser.Scene {
                         if (mSprite.hpText) {
                             mSprite.hpText.destroy();
                             mSprite.setTint(0x333333);
+                            mSprite.setDepth(DEPTH_DEAD);
+                            mSprite.disableBody();
                         }
                     }
                 }
