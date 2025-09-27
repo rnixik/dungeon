@@ -102,6 +102,8 @@ class Game extends Phaser.Scene {
         // --- Sprites ---
         this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(3.5);
         this.physics.add.collider(this.player, this.layerWalls);
+        this.player.hp = 100;
+        this.player.hpText = this.add.text(0, 0, '100/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
 
         // Camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -222,8 +224,13 @@ class Game extends Phaser.Scene {
             const p = this.players[id];
             if (p.hpText) {
                 p.hpText.x = p.x;
-                p.hpText.y = p.y;
+                p.hpText.y = p.y + 20;
             }
+        }
+
+        if (this.player.hpText) {
+            this.player.hpText.x = this.player.x;
+            this.player.hpText.y = this.player.y + 20;
         }
     }
 
@@ -232,6 +239,12 @@ class Game extends Phaser.Scene {
             for (const p of data.players) {
                 const id = p.clientId;
                 if (id === this.myClientId) {
+                    if (this.player.hp !== p.hp) {
+                        this.player.hp = p.hp;
+                        if (this.player.hpText) {
+                            this.player.hpText.setText(p.hp + '/100');
+                        }
+                    }
                     continue;
                 }
                 let justSpawned = false;
@@ -243,7 +256,7 @@ class Game extends Phaser.Scene {
 
                     np.setTint(Math.random() * 0xffffff);
 
-                    np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
+                    np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1);
 
                     this.players[id] = np;
                     this.bullets.addPlayer(np);
