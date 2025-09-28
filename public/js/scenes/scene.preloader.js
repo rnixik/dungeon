@@ -14,6 +14,7 @@ var sceneConfigPreloader = {
         this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj?v=2');
 
         this.load.spritesheet('player', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('mask', 'assets/mask1.png?v=2');
         this.load.atlas('controls', 'assets/controls.png', 'assets/controls.json');
         this.load.image('bullet', 'assets/bullet7.png');
@@ -54,6 +55,12 @@ var sceneConfigPreloader = {
             frameRate: 10,
             repeat: -1
         });
+        this.anims.create({
+            key: 'fireball-loop',
+            frames: this.anims.generateFrameNumbers('fireball', { start: 1, end: 12 }),
+            frameRate: 10,
+            repeat: -1
+        })
 
         this.scene.switch('MainMenu');
     }

@@ -2,7 +2,7 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
 {
     constructor (scene, x, y)
     {
-        super(scene, x, y, 'bullet');
+        super(scene, x, y, 'fireball');
     }
 
     fire (clientId, x, y, direction)
@@ -22,20 +22,26 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
         if (direction === 'left')
         {
             velX = -vel;
+            this.setAngle(0).setFlipX(true);
         }
         else if (direction === 'right')
         {
             velX = vel;
+            this.setAngle(0).setFlipX(false);
         }
         else if (direction === 'up')
         {
             velY = -vel;
+            this.setAngle(-90).setFlipX(false);
         }
         else if (direction === 'down')
         {
             velY = vel;
+            this.setAngle(90).setFlipX(false);
         }
         this.setVelocity(velX, velY);
+
+        this.anims.play('fireball-loop',true);
     }
 
     preUpdate (time, delta)
@@ -63,7 +69,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
         this.sprites = this.createMultiple({
             frameQuantity: 100,
-            key: 'bullet',
+            key: 'fireball',
             active: false,
             visible: false,
             classType: Bullet
