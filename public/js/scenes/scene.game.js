@@ -103,7 +103,7 @@ class Game extends Phaser.Scene {
         this.layerWalls.setCollisionByProperty({ collides: true });
 
         // --- Sprites ---
-        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(2).setDepth(DEPTH_PLAYER);
+        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(1.5).setDepth(DEPTH_PLAYER);
         this.physics.add.collider(this.player, this.layerWalls);
         this.player.hp = 100;
         this.player.hpText = this.add.text(0, 0, '100/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
@@ -194,7 +194,6 @@ class Game extends Phaser.Scene {
         else if (this.cursors.up.isDown || joy.up.isDown)
         {
             this.player.anims.play('up',   true);
-            this.player.setAngle(-90).setFlipX(false);
             this.direction='up';
             this.isMoving = true;
         }
@@ -207,7 +206,7 @@ class Game extends Phaser.Scene {
         }
         else
         {
-            this.player.anims.stop();
+            this.player.anims.play('idle', true);
             this.isMoving = false;
         }
 

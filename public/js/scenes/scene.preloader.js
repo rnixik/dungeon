@@ -26,25 +26,31 @@ var sceneConfigPreloader = {
     create: function() {
         this.anims.create({
             key: 'left',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 12 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
             frameRate: 10,
             repeat: -1
         });
         this.anims.create({
             key: 'right',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 12 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
             frameRate: 10,
             repeat: -1
         });
         this.anims.create({
             key: 'up',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 12 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 13, end: 17 }),
             frameRate: 10,
             repeat: -1
         });
         this.anims.create({
             key: 'down',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 12 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            frameRate: 10,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'idle',
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
             frameRate: 10,
             repeat: -1
         });
