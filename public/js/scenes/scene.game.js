@@ -326,6 +326,8 @@ class Game extends Phaser.Scene {
                         if (mSprite.hpText) {
                             mSprite.hpText.destroy();
                             mSprite.setTint(0x333333);
+                            // avoid late changes of damage effect
+                            this.time.delayedCall(110, () => mSprite.setTint(0x333333), [], this);
                             mSprite.setDepth(DEPTH_DEAD);
                             mSprite.disableBody();
                         }
