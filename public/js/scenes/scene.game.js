@@ -7,6 +7,8 @@ const DEPTH_MONSTER   = 40;
 const DEPTH_DARKNESS = 9000;
 const DEPTH_UI       = 10000;
 
+const PLAYER_SCALE = 1.5;
+
 // Global darkness opacity (0..1)
 const DARKNESS_ALPHA = 0.9;
 
@@ -103,7 +105,7 @@ class Game extends Phaser.Scene {
         this.layerWalls.setCollisionByProperty({ collides: true });
 
         // --- Sprites ---
-        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(1.5).setDepth(DEPTH_PLAYER);
+        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(PLAYER_SCALE).setDepth(DEPTH_PLAYER);
         this.physics.add.collider(this.player, this.layerWalls);
         this.player.hp = 100;
         this.player.hpText = this.add.text(0, 0, '100/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
@@ -263,7 +265,7 @@ class Game extends Phaser.Scene {
                 let justSpawned = false;
                 if (!this.players[id]) {
                     // spawn new player
-                    const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(3.5).setDepth(DEPTH_PLAYER);
+                    const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(PLAYER_SCALE).setDepth(DEPTH_PLAYER);
                     np.id = id;
                     np.hp = p.hp;
 
