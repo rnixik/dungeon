@@ -13,7 +13,8 @@ var sceneConfigPreloader = {
         this.load.image('tiles', 'assets/environment.png');
         this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj?v=2');
 
-        this.load.spritesheet('player', 'assets/spaceman.png', { frameWidth: 16, frameHeight: 16 });
+        this.load.spritesheet('player', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.image('mask', 'assets/mask1.png?v=2');
         this.load.atlas('controls', 'assets/controls.png', 'assets/controls.json');
         this.load.image('bullet', 'assets/bullet7.png');
@@ -27,28 +28,40 @@ var sceneConfigPreloader = {
     create: function() {
         this.anims.create({
             key: 'left',
-            frames: this.anims.generateFrameNumbers('player', { start: 8, end: 9 }),
-            frameRate: 10,
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            frameRate: 15,
             repeat: -1
         });
         this.anims.create({
             key: 'right',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 2 }),
-            frameRate: 10,
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            frameRate: 15,
             repeat: -1
         });
         this.anims.create({
             key: 'up',
-            frames: this.anims.generateFrameNumbers('player', { start: 11, end: 13 }),
-            frameRate: 10,
+            frames: this.anims.generateFrameNumbers('player', { start: 13, end: 17 }),
+            frameRate: 15,
             repeat: -1
         });
         this.anims.create({
             key: 'down',
-            frames: this.anims.generateFrameNumbers('player', { start: 4, end: 6 }),
-            frameRate: 10,
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            frameRate: 15,
             repeat: -1
         });
+        this.anims.create({
+            key: 'idle',
+            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            frameRate: 5,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'fireball-loop',
+            frames: this.anims.generateFrameNumbers('fireball', { start: 1, end: 12 }),
+            frameRate: 15,
+            repeat: -1
+        })
 
         this.scene.switch('MainMenu');
     }

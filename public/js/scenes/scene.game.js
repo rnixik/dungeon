@@ -103,7 +103,7 @@ class Game extends Phaser.Scene {
         this.layerWalls.setCollisionByProperty({ collides: true });
 
         // --- Sprites ---
-        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(3.5).setDepth(DEPTH_PLAYER);
+        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(1.5).setDepth(DEPTH_PLAYER);
         this.physics.add.collider(this.player, this.layerWalls);
         this.player.hp = 100;
         this.player.hpText = this.add.text(0, 0, '100/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
@@ -179,6 +179,7 @@ class Game extends Phaser.Scene {
 
         if (this.cursors.left.isDown || joy.left.isDown)
         {
+            this.player.setAngle(0).setFlipX(true);
             this.player.anims.play('left', true);
             this.direction='left';
             this.isMoving = true;
@@ -186,6 +187,7 @@ class Game extends Phaser.Scene {
         else if (this.cursors.right.isDown || joy.right.isDown)
         {
             this.player.anims.play('right',true);
+            this.player.setAngle(0).setFlipX(false);
             this.direction='right';
             this.isMoving = true;
         }
@@ -198,12 +200,13 @@ class Game extends Phaser.Scene {
         else if (this.cursors.down.isDown || joy.down.isDown)
         {
             this.player.anims.play('down', true);
+            this.player.setAngle(90).setFlipX(false);
             this.direction='down';
             this.isMoving = true;
         }
         else
         {
-            this.player.anims.stop();
+            this.player.anims.play('idle', true);
             this.isMoving = false;
         }
 
