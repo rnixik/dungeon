@@ -233,6 +233,14 @@ class Game extends Phaser.Scene {
             }
         }
 
+        for (const id in this.monsters) {
+            const m = this.monsters[id];
+            if (m.hpText) {
+                m.hpText.x = m.x;
+                m.hpText.y = m.y + 20;
+            }
+        }
+
         if (this.player.hpText) {
             this.player.hpText.x = this.player.x;
             this.player.hpText.y = this.player.y - 20;
@@ -368,6 +376,30 @@ class Game extends Phaser.Scene {
             }, null, this);
         }
 
+        if (name === 'DamageEvent') {
+            const pId = data.targetPlayerId;
+            const mId = data.targetMonsterId;
+            if (pId === this.myClientId) {
+                this.player.setTint(0xff0000);
+                this.time.delayedCall(100, () => this.player.clearTint(), [], this);
+            }
+            for (const i in this.players) {
+                const p = this.players[i];
+                if (p.id === pId) {
+                    p.setTint(0xff0000);
+                    this.time.delayedCall(100, () => p.clearTint(), [], this);
+                }
+            }
+            console.log(this.monsters);
+            for (const i in this.monsters) {
+                const m = this.monsters[i];
+                if (m.id === mId) {
+                    m.setTint(0xff0000);
+                    this.time.delayedCall(100, () => m.clearTint(), [], this);
+                }
+            }
+        }
+
         console.log('INCOMING GAME EVENT', name, data);
     }
 
@@ -406,6 +438,14 @@ class Game extends Phaser.Scene {
 
         mSprite.x = m.x;
         mSprite.y = m.y;
+
+        if (m.isAttacking && !mSprite.isAttacking) {
+            mSprite.setTint(0x00ff00);
+            mSprite.isAttacking = true;
+        } else if (!m.isAttacking && mSprite.isAttacking) {
+            mSprite.clearTint()
+            mSprite.isAttacking = false;
+        }
     }
 
     castFireball() {

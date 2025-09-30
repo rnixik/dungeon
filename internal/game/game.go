@@ -17,6 +17,7 @@ const positionsUpdateTickPeriod = time.Second / 60
 const commonUpdateTickPeriod = time.Second / 3
 
 const monsterKindArcher = "archer"
+const monsterKindSkeleton = "skeleton"
 
 type Player struct {
 	client             lobby.ClientPlayer
@@ -35,13 +36,17 @@ type Player struct {
 }
 
 type Monster struct {
-	id        int
-	kind      string
-	hp        int
-	x         int
-	y         int
-	direction string
-	isMoving  bool
+	id              int
+	kind            string
+	hp              int
+	x               int
+	y               int
+	direction       string
+	isMoving        bool
+	isAttacking     bool
+	attackStartedAt time.Time
+	moveToX         int
+	moveToY         int
 }
 
 func newPlayer(client lobby.ClientPlayer) *Player {
@@ -125,7 +130,9 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 
 			return
 		}
-		g.hitPlayer(c.OriginClientID, c.TargetClientID)
+		g.mutex.Lock()
+		g.hitPlayerUnsafe(c.TargetClientID, fireballDamage)
+		g.mutex.Unlock()
 		break
 	case "HitMonsterCommand":
 		var c HitMonsterCommand
@@ -173,6 +180,8 @@ func (g *Game) StartMainLoop() {
 
 			g.mutex.Lock()
 
+			g.moveMonstersUnsafe()
+
 			p := make([]PlayerPosition, 0, len(g.players))
 			for _, pl := range g.players {
 				p = append(p, PlayerPosition{
@@ -186,11 +195,12 @@ func (g *Game) StartMainLoop() {
 			m := make([]MonsterPosition, 0, len(g.monsters))
 			for _, mon := range g.monsters {
 				m = append(m, MonsterPosition{
-					ID:        mon.id,
-					X:         mon.x,
-					Y:         mon.y,
-					Direction: mon.direction,
-					IsMoving:  mon.isMoving,
+					ID:          mon.id,
+					X:           mon.x,
+					Y:           mon.y,
+					Direction:   mon.direction,
+					IsMoving:    mon.isMoving,
+					IsAttacking: mon.isAttacking,
 				})
 			}
 
@@ -224,11 +234,12 @@ func (g *Game) StartMainLoop() {
 			for _, mon := range g.monsters {
 				m = append(m, MonsterStats{
 					MonsterPosition: MonsterPosition{
-						ID:        mon.id,
-						X:         mon.x,
-						Y:         mon.y,
-						Direction: mon.direction,
-						IsMoving:  mon.isMoving,
+						ID:          mon.id,
+						X:           mon.x,
+						Y:           mon.y,
+						Direction:   mon.direction,
+						IsMoving:    mon.isMoving,
+						IsAttacking: mon.isAttacking,
 					},
 					Kind: mon.kind,
 					HP:   mon.hp,
@@ -286,22 +297,20 @@ func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
 	})
 }
 
-func (g *Game) hitPlayer(originClientID uint64, targetClientID uint64) {
-	g.mutex.Lock()
-	defer g.mutex.Unlock()
+func (g *Game) hitPlayerUnsafe(targetClientID uint64, damage int) {
 	if p, ok := g.players[targetClientID]; ok {
 		if p.hp == 0 {
 			return
 		}
 
-		p.hp -= fireballDamage
+		p.hp -= damage
 		if p.hp < 0 {
 			p.hp = 0
 		}
 
 		g.broadcastEventFunc(DamageEvent{
 			TargetPlayerId: targetClientID,
-			Damage:         fireballDamage,
+			Damage:         damage,
 		})
 
 		if p.hp == 0 {
@@ -354,6 +363,52 @@ func (g *Game) isGameEnded() bool {
 	return g.status == StatusEnded
 }
 
+func (g *Game) moveMonstersUnsafe() {
+	for _, mon := range g.monsters {
+		if mon.hp <= 0 {
+			continue
+		}
+
+		moveSpeedPerTick := 2
+
+		if mon.isMoving {
+			if mon.x < mon.moveToX {
+				mon.x += moveSpeedPerTick
+				mon.direction = "right"
+				if mon.x > mon.moveToX {
+					mon.x = mon.moveToX
+					mon.isMoving = false
+				}
+			} else if mon.x > mon.moveToX {
+				mon.x -= moveSpeedPerTick
+				mon.direction = "left"
+				if mon.x < mon.moveToX {
+					mon.x = mon.moveToX
+					mon.isMoving = false
+				}
+			}
+
+			if mon.y < mon.moveToY {
+				mon.y += moveSpeedPerTick
+				if mon.y > mon.moveToY {
+					mon.y = mon.moveToY
+					mon.isMoving = false
+				}
+			} else if mon.y > mon.moveToY {
+				mon.y -= moveSpeedPerTick
+				if mon.y < mon.moveToY {
+					mon.y = mon.moveToY
+					mon.isMoving = false
+				}
+			}
+
+			if mon.x == mon.moveToX && mon.y == mon.moveToY {
+				mon.isMoving = false
+			}
+		}
+	}
+}
+
 func (g *Game) spawnInitialMonsters() {
 	spawnLayer := g.gameMap.getLayerByName("spawns")
 	if spawnLayer == nil {
@@ -362,16 +417,26 @@ func (g *Game) spawnInitialMonsters() {
 	}
 
 	for _, obj := range spawnLayer.Objects {
-		if obj.Name == "archer" {
-			g.monsters = append(g.monsters, &Monster{
-				id:        len(g.monsters) + 1,
-				kind:      monsterKindArcher,
-				hp:        100,
-				x:         int(obj.X),
-				y:         int(obj.Y),
-				direction: "left",
-				isMoving:  false,
-			})
+		var kind string
+		var hp int
+		switch obj.Name {
+		case "archer":
+			kind = monsterKindArcher
+			hp = 100
+		case "skeleton":
+			kind = monsterKindSkeleton
+			hp = 200
+		default:
+			continue
 		}
+		g.monsters = append(g.monsters, &Monster{
+			id:        len(g.monsters) + 1,
+			kind:      kind,
+			hp:        hp,
+			x:         int(obj.X),
+			y:         int(obj.Y),
+			direction: "left",
+			isMoving:  false,
+		})
 	}
 }
