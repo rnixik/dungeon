@@ -161,7 +161,13 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 	g.mutex.Lock()
 	g.players[client.ID()] = newPlayer(client)
 	g.mutex.Unlock()
-	client.SendEvent(JoinToStartedGameEvent{})
+	client.SendEvent(JoinToStartedGameEvent{GameData: g.GetJoinClientData()})
+}
+
+func (g *Game) GetJoinClientData() map[string]interface{} {
+	return map[string]interface{}{
+		"mapData": g.gameMap,
+	}
 }
 
 func (g *Game) StartMainLoop() {
