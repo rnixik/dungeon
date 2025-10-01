@@ -66,6 +66,7 @@ type CreaturesStatsUpdateEvent struct {
 }
 
 type JoinToStartedGameEvent struct {
+	GameData map[string]interface{} `json:"gameData"`
 }
 
 type PlayerDeathEvent struct {

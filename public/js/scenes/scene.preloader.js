@@ -11,7 +11,6 @@ var sceneConfigPreloader = {
         });
 
         this.load.image('tiles', 'assets/environment.png');
-        this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj?v=2');
 
         this.load.spritesheet('player', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });

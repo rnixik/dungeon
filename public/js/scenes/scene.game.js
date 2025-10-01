@@ -92,12 +92,17 @@ class Game extends Phaser.Scene {
             self.onIncomingGameEvent(name, data);
         });
 
+        console.log(data.mapData);
+
         // viewport scale for UI placement
         this.uiScaleX = this.scale.width / 800;
         this.uiScaleY = this.scale.height / 600;
 
         // --- Tilemap & layers ---
+        // create tiled tilemap from server map data
+        this.cache.tilemap.add('map', {format: 1, data: data.mapData});
         this.map = this.make.tilemap({ key: 'map' });
+
         const tiles = this.map.addTilesetImage('environment', 'tiles');
 
         this.layerFloor = this.map.createLayer('floor', tiles, 0, 0);
