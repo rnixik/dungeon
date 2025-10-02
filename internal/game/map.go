@@ -225,58 +225,20 @@ func (m *Map) addLayerWithCollisionRectangles() error {
 	return nil
 }
 
-/* js function
-function getBigRectsFromWallLayer(layer) {
-    const mapW = layer.layer.width;
-    const mapH = layer.layer.height;
-    const tw = layer.tilemap.tileWidth;
-    const th = layer.tilemap.tileHeight;
+func (m *Map) getVisibilityColliders() (rects []Rectangle) {
+	visLayer := m.getLayerByName("collision-rects")
+	if visLayer == nil {
+		return
+	}
 
-    const isSolidAt = (x, y) => {
-        const t = layer.getTileAt(x, y);
-        return !!t && (t.collides === true || t.properties?.collides === true);
-    };
+	for _, obj := range visLayer.Objects {
+		rects = append(rects, Rectangle{
+			X:      int(obj.X),
+			Y:      int(obj.Y),
+			Width:  int(obj.Width),
+			Height: int(obj.Height),
+		})
+	}
 
-    // 1) horizontal runs per row
-    const runs = Array.from({ length: mapH }, () => []);
-    for (let y = 0; y < mapH; y++) {
-        let x = 0;
-        while (x < mapW) {
-            if (!isSolidAt(x, y)) { x++; continue; }
-            const x0 = x;
-            while (x < mapW && isSolidAt(x, y)) x++;
-            runs[y].push({ x: x0, w: x - x0 });
-        }
-    }
-
-    // 2) vertical merge of identical runs
-    const rects = [];
-    const used = runs.map(row => row.map(() => false));
-
-    for (let y = 0; y < mapH; y++) {
-        for (let i = 0; i < runs[y].length; i++) {
-            if (used[y][i]) continue;
-            const { x: rx, w: rw } = runs[y][i];
-            let h = 1;
-            // try to extend downwards while the exact same run exists and not used
-            let yy = y + 1;
-            while (yy < mapH) {
-                let foundIdx = -1;
-                for (let j = 0; j < runs[yy].length; j++) {
-                    if (!used[yy][j] && runs[yy][j].x === rx && runs[yy][j].w === rw) { foundIdx = j; break; }
-                }
-                if (foundIdx === -1) break;
-                used[yy][foundIdx] = true;
-                h++;
-                yy++;
-            }
-            used[y][i] = true;
-
-            const t0 = layer.getTileAt(rx, y);
-            rects.push(new Rectangle(t0.getLeft(), t0.getTop(), rw * tw, h * th));
-        }
-    }
-
-    return rects;
+	return
 }
-*/

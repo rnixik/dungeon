@@ -1,6 +1,8 @@
 package game
 
-import "time"
+import (
+	"time"
+)
 
 const period = time.Second / 5
 
@@ -50,7 +52,9 @@ func (g *Game) intellectArcher(mon *Monster) {
 		}
 
 		distance := getDistance(mon.x, mon.y, player.x, player.y)
-		if distance < minDistance && distance <= 10*tileSize {
+		if distance < minDistance &&
+			distance <= 30*tileSize &&
+			g.isVisible(mon.x, mon.y, player.x, player.y) {
 			minDistance = distance
 			closestPlayer = player
 		}
@@ -87,7 +91,9 @@ func (g *Game) intellectSkeleton(mon *Monster) {
 		}
 
 		distance := getDistance(mon.x, mon.y, player.x, player.y)
-		if distance < minDistance && distance <= 10*tileSize {
+		if distance < minDistance &&
+			distance <= 10*tileSize &&
+			g.isVisible(mon.x, mon.y, player.x, player.y) {
 			minDistance = distance
 			closestPlayer = player
 		}
@@ -119,6 +125,90 @@ func (g *Game) intellectSkeleton(mon *Monster) {
 			mon.isAttacking = true
 		}
 	}
+}
+
+func (g *Game) isVisible(x1, y1, x2, y2 int) bool {
+	colliders := g.gameMap.getVisibilityColliders()
+	for _, col := range colliders {
+		if lineIntersectsRect(x1, y1, x2, y2, col.X, col.Y, col.Width, col.Height) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func lineIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh int) bool {
+	// Check if either endpoint is inside the rectangle
+	if pointInRect(x1, y1, rx, ry, rw, rh) || pointInRect(x2, y2, rx, ry, rw, rh) {
+		return true
+	}
+
+	// Check for intersection with each edge of the rectangle
+	if linesIntersect(x1, y1, x2, y2, rx, ry, rx+rw, ry) || // Top edge
+		linesIntersect(x1, y1, x2, y2, rx+rw, ry, rx+rw, ry+rh) || // Right edge
+		linesIntersect(x1, y1, x2, y2, rx+rw, ry+rh, rx, ry+rh) || // Bottom edge
+		linesIntersect(x1, y1, x2, y2, rx, ry+rh, rx, ry) { // Left edge
+		return true
+	}
+
+	return false
+}
+
+func pointInRect(px, py, rx, ry, rw, rh int) bool {
+	return px >= rx && px <= rx+rw && py >= ry && py <= ry+rh
+}
+
+// Check if two line segments (x1,y1)-(x2,y2) and (x3,y3)-(x4,y4) intersect
+func linesIntersect(x1, y1, x2, y2, x3, y3, x4, y4 int) bool {
+	// Helper: compute orientation of the ordered triplet (p1, p2, p3)
+	// 0 → collinear
+	// 1 → clockwise
+	// 2 → counterclockwise
+	orientation := func(x1, y1, x2, y2, x3, y3 int) int {
+		val := (y2-y1)*(x3-x2) - (x2-x1)*(y3-y2)
+		if val == 0 {
+			return 0
+		}
+		if val > 0 {
+			return 1
+		}
+		return 2
+	}
+
+	// Helper: check if point (x3,y3) lies on the segment (x1,y1)-(x2,y2)
+	onSegment := func(x1, y1, x2, y2, x3, y3 int) bool {
+		return x3 <= max(x1, x2) && x3 >= min(x1, x2) &&
+			y3 <= max(y1, y2) && y3 >= min(y1, y2)
+	}
+
+	// Find orientations for the 4 combinations
+	o1 := orientation(x1, y1, x2, y2, x3, y3)
+	o2 := orientation(x1, y1, x2, y2, x4, y4)
+	o3 := orientation(x3, y3, x4, y4, x1, y1)
+	o4 := orientation(x3, y3, x4, y4, x2, y2)
+
+	// General case: segments intersect if orientations differ
+	if o1 != o2 && o3 != o4 {
+		return true
+	}
+
+	// Special cases: check if points are collinear and lie on the other segment
+	if o1 == 0 && onSegment(x1, y1, x2, y2, x3, y3) {
+		return true
+	}
+	if o2 == 0 && onSegment(x1, y1, x2, y2, x4, y4) {
+		return true
+	}
+	if o3 == 0 && onSegment(x3, y3, x4, y4, x1, y1) {
+		return true
+	}
+	if o4 == 0 && onSegment(x3, y3, x4, y4, x2, y2) {
+		return true
+	}
+
+	// Otherwise, no intersection
+	return false
 }
 
 func getDistance(x1, y1, x2, y2 int) int {
