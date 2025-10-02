@@ -153,7 +153,7 @@ class Game extends Phaser.Scene {
         this.layerFloor.setMask(mask);
 
         // --- Build occluder rectangles from wall tiles ---
-        const rects = getBigRectsFromWallLayer(this.layerWalls);
+        const rects = getCollisionRectsFromMapData(data.mapData);
 
         if (DEBUG) {
             const rectGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } }).setDepth(DEPTH_UI - 1);
@@ -675,56 +675,12 @@ function sortClockwise (points, center) {
     });
 }
 
-// ===================== Utils: Walls to rects =====================
-function getBigRectsFromWallLayer(layer) {
-    const mapW = layer.layer.width;
-    const mapH = layer.layer.height;
-    const tw = layer.tilemap.tileWidth;
-    const th = layer.tilemap.tileHeight;
+function getCollisionRectsFromMapData(mapData) {
+    const layer = mapData.layers.find(l => l.name === 'collision-rects');
 
-    const isSolidAt = (x, y) => {
-        const t = layer.getTileAt(x, y);
-        return !!t && (t.collides === true || t.properties?.collides === true);
-    };
-
-    // 1) horizontal runs per row
-    const runs = Array.from({ length: mapH }, () => []);
-    for (let y = 0; y < mapH; y++) {
-        let x = 0;
-        while (x < mapW) {
-            if (!isSolidAt(x, y)) { x++; continue; }
-            const x0 = x;
-            while (x < mapW && isSolidAt(x, y)) x++;
-            runs[y].push({ x: x0, w: x - x0 });
-        }
-    }
-
-    // 2) vertical merge of identical runs
     const rects = [];
-    const used = runs.map(row => row.map(() => false));
-
-    for (let y = 0; y < mapH; y++) {
-        for (let i = 0; i < runs[y].length; i++) {
-            if (used[y][i]) continue;
-            const { x: rx, w: rw } = runs[y][i];
-            let h = 1;
-            // try to extend downwards while the exact same run exists and not used
-            let yy = y + 1;
-            while (yy < mapH) {
-                let foundIdx = -1;
-                for (let j = 0; j < runs[yy].length; j++) {
-                    if (!used[yy][j] && runs[yy][j].x === rx && runs[yy][j].w === rw) { foundIdx = j; break; }
-                }
-                if (foundIdx === -1) break;
-                used[yy][foundIdx] = true;
-                h++;
-                yy++;
-            }
-            used[y][i] = true;
-
-            const t0 = layer.getTileAt(rx, y);
-            rects.push(new Rectangle(t0.getLeft(), t0.getTop(), rw * tw, h * th));
-        }
+    for (r of layer.objects) {
+        rects.push(new Rectangle(r.x, r.y, r.width, r.height));
     }
 
     return rects;

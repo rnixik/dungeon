@@ -2,6 +2,7 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 )
 
@@ -87,6 +88,11 @@ func LoadMap(filename string) (*Map, error) {
 		return nil, err
 	}
 
+	err = m.addLayerWithCollisionRectangles()
+	if err != nil {
+		return nil, err
+	}
+
 	return &m, err
 }
 
@@ -108,10 +114,10 @@ type Rectangle struct {
 	Height int
 }
 
-func (m *Map) addLayerWithCollisionRectangles() {
+func (m *Map) addLayerWithCollisionRectangles() error {
 	wallLayer := m.getLayerByName("walls")
 	if wallLayer == nil {
-		return
+		return fmt.Errorf("no wall layer found in map")
 	}
 
 	rects := make([]Rectangle, 0)
@@ -215,6 +221,8 @@ func (m *Map) addLayerWithCollisionRectangles() {
 		X:       0,
 		Y:       0,
 	})
+
+	return nil
 }
 
 /* js function
