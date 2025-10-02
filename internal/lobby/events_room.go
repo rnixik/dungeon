@@ -32,8 +32,7 @@ type RoomUpdatedEvent struct {
 
 // GameStartedEvent broadcasted to all room members when game is started
 type GameStartedEvent struct {
-	Room     *RoomInfo              `json:"room"`
-	GameData map[string]interface{} `json:"gameData"`
+	Room *RoomInfo `json:"room"`
 }
 
 // RoomMemberChangedStatusEvent contains info about room member when he changes his status

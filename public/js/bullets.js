@@ -43,6 +43,17 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
 
         this.anims.play('fireball-loop',true);
     }
+
+    preUpdate (time, delta)
+    {
+        super.preUpdate(time, delta);
+
+        if (this.y <= -32 || this.y >= 2000 || this.x <= -32 || this.x >= 2000)
+        {
+            this.setActive(false);
+            this.setVisible(false);
+        }
+    }
 }
 
 class Bullets extends Phaser.Physics.Arcade.Group
@@ -89,11 +100,6 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
     bulletHitPlayer (bullet, player)
     {
-        if (bullet.clientId === player.id)
-        {
-            // don't hit yourself
-            return;
-        }
         this.hideBullet(bullet);
         this.onBulletHitPlayer.apply(this.gameScene, [bullet, player]);
     }
@@ -113,7 +119,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
     fireBullet (clientId, x, y, direction)
     {
-        const bullet = this.getFirstDead(true);
+        const bullet = this.getFirstDead(false);
 
         if (bullet)
         {

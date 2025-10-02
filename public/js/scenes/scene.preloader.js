@@ -11,6 +11,7 @@ var sceneConfigPreloader = {
         });
 
         this.load.image('tiles', 'assets/environment.png');
+        this.load.tilemapTiledJSON('map', 'assets/dungeon1.tmj?v=2');
 
         this.load.spritesheet('player', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
@@ -19,7 +20,6 @@ var sceneConfigPreloader = {
         this.load.image('bullet', 'assets/bullet7.png');
         this.load.image('spinner', 'assets/spinner.png');
         this.load.image('archer', 'assets/archer.png');
-        this.load.image('skeleton', 'assets/archer.png');
 
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },

@@ -31,12 +31,11 @@ type PlayerPosition struct {
 }
 
 type MonsterPosition struct {
-	ID          int    `json:"id"`
-	X           int    `json:"x"`
-	Y           int    `json:"y"`
-	Direction   string `json:"direction"`
-	IsMoving    bool   `json:"isMoving"`
-	IsAttacking bool   `json:"isAttacking"`
+	ID        int    `json:"id"`
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Direction string `json:"direction"`
+	IsMoving  bool   `json:"isMoving"`
 }
 
 type CreaturesPosUpdateEvent struct {
@@ -66,7 +65,6 @@ type CreaturesStatsUpdateEvent struct {
 }
 
 type JoinToStartedGameEvent struct {
-	GameData map[string]interface{} `json:"gameData"`
 }
 
 type PlayerDeathEvent struct {

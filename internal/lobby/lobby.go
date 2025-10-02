@@ -16,7 +16,6 @@ type GameEventsDispatcher interface {
 	OnClientJoined(client ClientPlayer)
 	StartMainLoop()
 	Status() string
-	GetJoinClientData() map[string]interface{}
 }
 
 type NewGameFunc func(playersClients []ClientPlayer, room *Room, broadcastEventFunc func(event interface{})) GameEventsDispatcher
