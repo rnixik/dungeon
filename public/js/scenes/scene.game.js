@@ -7,6 +7,8 @@ const DEPTH_MONSTER   = 40;
 const DEPTH_DARKNESS = 9000;
 const DEPTH_UI       = 10000;
 
+const PLAYER_SCALE = 1.5;
+
 // Global darkness opacity (0..1)
 const DARKNESS_ALPHA = 0.9;
 
@@ -90,12 +92,17 @@ class Game extends Phaser.Scene {
             self.onIncomingGameEvent(name, data);
         });
 
+        console.log(data.mapData);
+
         // viewport scale for UI placement
         this.uiScaleX = this.scale.width / 800;
         this.uiScaleY = this.scale.height / 600;
 
         // --- Tilemap & layers ---
+        // create tiled tilemap from server map data
+        this.cache.tilemap.add('map', {format: 1, data: data.mapData});
         this.map = this.make.tilemap({ key: 'map' });
+
         const tiles = this.map.addTilesetImage('environment', 'tiles');
 
         this.layerFloor = this.map.createLayer('floor', tiles, 0, 0);
@@ -103,7 +110,7 @@ class Game extends Phaser.Scene {
         this.layerWalls.setCollisionByProperty({ collides: true });
 
         // --- Sprites ---
-        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(1.5).setDepth(DEPTH_PLAYER);
+        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(PLAYER_SCALE).setDepth(DEPTH_PLAYER);
         this.physics.add.collider(this.player, this.layerWalls);
         this.player.hp = 100;
         this.player.hpText = this.add.text(0, 0, '100/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
@@ -146,7 +153,7 @@ class Game extends Phaser.Scene {
         this.layerFloor.setMask(mask);
 
         // --- Build occluder rectangles from wall tiles ---
-        const rects = getBigRectsFromWallLayer(this.layerWalls);
+        const rects = getCollisionRectsFromMapData(data.mapData);
 
         if (DEBUG) {
             const rectGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } }).setDepth(DEPTH_UI - 1);
@@ -233,6 +240,14 @@ class Game extends Phaser.Scene {
             }
         }
 
+        for (const id in this.monsters) {
+            const m = this.monsters[id];
+            if (m.hpText) {
+                m.hpText.x = m.x;
+                m.hpText.y = m.y + 20;
+            }
+        }
+
         if (this.player.hpText) {
             this.player.hpText.x = this.player.x;
             this.player.hpText.y = this.player.y - 20;
@@ -255,7 +270,7 @@ class Game extends Phaser.Scene {
                 let justSpawned = false;
                 if (!this.players[id]) {
                     // spawn new player
-                    const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(3.5).setDepth(DEPTH_PLAYER);
+                    const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(PLAYER_SCALE).setDepth(DEPTH_PLAYER);
                     np.id = id;
                     np.hp = p.hp;
 
@@ -282,6 +297,8 @@ class Game extends Phaser.Scene {
                         if (pSprite.hpText) {
                             pSprite.hpText.destroy();
                             pSprite.setTint(0xff3333);
+                            // avoid late changes of damage effect
+                            this.time.delayedCall(110, () => pSprite.setTint(0xff3333), [], this);
                             pSprite.setDepth(DEPTH_DEAD);
                             pSprite.disableBody();
                         }
@@ -317,6 +334,8 @@ class Game extends Phaser.Scene {
                         if (mSprite.hpText) {
                             mSprite.hpText.destroy();
                             mSprite.setTint(0x333333);
+                            // avoid late changes of damage effect
+                            this.time.delayedCall(110, () => mSprite.setTint(0x333333), [], this);
                             mSprite.setDepth(DEPTH_DEAD);
                             mSprite.disableBody();
                         }
@@ -366,6 +385,30 @@ class Game extends Phaser.Scene {
             }, null, this);
         }
 
+        if (name === 'DamageEvent') {
+            const pId = data.targetPlayerId;
+            const mId = data.targetMonsterId;
+            if (pId === this.myClientId) {
+                this.player.setTint(0xff0000);
+                this.time.delayedCall(100, () => this.player.clearTint(), [], this);
+            }
+            for (const i in this.players) {
+                const p = this.players[i];
+                if (p.id === pId) {
+                    p.setTint(0xff0000);
+                    this.time.delayedCall(100, () => p.clearTint(), [], this);
+                }
+            }
+            console.log(this.monsters);
+            for (const i in this.monsters) {
+                const m = this.monsters[i];
+                if (m.id === mId) {
+                    m.setTint(0xff0000);
+                    this.time.delayedCall(100, () => m.clearTint(), [], this);
+                }
+            }
+        }
+
         console.log('INCOMING GAME EVENT', name, data);
     }
 
@@ -404,6 +447,14 @@ class Game extends Phaser.Scene {
 
         mSprite.x = m.x;
         mSprite.y = m.y;
+
+        if (m.isAttacking && !mSprite.isAttacking) {
+            mSprite.setTint(0x00ff00);
+            mSprite.isAttacking = true;
+        } else if (!m.isAttacking && mSprite.isAttacking) {
+            mSprite.clearTint()
+            mSprite.isAttacking = false;
+        }
     }
 
     castFireball() {
@@ -624,56 +675,12 @@ function sortClockwise (points, center) {
     });
 }
 
-// ===================== Utils: Walls to rects =====================
-function getBigRectsFromWallLayer(layer) {
-    const mapW = layer.layer.width;
-    const mapH = layer.layer.height;
-    const tw = layer.tilemap.tileWidth;
-    const th = layer.tilemap.tileHeight;
+function getCollisionRectsFromMapData(mapData) {
+    const layer = mapData.layers.find(l => l.name === 'collision-rects');
 
-    const isSolidAt = (x, y) => {
-        const t = layer.getTileAt(x, y);
-        return !!t && (t.collides === true || t.properties?.collides === true);
-    };
-
-    // 1) horizontal runs per row
-    const runs = Array.from({ length: mapH }, () => []);
-    for (let y = 0; y < mapH; y++) {
-        let x = 0;
-        while (x < mapW) {
-            if (!isSolidAt(x, y)) { x++; continue; }
-            const x0 = x;
-            while (x < mapW && isSolidAt(x, y)) x++;
-            runs[y].push({ x: x0, w: x - x0 });
-        }
-    }
-
-    // 2) vertical merge of identical runs
     const rects = [];
-    const used = runs.map(row => row.map(() => false));
-
-    for (let y = 0; y < mapH; y++) {
-        for (let i = 0; i < runs[y].length; i++) {
-            if (used[y][i]) continue;
-            const { x: rx, w: rw } = runs[y][i];
-            let h = 1;
-            // try to extend downwards while the exact same run exists and not used
-            let yy = y + 1;
-            while (yy < mapH) {
-                let foundIdx = -1;
-                for (let j = 0; j < runs[yy].length; j++) {
-                    if (!used[yy][j] && runs[yy][j].x === rx && runs[yy][j].w === rw) { foundIdx = j; break; }
-                }
-                if (foundIdx === -1) break;
-                used[yy][foundIdx] = true;
-                h++;
-                yy++;
-            }
-            used[y][i] = true;
-
-            const t0 = layer.getTileAt(rx, y);
-            rects.push(new Rectangle(t0.getLeft(), t0.getTop(), rw * tw, h * th));
-        }
+    for (r of layer.objects) {
+        rects.push(new Rectangle(r.x, r.y, r.width, r.height));
     }
 
     return rects;

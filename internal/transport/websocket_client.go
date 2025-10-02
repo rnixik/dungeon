@@ -120,8 +120,8 @@ func (c *WebSocketClient) writeLoop() {
 
 func (c *WebSocketClient) SendEvent(event interface{}) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	isClosed := c.sendIsClosed
-	c.mu.Unlock()
 
 	if isClosed {
 		return

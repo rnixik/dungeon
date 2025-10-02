@@ -125,19 +125,20 @@ class MainMenu extends Phaser.Scene
             return;
         }
         if (json.name === 'GameStartedEvent' || json.name === 'JoinToStartedGameEvent') {
-            this.startGame();
+            this.startGame(json.data.gameData);
             return;
         }
 
         this.onIncomingGameEventCallback(json.name, json.data);
     };
 
-    startGame()
+    startGame(gameData)
     {
         const self = this;
         this.scene.start('Game', {
             myClientId: this.myClientId,
             myNickname: this.nickname,
+            mapData: gameData.mapData,
             sendGameCommand: function (type, data) {
                 self.wsConnection.send(JSON.stringify({type: 'game', subType: type, data: data}));
             },

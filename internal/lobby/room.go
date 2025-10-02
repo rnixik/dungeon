@@ -268,7 +268,7 @@ func (r *Room) OnStartGameCommand(c ClientPlayer) {
 	roomUpdatedEvent := &RoomUpdatedEvent{r.toRoomInfo(), RoomUpdatedCauseGameStarted}
 	r.broadcastEvent(roomUpdatedEvent, nil)
 
-	gameStartedEvent := &GameStartedEvent{r.toRoomInfo()}
+	gameStartedEvent := &GameStartedEvent{Room: r.toRoomInfo(), GameData: r.game.GetJoinClientData()}
 	r.broadcastEvent(gameStartedEvent, nil)
 
 	r.lobby.sendRoomUpdate(r)
