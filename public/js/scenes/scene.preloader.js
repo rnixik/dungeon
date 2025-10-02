@@ -27,13 +27,13 @@ var sceneConfigPreloader = {
     create: function() {
         this.anims.create({
             key: 'left',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 0, end: 11 }),
             frameRate: 15,
             repeat: -1
         });
         this.anims.create({
             key: 'right',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 0, end: 11 }),
             frameRate: 15,
             repeat: -1
         });
@@ -45,7 +45,7 @@ var sceneConfigPreloader = {
         });
         this.anims.create({
             key: 'down',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            frames: this.anims.generateFrameNumbers('player', { start: 24, end: 35 }),
             frameRate: 15,
             repeat: -1
         });

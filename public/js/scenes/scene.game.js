@@ -200,7 +200,6 @@ class Game extends Phaser.Scene {
         else if (this.cursors.down.isDown || joy.down.isDown)
         {
             this.player.anims.play('down', true);
-            this.player.setAngle(90).setFlipX(false);
             this.direction='down';
             this.isMoving = true;
         }
@@ -230,13 +229,13 @@ class Game extends Phaser.Scene {
             const p = this.players[id];
             if (p.hpText) {
                 p.hpText.x = p.x;
-                p.hpText.y = p.y + 20;
+                p.hpText.y = p.y - 20;
             }
         }
 
         if (this.player.hpText) {
             this.player.hpText.x = this.player.x;
-            this.player.hpText.y = this.player.y + 20;
+            this.player.hpText.y = this.player.y - 20;
         }
     }
 
