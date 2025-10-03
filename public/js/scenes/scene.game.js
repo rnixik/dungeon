@@ -256,92 +256,7 @@ class Game extends Phaser.Scene {
 
     onIncomingGameEvent (name, data) {
         if (name === 'CreaturesStatsUpdateEvent') {
-            for (const p of data.players) {
-                const id = p.clientId;
-                if (id === this.myClientId) {
-                    if (this.player.hp !== p.hp) {
-                        this.player.hp = p.hp;
-                        if (this.player.hpText) {
-                            this.player.hpText.setText(p.hp + '/100');
-                        }
-                    }
-                    continue;
-                }
-                let justSpawned = false;
-                if (!this.players[id]) {
-                    // spawn new player
-                    const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(PLAYER_SCALE).setDepth(DEPTH_PLAYER);
-                    np.id = id;
-                    np.hp = p.hp;
-
-                    np.setTint(Math.random() * 0xffffff);
-
-                    np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
-
-                    this.players[id] = np;
-                    this.bullets.addPlayer(np);
-
-                    justSpawned = true;
-                    console.log('spawn player', id, Object.keys(this.players).length);
-                }
-
-                this.updatePlayerPos(p);
-
-                const pSprite = this.players[id];
-                if (pSprite.hp !== p.hp || justSpawned) {
-                    pSprite.hp = p.hp;
-                    if (pSprite.hpText) {
-                        pSprite.hpText.setText(p.hp + '/100');
-                    }
-                    if (p.hp === 0) {
-                        if (pSprite.hpText) {
-                            pSprite.hpText.destroy();
-                            pSprite.setTint(0xff3333);
-                            // avoid late changes of damage effect
-                            this.time.delayedCall(110, () => pSprite.setTint(0xff3333), [], this);
-                            pSprite.setDepth(DEPTH_DEAD);
-                            pSprite.disableBody();
-                        }
-                    }
-                }
-            }
-
-            for (const m of data.monsters) {
-                const id = m.id;
-                let justSpawned = false;
-                if (!this.monsters[id]) {
-                    // spawn new monster
-                    const nm = this.physics.add.sprite(m.x, m.y, m.kind, 0).setScale(2).setDepth(DEPTH_MONSTER);
-                    nm.id = id;
-                    nm.hp = m.hp;
-                    nm.hpText = this.add.text(m.x, m.y, m.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_MONSTER + 1);
-                    this.monsters[id] = nm;
-                    this.bullets.addMonster(nm);
-                    justSpawned = true;
-                    console.log('spawn monster', id, Object.keys(this.monsters).length);
-                }
-
-                this.updateMonsterPos(m);
-
-                const mSprite = this.monsters[id];
-
-                if (mSprite.hp !== m.hp || justSpawned) {
-                    mSprite.hp = m.hp;
-                    if (mSprite.hpText) {
-                        mSprite.hpText.setText(m.hp + '/100');
-                    }
-                    if (m.hp === 0) {
-                        if (mSprite.hpText) {
-                            mSprite.hpText.destroy();
-                            mSprite.setTint(0x333333);
-                            // avoid late changes of damage effect
-                            this.time.delayedCall(110, () => mSprite.setTint(0x333333), [], this);
-                            mSprite.setDepth(DEPTH_DEAD);
-                            mSprite.disableBody();
-                        }
-                    }
-                }
-            }
+            this.handleCreaturesStatsUpdateEvent(data);
 
             return;
         }
@@ -399,7 +314,6 @@ class Game extends Phaser.Scene {
                     this.time.delayedCall(100, () => p.clearTint(), [], this);
                 }
             }
-            console.log(this.monsters);
             for (const i in this.monsters) {
                 const m = this.monsters[i];
                 if (m.id === mId) {
@@ -410,6 +324,97 @@ class Game extends Phaser.Scene {
         }
 
         console.log('INCOMING GAME EVENT', name, data);
+    }
+
+    handleCreaturesStatsUpdateEvent(data)
+    {
+        for (const p of data.players) {
+            const id = p.clientId;
+            if (id === this.myClientId) {
+                if (this.player.hp !== p.hp) {
+                    this.player.hp = p.hp;
+                    if (this.player.hpText) {
+                        this.player.hpText.setText(p.hp + '/100');
+                    }
+                }
+                continue;
+            }
+            let justSpawned = false;
+            if (!this.players[id]) {
+                // spawn new player
+                const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(PLAYER_SCALE).setDepth(DEPTH_PLAYER);
+                np.id = id;
+                np.hp = p.hp;
+
+                np.setTint(Math.random() * 0xffffff);
+
+                np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
+
+                this.players[id] = np;
+                this.bullets.addPlayer(np);
+
+                justSpawned = true;
+                console.log('spawn player', id, Object.keys(this.players).length);
+            }
+
+            this.updatePlayerPos(p);
+
+            const pSprite = this.players[id];
+            if (pSprite.hp !== p.hp || justSpawned) {
+                pSprite.hp = p.hp;
+                if (pSprite.hpText) {
+                    pSprite.hpText.setText(p.hp + '/100');
+                }
+                if (p.hp === 0) {
+                    if (pSprite.hpText) {
+                        pSprite.hpText.destroy();
+                        pSprite.setTint(0xff3333);
+                        // avoid late changes of damage effect
+                        this.time.delayedCall(110, () => pSprite.setTint(0xff3333), [], this);
+                        pSprite.setDepth(DEPTH_DEAD);
+                        pSprite.disableBody();
+                    }
+                }
+            }
+        }
+
+        for (const m of data.monsters) {
+            const id = m.id;
+            let justSpawned = false;
+            if (!this.monsters[id]) {
+                // spawn new monster
+                const nm = this.physics.add.sprite(m.x, m.y, m.kind, 0).setScale(2).setDepth(DEPTH_MONSTER);
+                nm.id = id;
+                nm.kind = m.kind;
+                nm.hp = m.hp;
+                nm.hpText = this.add.text(m.x, m.y, m.hp + '/100', { font: '14px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_MONSTER + 1);
+                this.monsters[id] = nm;
+                this.bullets.addMonster(nm);
+                justSpawned = true;
+                console.log('spawn monster', id, Object.keys(this.monsters).length);
+            }
+
+            this.updateMonsterPos(m);
+
+            const mSprite = this.monsters[id];
+
+            if (mSprite.hp !== m.hp || justSpawned) {
+                mSprite.hp = m.hp;
+                if (mSprite.hpText) {
+                    mSprite.hpText.setText(m.hp + '/100');
+                }
+                if (m.hp === 0) {
+                    if (mSprite.hpText) {
+                        mSprite.hpText.destroy();
+                        mSprite.setTint(0x333333);
+                        // avoid late changes of damage effect
+                        this.time.delayedCall(110, () => mSprite.setTint(0x333333), [], this);
+                        mSprite.setDepth(DEPTH_DEAD);
+                        mSprite.disableBody();
+                    }
+                }
+            }
+        }
     }
 
     updatePlayerPos(p)
@@ -449,10 +454,20 @@ class Game extends Phaser.Scene {
         mSprite.y = m.y;
 
         if (m.isAttacking && !mSprite.isAttacking) {
-            mSprite.setTint(0x00ff00);
+            if (mSprite.kind === 'demon') {
+                mSprite.anims.play('demon_attack', true);
+            } else {
+                // example of attack effect
+                mSprite.setTint(0x00ff00);
+            }
+
             mSprite.isAttacking = true;
         } else if (!m.isAttacking && mSprite.isAttacking) {
-            mSprite.clearTint()
+            if (mSprite.kind === 'demon') {
+                mSprite.anims.play('demon', true);
+            } else {
+                mSprite.clearTint()
+            }
             mSprite.isAttacking = false;
         }
     }

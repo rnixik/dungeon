@@ -10,6 +10,7 @@ const tileSize = 32
 
 const skeletonAttackDuration = time.Second / 2
 const archerAttackCooldown = time.Second / 2
+const demonAttackCooldown = time.Second
 
 func (g *Game) startIntellect() {
 	ticker := time.NewTicker(period)
@@ -33,6 +34,8 @@ func (g *Game) startIntellect() {
 					g.intellectArcher(mon)
 				case monsterKindSkeleton:
 					g.intellectSkeleton(mon)
+				case monsterKindDemon:
+					g.intellectDemon(mon)
 				}
 
 			}
@@ -80,6 +83,47 @@ func (g *Game) intellectArcher(mon *Monster) {
 		mon.attackStartedAt = time.Time{}
 	}
 
+}
+
+func (g *Game) intellectDemon(mon *Monster) {
+	closestPlayers := make([]*Player, 0)
+
+	for _, player := range g.players {
+		if player.hp <= 0 {
+			continue
+		}
+
+		distance := getDistance(mon.x, mon.y, player.x, player.y)
+		if distance <= 30*tileSize &&
+			g.isVisible(mon.x, mon.y, player.x, player.y) {
+			closestPlayers = append(closestPlayers, player)
+		}
+	}
+
+	// Attack
+	if mon.attackStartedAt.IsZero() {
+		if len(closestPlayers) == 0 {
+			return
+		}
+
+		for _, closestPlayer := range closestPlayers {
+			g.broadcastEventFunc(ArrowEvent{
+				ClientID:  0,
+				MonsterID: mon.id,
+				X1:        mon.x,
+				Y1:        mon.y,
+				X2:        closestPlayer.x,
+				Y2:        closestPlayer.y,
+			})
+		}
+
+		mon.attackStartedAt = time.Now()
+		mon.isAttacking = true
+	} else if time.Since(mon.attackStartedAt) >= demonAttackCooldown {
+		mon.attackStartedAt = time.Time{}
+	} else if time.Since(mon.attackStartedAt) > time.Second {
+		mon.isAttacking = false
+	}
 }
 
 func (g *Game) intellectSkeleton(mon *Monster) {

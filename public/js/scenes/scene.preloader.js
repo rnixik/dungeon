@@ -21,6 +21,9 @@ var sceneConfigPreloader = {
         this.load.image('archer', 'assets/archer.png');
         this.load.image('skeleton', 'assets/archer.png');
 
+        this.load.spritesheet('demon', 'assets/demon/IDLE.png', { frameWidth: 79, frameHeight: 69 });
+        this.load.spritesheet('demon_attack', 'assets/demon/ATTACK.png', { frameWidth: 79, frameHeight: 69 });
+
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },
 
@@ -59,6 +62,18 @@ var sceneConfigPreloader = {
             key: 'fireball-loop',
             frames: this.anims.generateFrameNumbers('fireball', { start: 1, end: 12 }),
             frameRate: 15,
+            repeat: -1
+        })
+        this.anims.create({
+            key: 'demon',
+            frames: this.anims.generateFrameNumbers('demon', { start: 1, end: 4 }),
+            frameRate: 5,
+            repeat: -1
+        })
+        this.anims.create({
+            key: 'demon_attack',
+            frames: this.anims.generateFrameNumbers('demon_attack', { start: 1, end: 8 }),
+            frameRate: 8,
             repeat: -1
         })
 

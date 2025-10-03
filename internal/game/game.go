@@ -18,6 +18,7 @@ const commonUpdateTickPeriod = time.Second / 3
 
 const monsterKindArcher = "archer"
 const monsterKindSkeleton = "skeleton"
+const monsterKindDemon = "demon"
 
 type Player struct {
 	client             lobby.ClientPlayer
@@ -432,6 +433,9 @@ func (g *Game) spawnInitialMonsters() {
 		case "skeleton":
 			kind = monsterKindSkeleton
 			hp = 200
+		case "demon":
+			kind = monsterKindDemon
+			hp = 1000
 		default:
 			continue
 		}
