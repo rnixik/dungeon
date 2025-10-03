@@ -299,6 +299,19 @@ class Game extends Phaser.Scene {
                 });
             }, null, this);
         }
+        if (name === 'DemonFireballEvent') {
+            const ar = this.physics.add.sprite(data.x1, data.y1, 'bullet', 0).setScale(1);
+            const dir = new Phaser.Math.Vector2(data.x2 - data.x1, data.y2 - data.y1).normalize();
+            ar.setVelocity(dir.x * 700, dir.y * 700);
+            this.physics.add.collider(ar, this.layerWalls, () => ar.destroy(), null, this);
+            this.physics.add.overlap(ar, this.player, () => {
+                ar.destroy();
+                this.sendGameCommand('HitPlayerCommand', {
+                    monsterId: data.monsterId,
+                    targetClientId: this.myClientId
+                });
+            }, null, this);
+        }
 
         if (name === 'DamageEvent') {
             const pId = data.targetPlayerId;

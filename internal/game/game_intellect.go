@@ -107,7 +107,7 @@ func (g *Game) intellectDemon(mon *Monster) {
 		}
 
 		for _, closestPlayer := range closestPlayers {
-			g.broadcastEventFunc(ArrowEvent{
+			g.broadcastEventFunc(DemonFireballEvent{
 				ClientID:  0,
 				MonsterID: mon.id,
 				X1:        mon.x,

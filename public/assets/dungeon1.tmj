@@ -60,54 +60,6 @@
          "objects":[
                 {
                  "height":0,
-                 "id":57,
-                 "name":"archer",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":1232,
-                 "y":438.5
-                }, 
-                {
-                 "height":0,
-                 "id":58,
-                 "name":"archer",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":1267,
-                 "y":437.5
-                }, 
-                {
-                 "height":0,
-                 "id":59,
-                 "name":"archer",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":1295.5,
-                 "y":438.5
-                }, 
-                {
-                 "height":0,
-                 "id":60,
-                 "name":"archer",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":1265,
-                 "y":405
-                }, 
-                {
-                 "height":0,
                  "id":61,
                  "name":"archer",
                  "point":true,
@@ -127,8 +79,8 @@
                  "type":"",
                  "visible":true,
                  "width":0,
-                 "x":543.333333333333,
-                 "y":244.666666666667
+                 "x":1259.33333333333,
+                 "y":382.666666666667
                 }, 
                 {
                  "height":0,
