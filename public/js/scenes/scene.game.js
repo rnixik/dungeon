@@ -287,7 +287,7 @@ class Game extends Phaser.Scene {
             }
         }
         if (name === 'ArrowEvent') {
-            const ar = this.physics.add.sprite(data.x1, data.y1, 'archer', 0).setScale(0.4);
+            const ar = this.physics.add.sprite(data.x1, data.y1, 'arrow', 0).setScale(2);
             const dir = new Phaser.Math.Vector2(data.x2 - data.x1, data.y2 - data.y1).normalize();
             ar.setVelocity(dir.x * 400, dir.y * 400);
             this.physics.add.collider(ar, this.layerWalls, () => ar.destroy(), null, this);
@@ -396,7 +396,8 @@ class Game extends Phaser.Scene {
             let justSpawned = false;
             if (!this.monsters[id]) {
                 // spawn new monster
-                const nm = this.physics.add.sprite(m.x, m.y, m.kind, 0).setScale(2).setDepth(DEPTH_MONSTER);
+                const nm = this.physics.add.sprite(m.x, m.y, m.kind, 0).setScale(2)
+                    .setDepth(DEPTH_MONSTER);
                 nm.id = id;
                 nm.kind = m.kind;
                 nm.hp = m.hp;
@@ -404,6 +405,13 @@ class Game extends Phaser.Scene {
                 this.monsters[id] = nm;
                 this.bullets.addMonster(nm);
                 justSpawned = true;
+
+                if (m.kind === 'archer') {
+                    nm.bowSprite = this.add.sprite(m.x, m.y, 'bow', 0)
+                        .setScale(2)
+                        .setDepth(DEPTH_MONSTER + 0.1) // above body
+                        .setOrigin(0.5, 0.5);
+                }
                 console.log('spawn monster', id, Object.keys(this.monsters).length);
             }
 
