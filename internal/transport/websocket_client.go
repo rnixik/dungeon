@@ -83,7 +83,7 @@ func (c *WebSocketClient) writeLoop() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		_ = c.conn.Close()
+		c.Close()
 	}()
 	for {
 		select {
@@ -91,15 +91,12 @@ func (c *WebSocketClient) writeLoop() {
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				c.Close()
 
 				return
 			}
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				c.Close()
-
 				return
 			}
 			_, _ = w.Write(message)
@@ -155,6 +152,11 @@ func (c *WebSocketClient) Close() {
 
 	c.sendIsClosed = true
 	close(c.send)
+
+	err := c.conn.Close()
+	if err != nil {
+		log.Println("Error closing websocket connection:", err)
+	}
 }
 
 func ServeWebSocketRequest(lobby *lobby.Lobby, w http.ResponseWriter, r *http.Request) {
