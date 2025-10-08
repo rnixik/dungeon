@@ -61,6 +61,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
             key: 'fireball',
             active: false,
             visible: false,
+            setDepth: {value: DEPTH_PROJECTILES, step: 0},
             classType: Bullet
         });
 

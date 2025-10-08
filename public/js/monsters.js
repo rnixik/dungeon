@@ -77,22 +77,51 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         this.x = posData.x;
         this.y = posData.y;
 
-        if (posData.isAttacking && !this.isAttacking) {
-            if (this.kind === 'demon') {
-                this.anims.play('demon_attack', true);
-            } else {
-                // example of attack effect
-                this.setTint(0x00ff00);
+        // attacking
+        if (posData.isAttacking) {
+            let attackAnimsKey = `${this.kind}_attack_${posData.direction}`;
+            if (!this.scene.anims.exists(attackAnimsKey)) {
+                attackAnimsKey = `${this.kind}_attack`;
             }
 
-            this.isAttacking = true;
-        } else if (!posData.isAttacking && this.isAttacking) {
-            if (this.kind === 'demon') {
-                this.anims.play('demon', true);
+            if (this.scene.anims.exists(attackAnimsKey)) {
+                this.anims.play(attackAnimsKey, true);
             } else {
-                this.clearTint()
+                console.warn("missing attack anims:", attackAnimsKey);
             }
-            this.isAttacking = false;
+
+            return;
+        }
+
+        // moving
+        if (posData.isMoving) {
+            let moveAnimsKey = `${this.kind}_walk_${posData.direction}`;
+            if (!this.scene.anims.exists(moveAnimsKey)) {
+                moveAnimsKey = `${this.kind}_walk`;
+            }
+            if (!this.scene.anims.exists(moveAnimsKey)) {
+                moveAnimsKey = this.kind;
+            }
+
+            if (this.scene.anims.exists(moveAnimsKey)) {
+                this.anims.play(moveAnimsKey, true);
+            } else {
+                console.warn("missing move anims:", moveAnimsKey);
+            }
+
+            return;
+        }
+
+        // idle
+        let idleAnimsKey = `${this.kind}_idle_${posData.direction}`;
+        if (!this.scene.anims.exists(idleAnimsKey)) {
+            idleAnimsKey = this.kind + '_idle';
+        }
+        if (!this.scene.anims.exists(idleAnimsKey)) {
+            idleAnimsKey = this.kind;
+        }
+        if (this.scene.anims.exists(idleAnimsKey)) {
+            this.anims.play(idleAnimsKey, true);
         }
     }
 

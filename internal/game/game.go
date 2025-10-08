@@ -11,7 +11,7 @@ import (
 const StatusStarted = "started"
 const StatusEnded = "ended"
 
-const maxHP = 100
+const maxHP = 1000
 const fireballDamage = 25
 const positionsUpdateTickPeriod = time.Second / 60
 const commonUpdateTickPeriod = time.Second / 3
@@ -45,6 +45,7 @@ type Monster struct {
 	direction       string
 	isMoving        bool
 	isAttacking     bool
+	attacked        bool
 	attackStartedAt time.Time
 	moveToX         int
 	moveToY         int

@@ -10,7 +10,9 @@ const tileSize = 32
 
 const skeletonAttackDuration = time.Second / 2
 const archerAttackCooldown = time.Second / 2
-const demonAttackCooldown = time.Second
+const demonAttackCooldown = 2 * time.Second
+const demonAttackDelay = 300 * time.Millisecond
+const demonAttackDuration = time.Second
 
 func (g *Game) startIntellect() {
 	ticker := time.NewTicker(period)
@@ -106,6 +108,11 @@ func (g *Game) intellectDemon(mon *Monster) {
 			return
 		}
 
+		if len(closestPlayers) > 0 {
+			mon.attackStartedAt = time.Now()
+			mon.isAttacking = true
+		}
+	} else if !mon.attacked && time.Since(mon.attackStartedAt) >= demonAttackDelay {
 		for _, closestPlayer := range closestPlayers {
 			g.broadcastEventFunc(DemonFireballEvent{
 				ClientID:  0,
@@ -116,12 +123,13 @@ func (g *Game) intellectDemon(mon *Monster) {
 				Y2:        closestPlayer.y,
 			})
 		}
-
-		mon.attackStartedAt = time.Now()
-		mon.isAttacking = true
+		if len(closestPlayers) > 0 {
+			mon.attacked = true
+		}
 	} else if time.Since(mon.attackStartedAt) >= demonAttackCooldown {
 		mon.attackStartedAt = time.Time{}
-	} else if time.Since(mon.attackStartedAt) > time.Second {
+		mon.attacked = false
+	} else if time.Since(mon.attackStartedAt) > demonAttackDuration {
 		mon.isAttacking = false
 	}
 }

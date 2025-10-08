@@ -81,50 +81,98 @@ var sceneConfigPreloader = {
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_idle_down',
+            key: 'archer_idle_down',
             frames: this.anims.generateFrameNumbers('archer', { start: 0, end: 3}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_walk_down',
+            key: 'archer_walk_down',
             frames: this.anims.generateFrameNumbers('archer', { start: 6, end: 11}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_idle_up',
+            key: 'archer_idle_up',
             frames: this.anims.generateFrameNumbers('archer', { start: 12, end: 15}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_walk_up',
+            key: 'archer_walk_up',
             frames: this.anims.generateFrameNumbers('archer', { start: 18, end: 23}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_idle_left',
+            key: 'archer_idle_left',
             frames: this.anims.generateFrameNumbers('archer', { start: 24, end: 27}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_walk_left',
+            key: 'archer_walk_left',
             frames: this.anims.generateFrameNumbers('archer', { start: 30, end: 35}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_idle_right',
+            key: 'archer_idle_right',
             frames: this.anims.generateFrameNumbers('archer', { start: 36, end: 39}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_walk_right',
+            key: 'archer_walk_right',
             frames: this.anims.generateFrameNumbers('archer', { start: 42, end: 47}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_idle_down',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 0, end: 3}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_walk_down',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 6, end: 11}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_idle_up',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 12, end: 15}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_walk_up',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 18, end: 23}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_idle_left',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 24, end: 27}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_walk_left',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 30, end: 35}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_idle_right',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 36, end: 39}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_walk_right',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 42, end: 47}),
             frameRate: 8,
             repeat: -1
         });
