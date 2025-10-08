@@ -26,7 +26,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 
         this.id = statData.id;
         this.hp = statData.hp;
-        this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + this.maxHp, { font: '14px Arial', fill: '#ffffff' })
+        this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + this.maxHp, { font: '10px Arial', fill: '#ffffff' })
             .setOrigin(0.5, 1)
             .setDepth(DEPTH_MONSTER + 1);
 
@@ -80,8 +80,13 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         // attacking
         if (posData.isAttacking) {
             let attackAnimsKey = `${this.kind}_attack_${posData.direction}`;
+            console.warn("Playing attack:", attackAnimsKey);
             if (!this.scene.anims.exists(attackAnimsKey)) {
                 attackAnimsKey = `${this.kind}_attack`;
+            }
+
+            if (this.kind === 'archer') {
+                attackAnimsKey = `$bow_${posData.direction}`;
             }
 
             if (this.scene.anims.exists(attackAnimsKey)) {
@@ -89,6 +94,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             } else {
                 console.warn("missing attack anims:", attackAnimsKey);
             }
+
 
             return;
         }
@@ -167,8 +173,8 @@ class Archer extends Monster
     {
         super.spawn(statData);
 
-        this.bowSprite = this.scene.add.sprite(statData.x, statData.y, 'bow', 0)
-            .setScale(2)
+        this.bowSprite = this.scene.add.sprite(statData.x , statData.y + 10, 'bow', 6)
+            .setScale(1.5)
             .setDepth(DEPTH_MONSTER + 0.1) // above body
             .setOrigin(0.5, 0.5);
     }

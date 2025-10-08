@@ -247,7 +247,7 @@ class Game extends Phaser.Scene {
             const m = this.monsters[id];
             if (m.hpText) {
                 m.hpText.x = m.x;
-                m.hpText.y = m.y + 20;
+                m.hpText.y = m.y - 20;
             }
         }
 
