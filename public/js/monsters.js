@@ -30,6 +30,9 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             .setOrigin(0.5, 1)
             .setDepth(DEPTH_MONSTER + 1);
 
+        this.scene.add.existing(this);
+        this.scene.physics.add.existing(this);
+
         if (this.hp <= 0) {
             this.isCorpse = true;
             this.convertToCorpse();
@@ -61,8 +64,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             // avoid late changes of damage effect
             this.scene.time.delayedCall(110, () => this.setTint(0x333333), [], this);
             this.setDepth(DEPTH_DEAD);
-            // TODO: Fix collisions with corpse!
-            this.scene.physics.add.world.disableBody(this);
+            this.disableBody();
         }
     }
 
@@ -107,9 +109,6 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             console.error('Unknown monster kind:', statData.kind);
             return null;
         }
-
-        scene.add.existing(monster);
-        scene.physics.add.existing(monster);
 
         return monster;
     }
