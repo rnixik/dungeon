@@ -131,7 +131,7 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'archer_dead',
             frames: this.anims.generateFrameNumbers('archer', { start: 48, end: 53}),
-            frameRate: 5,
+            frameRate: 8,
             repeat: 0
         });
         this.anims.create({
@@ -181,6 +181,12 @@ var sceneConfigPreloader = {
             frames: this.anims.generateFrameNumbers('skeleton', { start: 42, end: 47}),
             frameRate: 8,
             repeat: -1
+        });
+        this.anims.create({
+            key: 'skeleton_dead',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 48, end: 53}),
+            frameRate: 8,
+            repeat: 0
         });
         this.anims.create({
             key: 'bow_up',
