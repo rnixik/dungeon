@@ -9,10 +9,11 @@ class Monster extends Phaser.Physics.Arcade.Sprite
     scene;
     isCorpse = false;
 
-    constructor (scene, statData, spriteKey, frame)
+    constructor (kind, scene, statData, spriteKey, frame)
     {
         super(scene, statData.x, statData.y, spriteKey, frame);
 
+        this.kind = kind;
         this.scene = scene;
         this.spawn(statData);
     }
@@ -63,9 +64,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         if (this.hpText) {
             this.hpText.destroy();
         }
-        this.setTint(0x333333);
-        // avoid late changes of damage effect
-        this.scene.time.delayedCall(110, () => this.setTint(0x333333), [], this);
+
         this.setDepth(DEPTH_DEAD);
         this.disableBody();
 
@@ -75,6 +74,9 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         } else {
             console.warn("no death anims:", animsKey);
             this.anims.stop();
+            this.setTint(0x333333);
+            // avoid late changes of damage effect
+            this.scene.time.delayedCall(110, () => this.setTint(0x333333), [], this);
         }
     }
 
@@ -165,12 +167,15 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 
 class Archer extends Monster
 {
-    kind = 'archer';
     bowSprite;
 
     constructor (scene, statData)
     {
-        super(scene, statData, 'archer', 0);
+        super('archer', scene, statData, 'archer', 0);
+
+        if (this.isCorpse) {
+            return;
+        }
 
         this.bowSprite = this.scene.add.sprite(statData.x , statData.y + 10, 'bow', 6)
             .setScale(1.5)
@@ -207,21 +212,17 @@ class Archer extends Monster
 
 class Skeleton extends Monster
 {
-    kind = 'skeleton';
-
     constructor (scene, statData)
     {
-        super(scene, statData, 'skeleton', 0);
+        super('skeleton', scene, statData, 'skeleton', 0);
     }
 }
 
 class Demon extends Monster
 {
-    kind = 'demon';
-
     constructor (scene, statData)
     {
-        super(scene, statData, 'demon', 0);
+        super('demon', scene, statData, 'demon', 0);
         this.anims.play('demon', true);
     }
 }
