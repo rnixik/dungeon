@@ -48,8 +48,8 @@ type WebSocketClient struct {
 
 func (c *WebSocketClient) readLoop() {
 	defer func() {
-		c.lobby.UnregisterTransportClient(c)
 		_ = c.conn.Close()
+		c.lobby.UnregisterTransportClient(c)
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
