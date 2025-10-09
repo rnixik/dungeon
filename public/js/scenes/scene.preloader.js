@@ -129,6 +129,12 @@ var sceneConfigPreloader = {
             repeat: -1
         });
         this.anims.create({
+            key: 'archer_dead',
+            frames: this.anims.generateFrameNumbers('archer', { start: 48, end: 53}),
+            frameRate: 5,
+            repeat: 0
+        });
+        this.anims.create({
             key: 'skeleton_idle_down',
             frames: this.anims.generateFrameNumbers('skeleton', { start: 0, end: 3}),
             frameRate: 8,
