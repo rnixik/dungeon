@@ -63,9 +63,9 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         if (this.hpText) {
             this.hpText.destroy();
         }
-        this.setTint(0x333333);
+        this.setTint(0xAAAAAA);
         // avoid late changes of damage effect
-        this.scene.time.delayedCall(110, () => this.setTint(0x333333), [], this);
+        this.scene.time.delayedCall(110, () => this.setTint(0xAAAAAA), [], this);
         this.setDepth(DEPTH_DEAD);
         this.disableBody();
 
