@@ -68,7 +68,14 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         this.scene.time.delayedCall(110, () => this.setTint(0x333333), [], this);
         this.setDepth(DEPTH_DEAD);
         this.disableBody();
-        this.anims.stop();
+
+        const animsKey = `${this.kind}_dead`;
+        if (this.scene.anims.exists(animsKey)) {
+            this.anims.play(animsKey, true);
+        } else {
+            console.warn("no death anims:", animsKey);
+            this.anims.stop();
+        }
     }
 
     updatePosition(posData)
