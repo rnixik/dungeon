@@ -10,6 +10,9 @@ const tileSize = 32
 
 const skeletonAttackDuration = time.Second / 2
 const archerAttackCooldown = time.Second / 2
+const archerAttackDelay = 200 * time.Millisecond
+const archerAttackDuration = 600 * time.Millisecond
+
 const demonAttackCooldown = 2 * time.Second
 const demonAttackDelay = 300 * time.Millisecond
 const demonAttackDuration = time.Second
@@ -71,6 +74,16 @@ func (g *Game) intellectArcher(mon *Monster) {
 
 	// Attack
 	if mon.attackStartedAt.IsZero() {
+		mon.attackStartedAt = time.Now()
+		mon.isAttacking = true
+		mon.attacked = false
+		mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
+	} else if time.Since(mon.attackStartedAt) >= archerAttackCooldown {
+		mon.attackStartedAt = time.Time{}
+	} else if time.Since(mon.attackStartedAt) >= archerAttackDuration {
+		mon.isAttacking = false
+	} else if time.Since(mon.attackStartedAt) >= archerAttackDelay && !mon.attacked {
+		mon.attacked = true
 		g.broadcastEventFunc(ArrowEvent{
 			ClientID:  0,
 			MonsterID: mon.id,
@@ -79,12 +92,7 @@ func (g *Game) intellectArcher(mon *Monster) {
 			X2:        closestPlayer.x,
 			Y2:        closestPlayer.y,
 		})
-
-		mon.attackStartedAt = time.Now()
-	} else if time.Since(mon.attackStartedAt) >= archerAttackCooldown {
-		mon.attackStartedAt = time.Time{}
 	}
-
 }
 
 func (g *Game) intellectDemon(mon *Monster) {
@@ -188,6 +196,22 @@ func (g *Game) isVisible(x1, y1, x2, y2 int) bool {
 	}
 
 	return true
+}
+
+func getDirection(x1, y1, x2, y2 int) string {
+	if abs(x2-x1) > abs(y2-y1) {
+		if x2 > x1 {
+			return "right"
+		}
+
+		return "left"
+	}
+
+	if y2 > y1 {
+		return "down"
+	}
+
+	return "up"
 }
 
 func lineIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh int) bool {
