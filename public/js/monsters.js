@@ -28,10 +28,12 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         this.hp = statData.hp;
         this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + this.maxHp, { font: '10px Arial', fill: '#ffffff' })
             .setOrigin(0.5, 1)
-            .setDepth(DEPTH_MONSTER + 1);
+            .setDepth(DEPTH_MONSTER + 1)
+            .setMask(this.scene.mask);;
 
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
+        this.setMask(this.scene.mask);
 
         if (this.hp <= 0) {
             this.isCorpse = true;
@@ -165,7 +167,8 @@ class Archer extends Monster
         this.bowSprite = this.scene.add.sprite(statData.x , statData.y + 10, 'bow', 6)
             .setScale(1.5)
             .setDepth(DEPTH_MONSTER + 0.1) // above body
-            .setOrigin(0.5, 0.5);
+            .setOrigin(0.5, 0.5)
+            .setMask(this.scene.mask);
     }
 
     preUpdate(time, delta)

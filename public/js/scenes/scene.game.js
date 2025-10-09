@@ -56,6 +56,7 @@ class Game extends Phaser.Scene {
     _lastBulletSampleAt = 0;
 
     // raycast data
+    mask;
     graphics;
     vertices;
     edges;
@@ -143,17 +144,15 @@ class Game extends Phaser.Scene {
 
         // Debug polyline graphics for raycast mask
         this.graphics = this.make.graphics({ lineStyle: { color: DEBUG_STROKE_COLOR, width: 0.5 } });
-        let mask;
         if (DEBUG) {
-            mask = null;
             this.graphics.setAlpha(0.5);
             this.add.existing(this.graphics);
         } else {
-            mask = new Phaser.Display.Masks.GeometryMask(this, this.graphics);
+            this.mask = new Phaser.Display.Masks.GeometryMask(this, this.graphics);
         }
 
         // Apply (optional) geometric mask to world layers/actors (not UI)
-        this.layerFloor.setMask(mask);
+        this.layerFloor.setMask(this.mask);
 
         // --- Build occluder rectangles from wall tiles ---
         const rects = getCollisionRectsFromMapData(data.mapData);
