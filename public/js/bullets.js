@@ -82,6 +82,11 @@ class Bullets extends Phaser.Physics.Arcade.Group
         this.scene.physics.add.overlap(this.sprites, monster, this.bulletHitMonster, null, this);
     }
 
+    addObject (object)
+    {
+        this.scene.physics.add.overlap(this.sprites, object, this.bulletHitWall, null, this);
+    }
+
     bulletHitWall (bullet, wall)
     {
         console.log('hit wall');

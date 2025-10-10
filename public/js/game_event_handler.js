@@ -139,4 +139,14 @@ const GameEventHandler = {
             }
         }
     },
+
+    ChestOpenEvent(data) {
+        const objId = data.objectId;
+        const obj = this.gameObjects[objId];
+        if (obj && obj instanceof Chest) {
+            obj.open();
+        } else {
+            console.warn("no such chest to open:", objId);
+        }
+    }
 }

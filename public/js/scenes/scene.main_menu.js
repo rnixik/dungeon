@@ -139,6 +139,7 @@ class MainMenu extends Phaser.Scene
             myClientId: this.myClientId,
             myNickname: this.nickname,
             mapData: gameData.mapData,
+            gameObjects: gameData.gameObjects,
             sendGameCommand: function (type, data) {
                 self.wsConnection.send(JSON.stringify({type: 'game', subType: type, data: data}));
             },

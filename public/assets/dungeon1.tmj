@@ -95,6 +95,29 @@
         }, 
         {
          "draworder":"topdown",
+         "id":5,
+         "name":"objects",
+         "objects":[
+                {
+                 "height":0,
+                 "id":81,
+                 "name":"chest",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":260,
+                 "y":218
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
          "id":4,
          "name":"spawns",
          "objects":[
@@ -446,8 +469,8 @@
          "x":0,
          "y":0
         }],
- "nextlayerid":5,
- "nextobjectid":81,
+ "nextlayerid":6,
+ "nextobjectid":82,
  "orientation":"orthogonal",
  "renderorder":"left-up",
  "tiledversion":"1.11.2",

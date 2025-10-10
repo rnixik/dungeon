@@ -20,6 +20,8 @@ const monsterKindArcher = "archer"
 const monsterKindSkeleton = "skeleton"
 const monsterKindDemon = "demon"
 
+const objectKindChest = "chest"
+
 type Player struct {
 	client             lobby.ClientPlayer
 	lastSpellId        string
@@ -51,6 +53,14 @@ type Monster struct {
 	moveToY         int
 }
 
+type Object struct {
+	ID    int    `json:"id"`
+	Kind  string `json:"kind"`
+	X     int    `json:"x"`
+	Y     int    `json:"y"`
+	State string `json:"state"`
+}
+
 func newPlayer(client lobby.ClientPlayer) *Player {
 	return &Player{
 		client:         client,
@@ -73,6 +83,7 @@ type Game struct {
 	statusMx           sync.Mutex
 	room               *lobby.Room
 	monsters           []*Monster
+	objects            map[uint64]*Object
 	gameMap            *Map
 }
 
@@ -92,6 +103,7 @@ func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEve
 		room:               room,
 		monsters:           []*Monster{},
 		gameMap:            gameMap,
+		objects:            make(map[uint64]*Object),
 	}
 }
 
@@ -168,13 +180,16 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 
 func (g *Game) GetJoinClientData() map[string]interface{} {
 	return map[string]interface{}{
-		"mapData": g.gameMap,
+		"mapData":     g.gameMap,
+		"gameObjects": g.objects,
 	}
 }
 
 func (g *Game) StartMainLoop() {
 	g.spawnInitialMonsters()
+	g.spawnInitialObjects()
 	go g.startIntellect()
+	go g.startObjectsLoop()
 	tickerPositions := time.NewTicker(positionsUpdateTickPeriod)
 	tickerCommon := time.NewTicker(commonUpdateTickPeriod)
 	defer tickerPositions.Stop()
@@ -449,5 +464,32 @@ func (g *Game) spawnInitialMonsters() {
 			direction: "left",
 			isMoving:  false,
 		})
+	}
+}
+
+func (g *Game) spawnInitialObjects() {
+	spawnLayer := g.gameMap.getLayerByName("objects")
+	if spawnLayer == nil {
+		log.Println("no objects layer found in map")
+		return
+	}
+
+	for _, obj := range spawnLayer.Objects {
+		var kind string
+		var state string
+		switch obj.Name {
+		case "chest":
+			kind = objectKindChest
+			state = "closed"
+		default:
+			continue
+		}
+		g.objects[uint64(len(g.objects)+1)] = &Object{
+			ID:    len(g.objects) + 1,
+			Kind:  kind,
+			X:     int(obj.X),
+			Y:     int(obj.Y),
+			State: state,
+		}
 	}
 }

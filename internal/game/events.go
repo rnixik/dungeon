@@ -81,3 +81,7 @@ type JoinToStartedGameEvent struct {
 type PlayerDeathEvent struct {
 	ClientID uint64 `json:"clientId"`
 }
+
+type ChestOpenEvent struct {
+	ObjectID int `json:"objectId"`
+}

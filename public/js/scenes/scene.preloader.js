@@ -28,6 +28,8 @@ var sceneConfigPreloader = {
         this.load.spritesheet('demon', 'assets/demon/IDLE.png', { frameWidth: 79, frameHeight: 69 });
         this.load.spritesheet('demon_attack', 'assets/demon/ATTACK.png', { frameWidth: 79, frameHeight: 69 });
 
+        this.load.spritesheet('chest', 'assets/chest.png', { frameWidth: 32, frameHeight: 32 });
+
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },
 

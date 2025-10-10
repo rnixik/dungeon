@@ -1,12 +1,13 @@
 const DEBUG = false;
 
 // Layering (z-index)
-const DEPTH_DEAD = 25;
-const DEPTH_PLAYER   = 30;
-const DEPTH_MONSTER   = 40;
-const DEPTH_PROJECTILES   = 200;
+const DEPTH_DEAD = 10;
+const DEPTH_OBJECTS = 20;
+const DEPTH_PLAYER = 30;
+const DEPTH_MONSTER = 40;
+const DEPTH_PROJECTILES = 200;
 const DEPTH_DARKNESS = 9000;
-const DEPTH_UI       = 10000;
+const DEPTH_UI = 10000;
 
 const PLAYER_SCALE = 1.5;
 
@@ -79,6 +80,7 @@ class Game extends Phaser.Scene {
 
     players = {};
     monsters = {};
+    gameObjects = {};
 
     constructor () {
         super({ key: 'Game' });
@@ -97,6 +99,7 @@ class Game extends Phaser.Scene {
         });
 
         console.log(data.mapData);
+        console.log(data.gameObjects);
 
         // viewport scale for UI placement
         this.uiScaleX = this.scale.width / 800;
@@ -125,6 +128,14 @@ class Game extends Phaser.Scene {
 
         // Bullets manager (assumes you have a Bullets class)
         this.bullets = new Bullets(this, this.layerWalls, this.onBulletHitPlayer, this.onBulletHitMonster);
+
+        // Spawn objects
+        for (const i in data.gameObjects) {
+            const o = data.gameObjects[i];
+            const id = o.id;
+            this.gameObjects[id] = GameObject.SpawnNewObject(this, o);
+            this.bullets.addObject(this.gameObjects[id]);
+        }
 
         // Input
         this.cursors = this.input.keyboard.createCursorKeys();
