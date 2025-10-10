@@ -48,7 +48,7 @@ type WebSocketClient struct {
 
 func (c *WebSocketClient) readLoop() {
 	defer func() {
-		_ = c.conn.Close()
+		c.Close()
 		c.lobby.UnregisterTransportClient(c)
 	}()
 
@@ -63,9 +63,6 @@ func (c *WebSocketClient) readLoop() {
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				log.Printf("error: %v", err)
-			}
 			break
 		}
 		// log.Printf("Incoming message: %s", message)
@@ -82,6 +79,7 @@ func (c *WebSocketClient) readLoop() {
 func (c *WebSocketClient) writeLoop() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
+		log.Println("stopping write loop")
 		ticker.Stop()
 		c.Close()
 	}()
@@ -90,6 +88,7 @@ func (c *WebSocketClient) writeLoop() {
 		case message, ok := <-c.send:
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
+				log.Println("write deadline exceeded")
 				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 
 				return
@@ -97,11 +96,14 @@ func (c *WebSocketClient) writeLoop() {
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				log.Printf("error getting next writer: %s", err)
+
 				return
 			}
 			_, _ = w.Write(message)
 
 			if err2 := w.Close(); err2 != nil {
+				log.Println("writer close error:", err2)
 				c.Close()
 
 				return
@@ -109,6 +111,7 @@ func (c *WebSocketClient) writeLoop() {
 		case <-ticker.C:
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Println("ping write error:", err)
 				return
 			}
 		}
