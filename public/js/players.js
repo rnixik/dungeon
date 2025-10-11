@@ -1,4 +1,4 @@
-class Monster extends Phaser.Physics.Arcade.Sprite
+class Player extends Phaser.Physics.Arcade.Sprite
 {
     id;
     kind;
@@ -22,14 +22,14 @@ class Monster extends Phaser.Physics.Arcade.Sprite
     {
         this.x = statData.x;
         this.y = statData.y;
-        this.setScale(2);
-        this.setDepth(DEPTH_MONSTER);
+        this.setScale(PLAYER_SCALE);
+        this.setDepth(DEPTH_PLAYER);
 
-        this.id = statData.id;
+        this.id = statData.clientId;
         this.hp = statData.hp;
         this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + this.maxHp, { font: '10px Arial', fill: '#ffffff' })
             .setOrigin(0.5, 1)
-            .setDepth(DEPTH_MONSTER + 1)
+            .setDepth(DEPTH_PLAYER + 1)
             .setMask(this.scene.mask);
 
         this.scene.add.existing(this);
@@ -84,9 +84,9 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         } else {
             console.warn("no death anims:", animsKey);
             this.anims.stop();
-            this.setTint(0x333333);
+            this.setTint(0xff3333);
             // avoid late changes of damage effect
-            this.scene.time.delayedCall(110, () => this.setTint(0x333333), [], this);
+            this.scene.time.delayedCall(110, () => this.setTint(0xff3333), [], this);
         }
     }
 
@@ -100,21 +100,21 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         this.y = posData.y;
 
         if (posData.isAttacking) {
-            this.playAttackAnimation(posData);
+            this.playAttackAnimation(posData.direction);
             return;
         }
 
         if (posData.isMoving) {
-            this.playMoveAnimation(posData);
+            this.playMoveAnimation(posData.direction);
             return;
         }
 
-        this.playIdleAnimation(posData);
+        this.playIdleAnimation(posData.direction);
     }
 
-    playAttackAnimation(posData)
+    playAttackAnimation(direction)
     {
-        let attackAnimsKey = `${this.kind}_attack_${posData.direction}`;
+        let attackAnimsKey = `${this.kind}_attack_${direction}`;
         if (!this.scene.anims.exists(attackAnimsKey)) {
             attackAnimsKey = `${this.kind}_attack`;
         }
@@ -126,9 +126,19 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         }
     }
 
-    playMoveAnimation(posData)
+    playMoveAnimation(direction)
     {
-        let moveAnimsKey = `${this.kind}_walk_${posData.direction}`;
+        if (this.isCorpse) {
+            return;
+        }
+
+        if (direction === 'left') {
+            this.setAngle(0).setFlipX(true);
+        } else if (direction === 'right') {
+            this.setAngle(0).setFlipX(false);
+        }
+
+        let moveAnimsKey = `${this.kind}_walk_${direction}`;
         if (!this.scene.anims.exists(moveAnimsKey)) {
             moveAnimsKey = `${this.kind}_walk`;
         }
@@ -143,9 +153,13 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         }
     }
 
-    playIdleAnimation(posData)
+    playIdleAnimation(direction)
     {
-        let idleAnimsKey = `${this.kind}_idle_${posData.direction}`;
+        if (this.isCorpse) {
+            return;
+        }
+
+        let idleAnimsKey = `${this.kind}_idle_${direction}`;
         if (!this.scene.anims.exists(idleAnimsKey)) {
             idleAnimsKey = this.kind + '_idle';
         }
@@ -156,78 +170,38 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             this.anims.play(idleAnimsKey, true);
         }
     }
-
-    static SpawnNewMonster(scene, statData)
-    {
-        switch (statData.kind) {
-            case 'archer': return new Archer(scene, statData);
-            case 'skeleton': return new Skeleton(scene, statData);
-            case 'demon': return new Demon(scene, statData);
-            default:
-                console.error('Unknown monster kind:', statData.kind);
-                return null;
-        }
-    }
 }
 
-class Archer extends Monster
+class MyPlayer extends Player
 {
-    bowSprite;
-
-    constructor (scene, statData)
+    constructor (kind, scene, x, y, spriteKey, frame)
     {
-        super('archer', scene, statData, 'archer', 0);
+        const statData = {
+            x: x,
+            y: y,
+            clientId: null,
+            hp: 100,
+        };
+        super(kind, scene, statData, spriteKey, frame);
 
-        if (this.isCorpse) {
-            return;
-        }
+        this.kind = kind;
+        this.scene = scene;
+    }
 
-        this.bowSprite = this.scene.add.sprite(statData.x , statData.y + 10, 'bow', 6)
-            .setScale(1.5)
-            .setDepth(DEPTH_MONSTER + 0.1) // above body
-            .setOrigin(0.5, 0.5)
+    spawn(statData) {
+        this.x = statData.x;
+        this.y = statData.y;
+        this.setScale(PLAYER_SCALE);
+        this.setDepth(DEPTH_PLAYER);
+
+        this.clientId = statData.clientId;
+        this.hp = statData.hp;
+        this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + this.maxHp, { font: '10px Arial', fill: '#ffffff' })
+            .setOrigin(0.5, 1)
+            .setDepth(DEPTH_PLAYER + 1)
             .setMask(this.scene.mask);
-    }
 
-    preUpdate(time, delta)
-    {
-        super.preUpdate(time, delta);
-
-        if (this.bowSprite) {
-            this.bowSprite.x = this.x;
-            this.bowSprite.y = this.y;
-        }
-    }
-
-    playAttackAnimation(posData)
-    {
-        // super.playAttackAnimation(posData);
-        this.bowSprite.anims.play(`bow_${posData.direction}`, true);
-    }
-
-    convertToCorpse()
-    {
-        super.convertToCorpse();
-        if (this.bowSprite) {
-            this.bowSprite.destroy();
-            this.bowSprite = null;
-        }
-    }
-}
-
-class Skeleton extends Monster
-{
-    constructor (scene, statData)
-    {
-        super('skeleton', scene, statData, 'skeleton', 0);
-    }
-}
-
-class Demon extends Monster
-{
-    constructor (scene, statData)
-    {
-        super('demon', scene, statData, 'demon', 0);
-        this.anims.play('demon', true);
+        this.scene.add.existing(this);
+        this.scene.physics.add.existing(this);
     }
 }

@@ -116,11 +116,8 @@ class Game extends Phaser.Scene {
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
-        // --- Sprites ---
-        this.player = this.physics.add.sprite(120, 140, 'player', 1).setScale(PLAYER_SCALE).setDepth(DEPTH_PLAYER);
+        this.player = new MyPlayer('mage', this, 120, 140, 'mage', 1);
         this.physics.add.collider(this.player, this.layerWalls);
-        this.player.hp = 100;
-        this.player.hpText = this.add.text(0, 0, '100/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
 
         // Camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -197,36 +194,26 @@ class Game extends Phaser.Scene {
         if (this.cursors.up.isDown || joy.up.isDown)      this.player.body.setVelocityY(-move);
         else if (this.cursors.down.isDown || joy.down.isDown) this.player.body.setVelocityY(move);
 
-        if (this.cursors.left.isDown || joy.left.isDown)
-        {
-            this.player.setAngle(0).setFlipX(true);
-            this.player.anims.play('left', true);
+        if (this.cursors.left.isDown || joy.left.isDown) {
             this.direction='left';
             this.isMoving = true;
-        }
-        else if (this.cursors.right.isDown || joy.right.isDown)
-        {
-            this.player.anims.play('right',true);
-            this.player.setAngle(0).setFlipX(false);
+        } else if (this.cursors.right.isDown || joy.right.isDown) {
             this.direction='right';
             this.isMoving = true;
-        }
-        else if (this.cursors.up.isDown || joy.up.isDown)
-        {
-            this.player.anims.play('up',   true);
+        } else if (this.cursors.up.isDown || joy.up.isDown) {
             this.direction='up';
             this.isMoving = true;
-        }
-        else if (this.cursors.down.isDown || joy.down.isDown)
-        {
-            this.player.anims.play('down', true);
+        } else if (this.cursors.down.isDown || joy.down.isDown) {
             this.direction='down';
             this.isMoving = true;
-        }
-        else
-        {
-            this.player.anims.play('idle', true);
+        } else {
             this.isMoving = false;
+        }
+
+        if (this.isMoving) {
+            this.player.playMoveAnimation(this.direction);
+        } else {
+            this.player.playIdleAnimation(this.direction);
         }
 
         // Lighting (spotlights + bullet glow)
@@ -243,27 +230,6 @@ class Game extends Phaser.Scene {
                 isMoving: this.isMoving
             });
             this.lastMoveSentTime = time;
-        }
-
-        for (const id in this.players) {
-            const p = this.players[id];
-            if (p.hpText) {
-                p.hpText.x = p.x;
-                p.hpText.y = p.y - 20;
-            }
-        }
-
-        for (const id in this.monsters) {
-            const m = this.monsters[id];
-            if (m.hpText) {
-                m.hpText.x = m.x;
-                m.hpText.y = m.y - 20;
-            }
-        }
-
-        if (this.player.hpText) {
-            this.player.hpText.x = this.player.x;
-            this.player.hpText.y = this.player.y - 20;
         }
     }
 
@@ -282,24 +248,11 @@ class Game extends Phaser.Scene {
             return;
         }
 
-        const pSprite = this.players[p.clientId];
-        if (!pSprite) {
+        if (!this.players[p.clientId]) {
             return;
         }
 
-        pSprite.x = p.x;
-        pSprite.y = p.y;
-        const direction = p.direction;
-        switch (direction) {
-            case 'up': pSprite.anims.play('up', true); break;
-            case 'down': pSprite.anims.play('down', true); break;
-            case 'left': pSprite.anims.play('left', true); break;
-            case 'right': pSprite.anims.play('right', true); break;
-        }
-
-        if (!p.isMoving) {
-            pSprite.anims.stop();
-        }
+        this.players[p.clientId].updatePosition(p);
     }
 
     updateMonsterPos(m)

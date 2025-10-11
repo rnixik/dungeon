@@ -15,49 +15,18 @@ const GameEventHandler = {
                 }
                 continue;
             }
-            let justSpawned = false;
+
             if (!this.players[id]) {
-                // spawn new player
-                const np = this.physics.add.sprite(p.x, p.y, 'player', 1).setScale(PLAYER_SCALE).setDepth(DEPTH_PLAYER);
-                np.id = id;
-                np.hp = p.hp;
-
-                np.setTint(Math.random() * 0xffffff);
-
-                np.hpText = this.add.text(p.x, p.y, p.hp + '/100', { font: '8px Arial', fill: '#ffffff' }).setOrigin(0.5, 1).setDepth(DEPTH_PLAYER + 1);
-
-                this.players[id] = np;
-                this.bullets.addPlayer(np);
-
-                justSpawned = true;
-                console.log('spawn player', id, Object.keys(this.players).length);
+                this.players[id] = new Player("mage", this, p, 'mage', 1)
+                this.bullets.addPlayer(this.players[id]);
             }
 
-            this.updatePlayerPos(p);
-
-            const pSprite = this.players[id];
-            if (pSprite.hp !== p.hp || justSpawned) {
-                pSprite.hp = p.hp;
-                if (pSprite.hpText) {
-                    pSprite.hpText.setText(p.hp + '/100');
-                }
-                if (p.hp === 0) {
-                    if (pSprite.hpText) {
-                        pSprite.hpText.destroy();
-                        pSprite.setTint(0xff3333);
-                        // avoid late changes of damage effect
-                        this.time.delayedCall(110, () => pSprite.setTint(0xff3333), [], this);
-                        pSprite.setDepth(DEPTH_DEAD);
-                        pSprite.disableBody();
-                    }
-                }
-            }
+            this.players[id].updateStatAndPosition(p);
         }
 
         for (const m of data.monsters) {
             const id = m.id;
             if (!this.monsters[id]) {
-                // spawn new monster
                 this.monsters[id] = Monster.SpawnNewMonster(this, m);
                 this.bullets.addMonster(this.monsters[id]);
             }

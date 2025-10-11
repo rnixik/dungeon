@@ -12,7 +12,7 @@ var sceneConfigPreloader = {
 
         this.load.image('tiles', 'assets/environment.png');
 
-        this.load.spritesheet('player', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('mage', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('archer', 'assets/skeleton5.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('skeleton', 'assets/skeleton6.png', { frameWidth: 32, frameHeight: 32 });
@@ -35,32 +35,32 @@ var sceneConfigPreloader = {
 
     create: function() {
         this.anims.create({
-            key: 'left',
-            frames: this.anims.generateFrameNumbers('player', { start: 0, end: 11 }),
+            key: 'mage_walk_left',
+            frames: this.anims.generateFrameNumbers('mage', { start: 0, end: 11 }),
             frameRate: 15,
             repeat: -1
         });
         this.anims.create({
-            key: 'right',
-            frames: this.anims.generateFrameNumbers('player', { start: 0, end: 11 }),
+            key: 'mage_walk_right',
+            frames: this.anims.generateFrameNumbers('mage', { start: 0, end: 11 }),
             frameRate: 15,
             repeat: -1
         });
         this.anims.create({
-            key: 'up',
-            frames: this.anims.generateFrameNumbers('player', { start: 13, end: 17 }),
+            key: 'mage_walk_up',
+            frames: this.anims.generateFrameNumbers('mage', { start: 13, end: 17 }),
             frameRate: 15,
             repeat: -1
         });
         this.anims.create({
-            key: 'down',
-            frames: this.anims.generateFrameNumbers('player', { start: 24, end: 35 }),
+            key: 'mage_walk_down',
+            frames: this.anims.generateFrameNumbers('mage', { start: 24, end: 35 }),
             frameRate: 15,
             repeat: -1
         });
         this.anims.create({
-            key: 'idle',
-            frames: this.anims.generateFrameNumbers('player', { start: 1, end: 11 }),
+            key: 'mage_idle',
+            frames: this.anims.generateFrameNumbers('mage', { start: 1, end: 11 }),
             frameRate: 5,
             repeat: -1
         });
