@@ -116,7 +116,7 @@ class Game extends Phaser.Scene {
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
-        this.player = new MyPlayer('mage', this, 120, 140, 'mage', 1);
+        this.player = new MyPlayer('mage', this, {x: 120, y: 140, clientId: this.myClientId, hp: 100}, 'mage', 1);
         this.physics.add.collider(this.player, this.layerWalls);
 
         // Camera
@@ -125,6 +125,7 @@ class Game extends Phaser.Scene {
 
         // Bullets manager (assumes you have a Bullets class)
         this.bullets = new Bullets(this, this.layerWalls, this.onBulletHitPlayer, this.onBulletHitMonster);
+        this.bullets.addPlayer(this.player);
 
         // Spawn objects
         for (const i in data.gameObjects) {

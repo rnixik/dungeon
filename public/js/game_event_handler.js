@@ -7,12 +7,7 @@ const GameEventHandler = {
         for (const p of data.players) {
             const id = p.clientId;
             if (id === this.myClientId) {
-                if (this.player.hp !== p.hp) {
-                    this.player.hp = p.hp;
-                    if (this.player.hpText) {
-                        this.player.hpText.setText(p.hp + '/100');
-                    }
-                }
+                this.player.updateStatAndPosition(p);
                 continue;
             }
 

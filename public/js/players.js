@@ -174,34 +174,13 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
 class MyPlayer extends Player
 {
-    constructor (kind, scene, x, y, spriteKey, frame)
+    updateStatAndPosition(statData)
     {
-        const statData = {
-            x: x,
-            y: y,
-            clientId: null,
-            hp: 100,
-        };
-        super(kind, scene, statData, spriteKey, frame);
-
-        this.kind = kind;
-        this.scene = scene;
-    }
-
-    spawn(statData) {
-        this.x = statData.x;
-        this.y = statData.y;
-        this.setScale(PLAYER_SCALE);
-        this.setDepth(DEPTH_PLAYER);
-
-        this.clientId = statData.clientId;
-        this.hp = statData.hp;
-        this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + this.maxHp, { font: '10px Arial', fill: '#ffffff' })
-            .setOrigin(0.5, 1)
-            .setDepth(DEPTH_PLAYER + 1)
-            .setMask(this.scene.mask);
-
-        this.scene.add.existing(this);
-        this.scene.physics.add.existing(this);
+        if (this.hp !== statData.hp) {
+            this.hp = statData.hp;
+            if (this.hpText) {
+                this.hpText.setText(statData.hp + '/' + this.maxHp);
+            }
+        }
     }
 }
