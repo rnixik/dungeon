@@ -116,7 +116,7 @@ class Game extends Phaser.Scene {
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
-        this.player = new MyPlayer('mage', this, {x: 120, y: 140, clientId: this.myClientId, hp: 100}, 'mage', 1);
+        this.player = new MyPlayer('mage', this, {x: 120, y: 140, clientId: this.myClientId, color: '0xffffff', maxHp: 1000, hp: 100});
         this.physics.add.collider(this.player, this.layerWalls);
 
         // Camera

@@ -3,7 +3,9 @@ package game
 import (
 	"dungeon/internal/lobby"
 	"encoding/json"
+	"fmt"
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -31,6 +33,8 @@ type Player struct {
 	spellWasSent       bool
 	spellWasSentShield bool
 	hasActiveSpell     bool
+	color              string
+	maxHp              int
 	hp                 int
 	x                  int
 	y                  int
@@ -62,11 +66,16 @@ type Object struct {
 }
 
 func newPlayer(client lobby.ClientPlayer) *Player {
+	// Assign a random hex color to the player
+	colorHex := fmt.Sprintf("0x%06x", rand.Intn(0xFFFFFF))
+
 	return &Player{
 		client:         client,
 		lastSpellId:    "",
 		lastCastTime:   time.Time{},
 		hasActiveSpell: false,
+		color:          colorHex,
+		maxHp:          maxHP,
 		hp:             maxHP,
 		x:              120,
 		y:              140,
@@ -250,6 +259,8 @@ func (g *Game) StartMainLoop() {
 						IsMoving:  pl.isMoving,
 					},
 					Nickname: pl.client.Nickname(),
+					Color:    pl.color,
+					MaxHP:    pl.maxHp,
 					HP:       pl.hp,
 				})
 			}

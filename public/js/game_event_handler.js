@@ -12,7 +12,7 @@ const GameEventHandler = {
             }
 
             if (!this.players[id]) {
-                this.players[id] = new Player("mage", this, p, 'mage', 1)
+                this.players[id] = new Player("mage", this, p)
                 this.bullets.addPlayer(this.players[id]);
             }
 

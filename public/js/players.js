@@ -9,9 +9,9 @@ class Player extends Phaser.Physics.Arcade.Sprite
     scene;
     isCorpse = false;
 
-    constructor (kind, scene, statData, spriteKey, frame)
+    constructor (kind, scene, statData)
     {
-        super(scene, statData.x, statData.y, spriteKey, frame);
+        super(scene, statData.x, statData.y, kind, 1);
 
         this.kind = kind;
         this.scene = scene;
@@ -25,7 +25,11 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.setScale(PLAYER_SCALE);
         this.setDepth(DEPTH_PLAYER);
 
+        console.log(statData);
+        this.setTint(Number(statData.color));
+
         this.id = statData.clientId;
+        this.maxHp = statData.maxHp;
         this.hp = statData.hp;
         this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + this.maxHp, { font: '10px Arial', fill: '#ffffff' })
             .setOrigin(0.5, 1)
