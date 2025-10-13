@@ -12,7 +12,7 @@ import (
 
 const (
 	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
+	writeWait = 1 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
@@ -56,8 +56,7 @@ func (c *WebSocketClient) readLoop() {
 	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
 
 	c.conn.SetPongHandler(func(string) error {
-		_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
-		return nil
+		return c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
 	for {
@@ -104,7 +103,6 @@ func (c *WebSocketClient) writeLoop() {
 
 			if err2 := w.Close(); err2 != nil {
 				log.Println("writer close error:", err2)
-				c.Close()
 
 				return
 			}

@@ -116,9 +116,9 @@ func (l *Lobby) Run() {
 			l.clients[client.ID()] = client
 		case tc := <-l.unregister:
 			if client, ok := l.clients[tc.ID()]; ok {
+				client.CloseConnection()
 				delete(l.clients, client.ID())
 				l.onClientLeft(client)
-				client.CloseConnection()
 			}
 		case clientCommand := <-l.clientCommands:
 			l.onClientCommand(clientCommand)
