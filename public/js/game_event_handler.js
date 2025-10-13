@@ -85,21 +85,18 @@ const GameEventHandler = {
         const pId = data.targetPlayerId;
         const mId = data.targetMonsterId;
         if (pId === this.myClientId) {
-            this.player.setTint(0xff0000);
-            this.time.delayedCall(100, () => this.player.clearTint(), [], this);
+            this.player.takeDamage(data.damage)
         }
         for (const i in this.players) {
             const p = this.players[i];
             if (p.id === pId) {
-                p.setTint(0xff0000);
-                this.time.delayedCall(100, () => p.clearTint(), [], this);
+                p.takeDamage(data.damage);
             }
         }
         for (const i in this.monsters) {
             const m = this.monsters[i];
             if (m.id === mId) {
-                m.setTint(0xff0000);
-                this.time.delayedCall(100, () => m.clearTint(), [], this);
+                m.takeDamage(data.damage);
             }
         }
     },

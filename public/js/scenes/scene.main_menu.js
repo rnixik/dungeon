@@ -124,7 +124,7 @@ class MainMenu extends Phaser.Scene
             this.connectingText.x = 10000;
             return;
         }
-        if (json.name === 'GameStartedEvent' || json.name === 'JoinToStartedGameEvent') {
+        if (json.name === 'JoinToStartedGameEvent') {
             this.startGame(json.data.gameData);
             return;
         }
@@ -136,10 +136,7 @@ class MainMenu extends Phaser.Scene
     {
         const self = this;
         this.scene.start('Game', {
-            myClientId: this.myClientId,
-            myNickname: this.nickname,
-            mapData: gameData.mapData,
-            gameObjects: gameData.gameObjects,
+            gameData: gameData,
             sendGameCommand: function (type, data) {
                 self.wsConnection.send(JSON.stringify({type: 'game', subType: type, data: data}));
             },

@@ -157,6 +157,16 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         }
     }
 
+    takeDamage(damage)
+    {
+        if (this.isCorpse) {
+            return;
+        }
+
+        this.setTint(0xff3333);
+        this.scene.time.delayedCall(100, () => this.clearTint(), [], this);
+    }
+
     static SpawnNewMonster(scene, statData)
     {
         switch (statData.kind) {

@@ -8,6 +8,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
     isAttacking = false;
     scene;
     isCorpse = false;
+    initialTint = 0xffffff;
 
     constructor (kind, scene, statData)
     {
@@ -25,8 +26,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.setScale(PLAYER_SCALE);
         this.setDepth(DEPTH_PLAYER);
 
-        console.log(statData);
-        this.setTint(Number(statData.color));
+        this.initialTint = Number(statData.color)
+        this.setTint(this.initialTint);
 
         this.id = statData.clientId;
         this.maxHp = statData.maxHp;
@@ -173,6 +174,16 @@ class Player extends Phaser.Physics.Arcade.Sprite
         if (this.scene.anims.exists(idleAnimsKey)) {
             this.anims.play(idleAnimsKey, true);
         }
+    }
+
+    takeDamage(damage)
+    {
+        if (this.isCorpse) {
+            return;
+        }
+
+        this.setTint(0xff3333);
+        this.scene.time.delayedCall(100, () => this.setTint(this.initialTint), [], this);
     }
 }
 

@@ -184,19 +184,43 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 	g.mutex.Lock()
 	g.players[client.ID()] = newPlayer(client)
 	g.mutex.Unlock()
-	client.SendEvent(JoinToStartedGameEvent{GameData: g.GetJoinClientData()})
+	client.SendEvent(JoinToStartedGameEvent{GameData: g.getPlayerInitialGameData(g.players[client.ID()])})
 }
 
-func (g *Game) GetJoinClientData() map[string]interface{} {
+func (g *Game) GetCommonInitialGameData() map[string]interface{} {
+	return map[string]interface{}{}
+}
+
+func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 	return map[string]interface{}{
 		"mapData":     g.gameMap,
 		"gameObjects": g.objects,
+		"playerData": PlayerStats{
+			PlayerPosition: PlayerPosition{
+				ClientID:  pl.client.ID(),
+				X:         pl.x,
+				Y:         pl.y,
+				Direction: pl.direction,
+				IsMoving:  pl.isMoving,
+			},
+			Nickname: pl.client.Nickname(),
+			Color:    pl.color,
+			MaxHP:    pl.maxHp,
+			HP:       pl.hp,
+		},
+	}
+}
+
+func (g *Game) sendPlayerInitialGameData() {
+	for _, p := range g.players {
+		p.client.SendEvent(JoinToStartedGameEvent{GameData: g.getPlayerInitialGameData(p)})
 	}
 }
 
 func (g *Game) StartMainLoop() {
 	g.spawnInitialMonsters()
 	g.spawnInitialObjects()
+	g.sendPlayerInitialGameData()
 	go g.startIntellect()
 	go g.startObjectsLoop()
 	tickerPositions := time.NewTicker(positionsUpdateTickPeriod)

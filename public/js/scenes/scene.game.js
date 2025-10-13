@@ -89,8 +89,9 @@ class Game extends Phaser.Scene {
     }
 
     create (data) {
-        this.myClientId = data.myClientId;
-        this.myNickname = data.myNickname;
+        const gameData = data.gameData;
+        this.myClientId = gameData.playerData.clientId;
+        this.myNickname = gameData.playerData.nickname;
         console.log("Game started. My client id: " + this.myClientId + ", my nickname: " + this.myNickname);
         this.sendGameCommand = data.sendGameCommand;
         const self = this;
@@ -98,16 +99,13 @@ class Game extends Phaser.Scene {
             self.onIncomingGameEvent(name, data);
         });
 
-        console.log(data.mapData);
-        console.log(data.gameObjects);
-
         // viewport scale for UI placement
         this.uiScaleX = this.scale.width / 800;
         this.uiScaleY = this.scale.height / 600;
 
         // --- Tilemap & layers ---
         // create tiled tilemap from server map data
-        this.cache.tilemap.add('map', {format: 1, data: data.mapData});
+        this.cache.tilemap.add('map', {format: 1, data: gameData.mapData});
         this.map = this.make.tilemap({ key: 'map' });
 
         const tiles = this.map.addTilesetImage('environment', 'tiles');
@@ -116,7 +114,7 @@ class Game extends Phaser.Scene {
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
-        this.player = new MyPlayer('mage', this, {x: 120, y: 140, clientId: this.myClientId, color: '0xffffff', maxHp: 1000, hp: 100});
+        this.player = new MyPlayer('mage', this, gameData.playerData);
         this.physics.add.collider(this.player, this.layerWalls);
 
         // Camera
@@ -128,8 +126,8 @@ class Game extends Phaser.Scene {
         this.bullets.addPlayer(this.player);
 
         // Spawn objects
-        for (const i in data.gameObjects) {
-            const o = data.gameObjects[i];
+        for (const i in gameData.gameObjects) {
+            const o = gameData.gameObjects[i];
             const id = o.id;
             this.gameObjects[id] = GameObject.SpawnNewObject(this, o);
             this.bullets.addObject(this.gameObjects[id]);
@@ -164,7 +162,7 @@ class Game extends Phaser.Scene {
         this.layerFloor.setMask(this.mask);
 
         // --- Build occluder rectangles from wall tiles ---
-        const rects = getCollisionRectsFromMapData(data.mapData);
+        const rects = getCollisionRectsFromMapData(gameData.mapData);
 
         if (DEBUG) {
             const rectGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } }).setDepth(DEPTH_UI - 1);
