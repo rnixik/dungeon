@@ -31,6 +31,13 @@ type DemonFireballEvent struct {
 	Y2        int    `json:"y2"`
 }
 
+type FireCircleEvent struct {
+	ClientID  uint64 `json:"clientId"`
+	MonsterID int    `json:"MonsterID"`
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+}
+
 type PlayerPosition struct {
 	ClientID  uint64 `json:"clientId"`
 	X         int    `json:"x"`

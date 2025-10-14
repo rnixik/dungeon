@@ -43,18 +43,19 @@ type Player struct {
 }
 
 type Monster struct {
-	id              int
-	kind            string
-	hp              int
-	x               int
-	y               int
-	direction       string
-	isMoving        bool
-	isAttacking     bool
-	attacked        bool
-	attackStartedAt time.Time
-	moveToX         int
-	moveToY         int
+	id                  int
+	kind                string
+	hp                  int
+	x                   int
+	y                   int
+	direction           string
+	isMoving            bool
+	isAttacking         bool
+	attacked            bool
+	attackStartedAt     time.Time
+	moveToX             int
+	moveToY             int
+	firecircleStartedAt time.Time
 }
 
 type Object struct {

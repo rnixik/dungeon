@@ -3,6 +3,10 @@ const GameEventHandler = {
         this.bullets.fireBullet(data.clientId, data.x, data.y, data.direction)
     },
 
+    FireCircleEvent(data) {
+        this.bullets.fireCircle(data.clientId, data.x, data.y);
+    },
+
     CreaturesStatsUpdateEvent(data) {
         for (const p of data.players) {
             const id = p.clientId;

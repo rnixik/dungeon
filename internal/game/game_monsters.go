@@ -13,6 +13,7 @@ const archerAttackCooldown = time.Second / 2
 const archerAttackDelay = 200 * time.Millisecond
 const archerAttackDuration = 600 * time.Millisecond
 
+const demonAttackFirecircleCooldown = 5 * time.Second
 const demonAttackCooldown = 2 * time.Second
 const demonAttackDelay = 300 * time.Millisecond
 const demonAttackDuration = time.Second
@@ -108,6 +109,16 @@ func (g *Game) intellectDemon(mon *Monster) {
 			g.isVisible(mon.x, mon.y, player.x, player.y) {
 			closestPlayers = append(closestPlayers, player)
 		}
+	}
+
+	if time.Since(mon.firecircleStartedAt) >= demonAttackFirecircleCooldown {
+		mon.firecircleStartedAt = time.Now()
+		g.broadcastEventFunc(FireCircleEvent{
+			ClientID:  0,
+			MonsterID: mon.id,
+			X:         mon.x,
+			Y:         mon.y,
+		})
 	}
 
 	// Attack
