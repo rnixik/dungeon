@@ -10798,12 +10798,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10836,12 +10836,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10855,12 +10855,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10874,12 +10874,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10893,12 +10893,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10912,12 +10912,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10931,12 +10931,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10950,12 +10950,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10969,12 +10969,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -10988,12 +10988,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -11007,12 +11007,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -11026,12 +11026,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -11045,12 +11045,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
@@ -11083,12 +11083,12 @@
                         {
                          "name":"absorbs_light",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"collides",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }, 
                         {
                          "name":"type",
