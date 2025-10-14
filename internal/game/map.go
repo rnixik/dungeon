@@ -62,18 +62,19 @@ type MapTile struct {
 }
 
 type Map struct {
-	Compression int          `json:"compressionlevel"`
-	Infinite    bool         `json:"infinite"`
-	Width       int          `json:"width"`
-	Height      int          `json:"height"`
-	Layers      []MapLayer   `json:"layers"`
-	TileWidth   int          `json:"tilewidth"`
-	TileHeight  int          `json:"tileheight"`
-	Tilesets    []MapTileset `json:"tilesets"`
-	Orientation string       `json:"orientation"`
-	RenderOrder string       `json:"renderorder"`
-	Type        string       `json:"type"`
-	Version     string       `json:"version"`
+	Compression         int                    `json:"compressionlevel"`
+	Infinite            bool                   `json:"infinite"`
+	Width               int                    `json:"width"`
+	Height              int                    `json:"height"`
+	Layers              []MapLayer             `json:"layers"`
+	TileWidth           int                    `json:"tilewidth"`
+	TileHeight          int                    `json:"tileheight"`
+	Tilesets            []MapTileset           `json:"tilesets"`
+	Orientation         string                 `json:"orientation"`
+	RenderOrder         string                 `json:"renderorder"`
+	Type                string                 `json:"type"`
+	Version             string                 `json:"version"`
+	TilesPropertiesHash map[int]map[string]any `json:"-"`
 }
 
 func LoadMap(filename string) (*Map, error) {
@@ -88,12 +89,27 @@ func LoadMap(filename string) (*Map, error) {
 		return nil, err
 	}
 
+	m.fillTilesPropertiesHash()
+
 	err = m.addLayerWithCollisionRectangles()
 	if err != nil {
 		return nil, err
 	}
 
 	return &m, err
+}
+
+func (m *Map) fillTilesPropertiesHash() {
+	m.TilesPropertiesHash = make(map[int]map[string]any)
+	for _, ts := range m.Tilesets {
+		for _, tile := range ts.Tiles {
+			gid := ts.Firstgid + tile.Id
+			m.TilesPropertiesHash[gid] = make(map[string]any, len(tile.Properties))
+			for _, p := range tile.Properties {
+				m.TilesPropertiesHash[gid][p.Name] = p.Value
+			}
+		}
+	}
 }
 
 func (m *Map) getLayerByName(layerName string) (layer *MapLayer) {
@@ -136,7 +152,17 @@ func (m *Map) addLayerWithCollisionRectangles() error {
 			return false
 		}
 		t := wallLayer.Data[tileIndex]
-		return t != 0 // assuming non-zero tile means solid
+		if t == 0 {
+			return false
+		}
+
+		if props, ok := m.TilesPropertiesHash[t]; ok {
+			if collides, ok2 := props["collides"].(bool); ok2 {
+				return collides
+			}
+		}
+
+		return false
 	}
 
 	// 1) horizontal runs per row
