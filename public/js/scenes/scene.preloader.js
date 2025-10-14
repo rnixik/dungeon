@@ -10,7 +10,7 @@ var sceneConfigPreloader = {
             preloadBar.setCrop(0, 0, preloadBar.width * value, preloadBar.height);
         });
 
-        this.load.image('tiles', 'assets/environment.png');
+        this.load.image('tiles', 'assets/catacombs.png');
 
         this.load.spritesheet('mage', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });

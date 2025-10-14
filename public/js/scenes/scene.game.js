@@ -108,7 +108,7 @@ class Game extends Phaser.Scene {
         this.cache.tilemap.add('map', {format: 1, data: gameData.mapData});
         this.map = this.make.tilemap({ key: 'map' });
 
-        const tiles = this.map.addTilesetImage('environment', 'tiles');
+        const tiles = this.map.addTilesetImage('catacombs', 'tiles');
 
         this.layerFloor = this.map.createLayer('floor', tiles, 0, 0);
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
