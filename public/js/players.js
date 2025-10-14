@@ -39,6 +39,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
+        this.body.setSize(30, 20).setOffset(0, 10);
         this.setMask(this.scene.mask);
 
         if (this.hp <= 0) {
