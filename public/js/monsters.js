@@ -205,7 +205,7 @@ class Archer extends Monster
 
         if (this.bowSprite) {
             this.bowSprite.x = this.x;
-            this.bowSprite.y = this.y;
+            this.bowSprite.y = this.y + 15;
         }
     }
 
