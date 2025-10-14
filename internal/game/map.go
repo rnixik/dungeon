@@ -157,7 +157,7 @@ func (m *Map) addLayerWithCollisionRectangles() error {
 		}
 
 		if props, ok := m.TilesPropertiesHash[t]; ok {
-			if collides, ok2 := props["collides"].(bool); ok2 {
+			if collides, ok2 := props["absorbs_light"].(bool); ok2 {
 				return collides
 			}
 		}
