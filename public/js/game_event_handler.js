@@ -3,10 +3,6 @@ const GameEventHandler = {
         this.bullets.fireBullet(data.clientId, data.x, data.y, data.direction)
     },
 
-    FireCircleEvent(data) {
-        this.bullets.fireCircle(data.clientId, data.x, data.y);
-    },
-
     CreaturesStatsUpdateEvent(data) {
         for (const p of data.players) {
             const id = p.clientId;
@@ -83,6 +79,23 @@ const GameEventHandler = {
                 targetClientId: this.myClientId
             });
         }, null, this);
+    },
+
+    FireCircleEvent(data) {
+        for (let i = 0; i < 8; i++) {
+            const angle = Phaser.Math.DegToRad(i * 45);
+            const dir = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
+            const ar = this.physics.add.sprite(data.x, data.y, 'bullet', 0).setScale(1);
+            ar.setVelocity(dir.x * 300, dir.y * 300);
+            this.physics.add.collider(ar, this.layerWalls, () => ar.destroy(), null, this);
+            this.physics.add.overlap(ar, this.player, () => {
+                ar.destroy();
+                this.sendGameCommand('HitPlayerCommand', {
+                    monsterId: data.monsterId,
+                    targetClientId: this.myClientId
+                });
+            }, null, this);
+        }
     },
 
     DamageEvent(data) {

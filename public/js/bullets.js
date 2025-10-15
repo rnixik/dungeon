@@ -126,20 +126,4 @@ class Bullets extends Phaser.Physics.Arcade.Group
             bullet.fire(clientId, x, y, direction);
         }
     }
-
-    fireCircle(clientId, x, y)
-    {
-        for (let i = 0; i < 8; i++) {
-            const angle = Phaser.Math.RadToDeg(i * (Math.PI / 4));
-            const bullet = this.getFirstDead(true);
-            if (bullet) {
-                bullet.fire(clientId, x, y, "right");
-                const vel = 500;
-                const velX = vel * Math.cos(Phaser.Math.DegToRad(angle));
-                const velY = vel * Math.sin(Phaser.Math.DegToRad(angle));
-                bullet.setVelocity(velX, velY);
-                bullet.setAngle(angle);
-            }
-        }
-    }
 }
