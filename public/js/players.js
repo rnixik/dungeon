@@ -56,6 +56,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this.hpText.x = this.x;
             this.hpText.y = this.y - 20;
         }
+
+        this.depth = this.y;
     }
 
     updateStatAndPosition(statData)
