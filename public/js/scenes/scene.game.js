@@ -4,9 +4,9 @@ const DEBUG = false;
 const DEPTH_DEAD = 10;
 const DEPTH_OBJECTS = 20;
 const DEPTH_PLAYER = 30;
-const DEPTH_UPPER_WALLS = 35;
 const DEPTH_MONSTER = 40;
 const DEPTH_PROJECTILES = 200;
+const DEPTH_UPPER_WALLS = 500;
 const DEPTH_DARKNESS = 9000;
 const DEPTH_UI = 10000;
 
