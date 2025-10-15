@@ -4,6 +4,7 @@ const DEBUG = false;
 const DEPTH_DEAD = 10;
 const DEPTH_OBJECTS = 20;
 const DEPTH_PLAYER = 30;
+const DEPTH_UPPER_WALLS = 35;
 const DEPTH_MONSTER = 40;
 const DEPTH_PROJECTILES = 200;
 const DEPTH_DARKNESS = 9000;
@@ -114,6 +115,15 @@ class Game extends Phaser.Scene {
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
+        const layerWallsUpper = this.map.createBlankLayer('upper_walls', tiles, 0, 0, this.map.width, this.map.height);
+        this.layerWalls.forEachTile((tile) => {
+            if (tile.properties.extra_z === true) {
+                layerWallsUpper.putTileAt(tile, tile.x, tile.y);
+                this.layerWalls.removeTileAt(tile.x, tile.y);
+            }
+        });
+        layerWallsUpper.setDepth(DEPTH_UPPER_WALLS);
+
         this.player = new MyPlayer('mage', this, gameData.playerData);
         this.physics.add.collider(this.player, this.layerWalls);
 
@@ -131,6 +141,7 @@ class Game extends Phaser.Scene {
             const id = o.id;
             this.gameObjects[id] = GameObject.SpawnNewObject(this, o);
             this.bullets.addObject(this.gameObjects[id]);
+            this.physics.add.collider(this.player, this.gameObjects[id]);
         }
 
         // Input

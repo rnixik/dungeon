@@ -42,7 +42,7 @@ func (g *Game) tickChest(obj *Object) {
 		}
 
 		distance := getDistance(obj.X, obj.Y, player.x, player.y)
-		if distance <= tileSize && g.isVisible(obj.X, obj.Y, player.x, player.y) {
+		if distance <= tileSize*1.5 && g.isVisible(obj.X, obj.Y, player.x, player.y) {
 			obj.State = "open"
 			g.broadcastEventFunc(ChestOpenEvent{ObjectID: obj.ID})
 		}

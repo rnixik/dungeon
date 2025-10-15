@@ -19,13 +19,14 @@ class GameObject extends Phaser.Physics.Arcade.Sprite
         this.x = statData.x;
         this.y = statData.y;
         this.setScale(1);
-        this.setDepth(this.y);
+        this.setDepth(DEPTH_OBJECTS);
 
         this.id = statData.id;
         this.state = statData.scene;
 
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
+        this.body.setImmovable(true)
         this.setMask(this.scene.mask);
     }
 
