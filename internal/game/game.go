@@ -13,7 +13,7 @@ import (
 const StatusStarted = "started"
 const StatusEnded = "ended"
 
-const maxHP = 1000
+const maxHP = 100
 const fireballDamage = 25
 const positionsUpdateTickPeriod = time.Second / 60
 const commonUpdateTickPeriod = time.Second / 3
