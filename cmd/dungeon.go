@@ -57,6 +57,16 @@ func main() {
 		log.Fatal("Load map error: ", err)
 	}
 
+	// write map to debug light rects
+	mapJson, err := json.Marshal(gameMap)
+	if err != nil {
+		log.Fatal("Marshal map error: ", err)
+	}
+	err = os.WriteFile("./public/assets/dungeon1_.tmj", mapJson, 0666)
+	if err != nil {
+		log.Fatal("Write map error: ", err)
+	}
+
 	newGameFunc := func(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{})) lobby.GameEventsDispatcher {
 		return game.NewGame(playersClients, room, broadcastEventFunc, gameMap)
 	}
