@@ -95,6 +95,7 @@ type Game struct {
 	monsters           []*Monster
 	objects            map[uint64]*Object
 	gameMap            *Map
+	demonWasSpawned    bool
 }
 
 func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map) *Game {
@@ -485,9 +486,6 @@ func (g *Game) spawnInitialMonsters() {
 		case "skeleton":
 			kind = monsterKindSkeleton
 			hp = 200
-		case "demon":
-			kind = monsterKindDemon
-			hp = 1000
 		default:
 			continue
 		}
@@ -528,4 +526,29 @@ func (g *Game) spawnInitialObjects() {
 			State: state,
 		}
 	}
+}
+
+func (g *Game) spawnDemonUnsafe() {
+	spawnLayer := g.gameMap.getLayerByName("spawns")
+	if spawnLayer == nil {
+		log.Println("no spawn layer found in map")
+		return
+	}
+
+	for _, obj := range spawnLayer.Objects {
+		if obj.Name == "demon" {
+			g.monsters = append(g.monsters, &Monster{
+				id:        len(g.monsters) + 1,
+				kind:      monsterKindDemon,
+				hp:        1000,
+				x:         int(obj.X),
+				y:         int(obj.Y),
+				direction: "left",
+				isMoving:  false,
+			})
+			break
+		}
+	}
+
+	g.demonWasSpawned = true
 }

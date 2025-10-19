@@ -45,6 +45,9 @@ func (g *Game) tickChest(obj *Object) {
 		if distance <= tileSize*1.5 && g.isVisible(obj.X, obj.Y, player.x, player.y) {
 			obj.State = "open"
 			g.broadcastEventFunc(ChestOpenEvent{ObjectID: obj.ID})
+			if g.demonWasSpawned == false {
+				g.spawnDemonUnsafe()
+			}
 		}
 	}
 }
