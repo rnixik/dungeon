@@ -1,11 +1,6 @@
 class Bullet extends Phaser.Physics.Arcade.Sprite
 {
-    constructor (scene, x, y)
-    {
-        super(scene, x, y, 'fireball');
-    }
-
-    fire (clientId, x, y, direction)
+    fire (clientId, x, y, velocityVector, animationKey)
     {
         this.clientId = clientId;
 
@@ -15,33 +10,14 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
         this.setActive(true);
         this.setVisible(true);
 
-        const vel = 500;
+        const rotationAngle = Math.atan2(velocityVector.y, velocityVector.x);
+        this.setRotation(rotationAngle);
+        if (rotationAngle > 90 && rotationAngle < 270) {
+            this.setFlipY(true);
+        }
 
-        let velX = 0;
-        let velY = 0;
-        if (direction === 'left')
-        {
-            velX = -vel;
-            this.setAngle(0).setFlipX(true);
-        }
-        else if (direction === 'right')
-        {
-            velX = vel;
-            this.setAngle(0).setFlipX(false);
-        }
-        else if (direction === 'up')
-        {
-            velY = -vel;
-            this.setAngle(-90).setFlipX(false);
-        }
-        else if (direction === 'down')
-        {
-            velY = vel;
-            this.setAngle(90).setFlipX(false);
-        }
-        this.setVelocity(velX, velY);
-
-        this.anims.play('fireball-loop',true);
+        this.setVelocity(velocityVector.x, velocityVector.y);
+        this.anims.play(animationKey, true);
     }
 }
 
@@ -52,13 +28,13 @@ class Bullets extends Phaser.Physics.Arcade.Group
     onBulletHitMonster;
     gameScene;
 
-    constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
+    constructor (key, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
         super(scene.physics.world, scene);
 
         this.sprites = this.createMultiple({
             frameQuantity: 100,
-            key: 'fireball',
+            key: key,
             active: false,
             visible: false,
             setDepth: {value: DEPTH_PROJECTILES, step: 0},
@@ -117,13 +93,66 @@ class Bullets extends Phaser.Physics.Arcade.Group
         bullet.disableBody();
     }
 
-    fireBullet (clientId, x, y, direction)
+    fireBullet (clientId, x, y, vector, animationKey)
     {
         const bullet = this.getFirstDead(true);
-
-        if (bullet)
-        {
-            bullet.fire(clientId, x, y, direction);
+        if (bullet) {
+            bullet.fire(clientId, x, y, vector, animationKey);
         }
+
+        return bullet;
+    }
+}
+
+class FireballsGroup extends Bullets
+{
+    constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
+    {
+        super('fireball', scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+    }
+
+    fireBullet(clientId, x, y, direction4x, velocity) {
+        let vector = new Phaser.Math.Vector2(1, 0);
+        switch (direction4x) {
+            case 'left': vector = new Phaser.Math.Vector2(-1, 0); break;
+            case 'right': vector = new Phaser.Math.Vector2(1, 0); break;
+            case 'up': vector = new Phaser.Math.Vector2(0, -1); break;
+            case 'down': vector = new Phaser.Math.Vector2(0, 1); break;
+        }
+        vector = vector.normalize().scale(velocity);
+
+        return super.fireBullet(clientId, x, y, vector, 'fireball-loop');
+    }
+}
+
+class AllProjectilesGroup
+{
+    fireballs;
+
+    constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
+    {
+        this.fireballs = new FireballsGroup(scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+    }
+
+    addPlayer(player) {
+        this.fireballs.addPlayer(player);
+    }
+
+    addMonster(monster) {
+        this.fireballs.addMonster(monster);
+    }
+
+    addObject(object) {
+        this.fireballs.addObject(object);
+    }
+
+    getAllIlluminatedSprites() {
+        const children = this.fireballs.getChildren();
+        return children.filter(b => b.active);
+    }
+
+    castFireball(clientId, x, y, direction4x, velocity)
+    {
+        return this.fireballs.fireBullet(clientId, x, y, direction4x, velocity);
     }
 }

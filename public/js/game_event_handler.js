@@ -1,6 +1,6 @@
 const GameEventHandler = {
     FireballEvent(data) {
-        this.bullets.fireBullet(data.clientId, data.x, data.y, data.direction)
+        this.projectiles.castFireball(data.clientId, data.x, data.y, data.direction, 500)
     },
 
     CreaturesStatsUpdateEvent(data) {
@@ -13,7 +13,7 @@ const GameEventHandler = {
 
             if (!this.players[id]) {
                 this.players[id] = new Player("mage", this, p)
-                this.bullets.addPlayer(this.players[id]);
+                this.projectiles.addPlayer(this.players[id]);
             }
 
             this.players[id].updateStatAndPosition(p);
@@ -23,7 +23,7 @@ const GameEventHandler = {
             const id = m.id;
             if (!this.monsters[id]) {
                 this.monsters[id] = Monster.SpawnNewMonster(this, m);
-                this.bullets.addMonster(this.monsters[id]);
+                this.projectiles.addMonster(this.monsters[id]);
             }
 
             this.monsters[id].updateStatAndPosition(m);

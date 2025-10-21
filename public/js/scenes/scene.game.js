@@ -49,7 +49,7 @@ class Game extends Phaser.Scene {
     map;
     layerWalls;
     layerFloor;
-    bullets; // external bullets manager passed/constructed elsewhere in your code
+    projectiles;
 
     // lighting
     rt;               // RenderTexture for darkness
@@ -134,16 +134,15 @@ class Game extends Phaser.Scene {
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(this.player);
 
-        // Bullets manager (assumes you have a Bullets class)
-        this.bullets = new Bullets(this, this.layerWalls, this.onBulletHitPlayer, this.onBulletHitMonster);
-        this.bullets.addPlayer(this.player);
+        this.projectiles = new AllProjectilesGroup(this, this.layerWalls, this.onBulletHitPlayer, this.onBulletHitMonster);
+        this.projectiles.addPlayer(this.player);
 
         // Spawn objects
         for (const i in gameData.gameObjects) {
             const o = gameData.gameObjects[i];
             const id = o.id;
             this.gameObjects[id] = GameObject.SpawnNewObject(this, o);
-            this.bullets.addObject(this.gameObjects[id]);
+            this.projectiles.addObject(this.gameObjects[id]);
             this.physics.add.collider(this.player, this.gameObjects[id]);
         }
 
@@ -336,11 +335,15 @@ class Game extends Phaser.Scene {
 
         eraseAt(LIGHT_MASK_PLAYER, this.player.x,     this.player.y,     LIGHT_DIAMETER);
 
+        if (!this.projectiles) {
+            return;
+        }
+
         // Sample bullets periodically to build a short-lived glow trail
         const now = this.time.now;
         if (now - this._lastBulletSampleAt >= BULLET_SAMPLE_MS) {
             this._lastBulletSampleAt = now;
-            for (const s of this._iterateAliveBullets()) {
+            for (const s of this.projectiles.getAllIlluminatedSprites()) {
                 this._pushBulletLight(s.x, s.y, now + BULLET_POINT_TTL_MS);
             }
         }
@@ -414,16 +417,6 @@ class Game extends Phaser.Scene {
                 else this.scale.startFullscreen();
             });
         }
-    }
-
-    // --- bullets helpers ---
-    _iterateAliveBullets() {
-        const out = [];
-        const b = this.bullets;
-        if (!b) return out;
-        const arr = b.group?.getChildren?.() ?? b.children?.entries ?? b.children ?? b.getChildren?.() ?? [];
-        for (const s of arr) if (s?.active) out.push(s);
-        return out;
     }
 
     _pushBulletLight(x, y, expiresAt) {
