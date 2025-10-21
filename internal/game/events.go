@@ -15,7 +15,7 @@ type FireballEvent struct {
 
 type ArrowEvent struct {
 	ClientID  uint64 `json:"clientId"`
-	MonsterID int    `json:"MonsterID"`
+	MonsterID int    `json:"monsterId"`
 	X1        int    `json:"x1"`
 	Y1        int    `json:"y1"`
 	X2        int    `json:"x2"`

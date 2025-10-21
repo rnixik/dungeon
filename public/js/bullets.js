@@ -1,8 +1,9 @@
 class Bullet extends Phaser.Physics.Arcade.Sprite
 {
-    fire (clientId, x, y, velocityVector, animationKey)
+    fire (clientId, monsterId, x, y, velocityVector, animationKey)
     {
         this.clientId = clientId;
+        this.monsterId = monsterId;
 
         this.enableBody();
         this.body.reset(x, y);
@@ -17,7 +18,9 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
         }
 
         this.setVelocity(velocityVector.x, velocityVector.y);
-        this.anims.play(animationKey, true);
+        if (animationKey) {
+            this.anims.play(animationKey, true);
+        }
     }
 }
 
@@ -27,8 +30,9 @@ class Bullets extends Phaser.Physics.Arcade.Group
     onBulletHitPlayer;
     onBulletHitMonster;
     gameScene;
+    animationKey;
 
-    constructor (key, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
+    constructor (key, animationKey, scale, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
         super(scene.physics.world, scene);
 
@@ -38,11 +42,13 @@ class Bullets extends Phaser.Physics.Arcade.Group
             active: false,
             visible: false,
             setDepth: {value: DEPTH_PROJECTILES, step: 0},
+            setScale: {x: scale, y: scale},
             classType: Bullet
         });
 
         scene.physics.add.collider(this.sprites, layerWalls, this.bulletHitWall, null, this);
 
+        this.animationKey = animationKey;
         this.gameScene = scene;
         this.onBulletHitPlayer = onBulletHitPlayer;
         this.onBulletHitMonster = onBulletHitMonster;
@@ -82,6 +88,10 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
     bulletHitMonster (bullet, monster)
     {
+        if (bullet.monsterId === monster.id) {
+            // don't hit yourself
+            return;
+        }
         this.hideBullet(bullet);
         this.onBulletHitMonster.apply(this.gameScene, [bullet, monster]);
     }
@@ -93,25 +103,17 @@ class Bullets extends Phaser.Physics.Arcade.Group
         bullet.disableBody();
     }
 
-    fireBullet (clientId, x, y, vector, animationKey)
+    fireBullet (clientId, monsterId, x, y, vector)
     {
         const bullet = this.getFirstDead(true);
         if (bullet) {
-            bullet.fire(clientId, x, y, vector, animationKey);
+            bullet.fire(clientId, monsterId, x, y, vector, this.animationKey);
         }
 
         return bullet;
     }
-}
 
-class FireballsGroup extends Bullets
-{
-    constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
-    {
-        super('fireball', scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
-    }
-
-    fireBullet(clientId, x, y, direction4x, velocity) {
+    shootToDirection4x(clientId, monsterId, x, y, direction4x, velocity) {
         let vector = new Phaser.Math.Vector2(1, 0);
         switch (direction4x) {
             case 'left': vector = new Phaser.Math.Vector2(-1, 0); break;
@@ -121,29 +123,57 @@ class FireballsGroup extends Bullets
         }
         vector = vector.normalize().scale(velocity);
 
-        return super.fireBullet(clientId, x, y, vector, 'fireball-loop');
+        return this.fireBullet(clientId, monsterId, x, y, vector);
+    }
+
+    shootToPoint(clientId, monsterId, x, y, destX, destY, velocity) {
+        let vector = new Phaser.Math.Vector2(destX - x, destY - y);
+        vector = vector.normalize().scale(velocity);
+
+        return this.fireBullet(clientId, monsterId, x, y, vector);
+    }
+}
+
+class FireballsGroup extends Bullets
+{
+    constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
+    {
+        super('fireball', 'fireball-loop', 1, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+    }
+}
+
+class ArrowsGroup extends Bullets
+{
+    constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
+    {
+        super('arrow', null, 2, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 }
 
 class AllProjectilesGroup
 {
     fireballs;
+    arrows;
 
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
         this.fireballs = new FireballsGroup(scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        this.arrows = new ArrowsGroup(scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 
     addPlayer(player) {
         this.fireballs.addPlayer(player);
+        this.arrows.addPlayer(player);
     }
 
     addMonster(monster) {
         this.fireballs.addMonster(monster);
+        this.arrows.addMonster(monster);
     }
 
     addObject(object) {
         this.fireballs.addObject(object);
+        this.arrows.addObject(object);
     }
 
     getAllIlluminatedSprites() {
@@ -151,8 +181,13 @@ class AllProjectilesGroup
         return children.filter(b => b.active);
     }
 
-    castFireball(clientId, x, y, direction4x, velocity)
+    castPlayerFireball(clientId, x, y, direction4x, velocity)
     {
-        return this.fireballs.fireBullet(clientId, x, y, direction4x, velocity);
+        return this.fireballs.shootToDirection4x(clientId, null, x, y, direction4x, velocity);
+    }
+
+    shootMonsterArrow(monsterId, x, y, destX, destY, velocity)
+    {
+        return this.arrows.shootToPoint(null, monsterId, x, y, destX, destY, velocity);
     }
 }

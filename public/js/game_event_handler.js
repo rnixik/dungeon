@@ -1,6 +1,6 @@
 const GameEventHandler = {
     FireballEvent(data) {
-        this.projectiles.castFireball(data.clientId, data.x, data.y, data.direction, 500)
+        this.projectiles.castPlayerFireball(data.clientId, data.x, data.y, data.direction, 500)
     },
 
     CreaturesStatsUpdateEvent(data) {
@@ -52,19 +52,7 @@ const GameEventHandler = {
     },
 
     ArrowEvent(data) {
-        const ar = this.physics.add.sprite(data.x1, data.y1, 'arrow', 0).setScale(2);
-        const dir = new Phaser.Math.Vector2(data.x2 - data.x1, data.y2 - data.y1).normalize();
-        const ang = Phaser.Math.Angle.Between(data.x1, data.y1, data.x2, data.y2);
-        ar.setOrigin(0.5, 0.5).setRotation(ang).setAngle(ar.angle - 90);
-        ar.setVelocity(dir.x * 400, dir.y * 400);
-        this.physics.add.collider(ar, this.layerWalls, () => ar.destroy(), null, this);
-        this.physics.add.overlap(ar, this.player, () => {
-            ar.destroy();
-            this.sendGameCommand('HitPlayerCommand', {
-                monsterId: data.monsterId,
-                targetClientId: this.myClientId
-            });
-        }, null, this);
+        this.projectiles.shootMonsterArrow(data.monsterId, data.x1, data.y1, data.x2, data.y2, 400);
     },
 
     DemonFireballEvent(data) {

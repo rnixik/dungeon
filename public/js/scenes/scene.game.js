@@ -284,6 +284,15 @@ class Game extends Phaser.Scene {
     onBulletHitPlayer(bullet, player)
     {
         console.log('hit player', bullet.clientId, player.id);
+        if (bullet.monsterId && player.id === this.myClientId) {
+            // hit caused by monster's bullet on ourselves
+            this.sendGameCommand('HitPlayerCommand', {
+                monsterId: bullet.monsterId,
+                targetClientId: this.myClientId
+            });
+            return;
+        }
+
         if (bullet.clientId !== this.myClientId) {
             return; // only report hits caused by our own bullets
         }
@@ -295,7 +304,11 @@ class Game extends Phaser.Scene {
 
     onBulletHitMonster(bullet, monster)
     {
-        console.log('hit monster', bullet.clientId, monster.id, this.myClientId);
+        console.log('hit monster', bullet.clientId, this.myClientId, bullet.monsterId, monster.id);
+        if (bullet.monsterId) {
+            return; // ignore hitting monsters by monster bullets
+        }
+
         if (bullet.clientId !== this.myClientId) {
             return; // only report hits caused by our own bullets
         }
