@@ -63,6 +63,9 @@ class Game extends Phaser.Scene {
     vertices;
     edges;
     rays;
+    raycastByAreas = [];
+    prevAreaId = null;
+
     direction = 'right';
 
     // UI scale helpers
@@ -173,20 +176,17 @@ class Game extends Phaser.Scene {
         this.layerFloor.setMask(this.mask);
 
         // --- Build occluder rectangles from wall tiles ---
-        const rects = getCollisionRectsFromMapData(gameData.mapData);
-
-        if (DEBUG) {
-            const rectGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } }).setDepth(DEPTH_UI - 1);
-            for (const r of rects) rectGraphics.fillRectShape(r);
-            const rectVertGraphics = this.add.graphics({ fillStyle: { color: 0x00aaaa } }).setDepth(DEPTH_UI - 1);
-            for (const r of rects) for (const v of getRectVertices(r)) rectVertGraphics.fillPointShape(v, 4);
-            console.log('rect count', rects.length);
+        const rectsByAreas = getCollisionRectsFromMapData(gameData.mapData);
+        for (const area of rectsByAreas) {
+            this.raycastByAreas.push({
+                id: area.id,
+                center: area.center,
+                edges: area.rects.flatMap(getRectEdges),
+                vertices: area.rects.flatMap(getRectVertices),
+                rays: area.rects.flatMap(getRectVertices).map(() => new Line()),
+                rects: area.rects
+            });
         }
-
-        // Convert rectangles to edges/vertices for raycast
-        this.edges = rects.flatMap(getRectEdges);
-        this.vertices = rects.flatMap(getRectVertices);
-        this.rays = this.vertices.map(() => new Line());
 
         // UI
         this.addMobileButtons();
@@ -357,7 +357,31 @@ class Game extends Phaser.Scene {
         if (this.isDead) {
             return;
         }
-        draw(this.graphics, calc(this.player, this.vertices, this.edges, this.rays), this.rays, this.edges);
+
+        // find closest area(s) to player and raycast there
+        for (const area of this.raycastByAreas) {
+            if (Math.abs(this.player.x - area.center.x) < 400 && Math.abs(this.player.y - area.center.y) < 300) {
+                if (this.prevAreaId !== area.id) {
+                    console.log("Switched to raycast area id:", area.id, "rects num:", area.rects.length);
+                    this.prevAreaId = area.id;
+
+                    if (DEBUG) {
+                        const rectGraphics = this.add.graphics({ fillStyle: { color: 0x0000aa } }).setDepth(DEPTH_UI - 1);
+                        for (const r of area.rects) rectGraphics.fillRectShape(r);
+                        const rectVertGraphics = this.add.graphics({ fillStyle: { color: 0x00aaaa } }).setDepth(DEPTH_UI - 1);
+                        for (const r of area.rects) for (const v of getRectVertices(r)) rectVertGraphics.fillPointShape(v, 4);
+                    }
+                }
+
+                const vertices = area.vertices;
+                const edges    = area.edges;
+                const rays     = area.rays;
+
+                draw(this.graphics, calc(this.player, vertices, edges, rays), rays, edges);
+
+                return;
+            }
+        }
     }
 
     addMobileButtons () {
@@ -493,12 +517,25 @@ function sortClockwise (points, center) {
 }
 
 function getCollisionRectsFromMapData(mapData) {
-    const layer = mapData.layers.find(l => l.name === 'collision-rects');
-
-    const rects = [];
-    for (r of layer.objects) {
-        rects.push(new Rectangle(r.x, r.y, r.width, r.height));
+    const rectsByAreas = [];
+    const areasLayer = mapData.layers.find(l => l.name === 'area-centers');
+    for (const a of areasLayer.objects) {
+        rectsByAreas.push({
+            "id": a.id,
+            "center": new Point(a.x, a.y),
+            rects: []
+        });
     }
 
-    return rects;
+    const rectsLayer = mapData.layers.find(l => l.name === 'collision-rects');
+    for (const r of rectsLayer.objects) {
+        for (const area of rectsByAreas) {
+            aid = area.id;
+            if (r.properties["area_" + aid]) {
+                area.rects.push(new Rectangle(r.x, r.y, r.width, r.height));
+            }
+        }
+    }
+
+    return rectsByAreas;
 }

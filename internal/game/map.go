@@ -96,6 +96,8 @@ func LoadMap(filename string) (*Map, error) {
 		return nil, err
 	}
 
+	m.buildAreaOptimizedCollisionRects()
+
 	return &m, err
 }
 
@@ -249,6 +251,74 @@ func (m *Map) addLayerWithCollisionRectangles() error {
 	})
 
 	return nil
+}
+
+func (m *Map) buildAreaOptimizedCollisionRects() {
+	// Split the map into overlapping areas of visibility
+	w := 960
+	h := 720
+
+	areasCenters := []struct{ x, y int }{}
+	for y := h / 2; y < m.Height*m.TileHeight+h/2; y += h / 2 {
+		for x := w / 2; x < m.Width*m.TileWidth+w/2; x += w / 2 {
+			areasCenters = append(areasCenters, struct{ x, y int }{x: x, y: y})
+		}
+	}
+
+	rectsLayer := m.getLayerByName("collision-rects")
+	if rectsLayer == nil {
+		return
+	}
+
+	areaCenters := make([]MapObject, 0, len(areasCenters))
+	for i, ac := range areasCenters {
+		propName := fmt.Sprintf("area_%d", i+1)
+		areaCenters = append(areaCenters, MapObject{
+			Id:       i + 1,
+			Name:     propName,
+			Type:     "area-center",
+			Rotation: 0,
+			Visible:  true,
+			Width:    0,
+			Height:   0,
+			X:        float64(ac.x),
+			Y:        float64(ac.y),
+		})
+	}
+
+	m.Layers = append(m.Layers, MapLayer{
+		Data:    nil,
+		Objects: areaCenters,
+		Name:    "area-centers",
+		Width:   0,
+		Height:  0,
+		Type:    "objectgroup",
+		X:       0,
+		Y:       0,
+	})
+
+	for _, rect := range rectsLayer.Objects {
+		for ai, ac := range areasCenters {
+			isRelevant := false
+			// check if any corner is within area
+			if abs(int(rect.X)-ac.x) <= w && abs(int(rect.Y)-ac.y) <= h ||
+				abs(int(rect.X)+int(rect.Width)-ac.x) <= w && abs(int(rect.Y)+int(rect.Height)-ac.y) <= h {
+				isRelevant = true
+			}
+			// check if rect spans area center horizontally or vertically
+			if (int(rect.Width) > w && abs(int(rect.Y)-ac.y) <= h) ||
+				(int(rect.Height) > h && abs(int(rect.X)-ac.x) <= w) {
+				isRelevant = true
+			}
+			if isRelevant {
+				propName := fmt.Sprintf("area_%d", ai+1)
+				if rect.Properties == nil {
+					rect.Properties = make(map[string]any)
+				}
+				rect.Properties[propName] = true
+			}
+		}
+	}
 }
 
 func (m *Map) getVisibilityColliders() (rects []Rectangle) {
