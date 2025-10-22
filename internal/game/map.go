@@ -259,8 +259,8 @@ func (m *Map) buildAreaOptimizedCollisionRects() {
 	h := 720
 
 	areasCenters := []struct{ x, y int }{}
-	for y := h / 2; y < m.Height*m.TileHeight+h/2; y += h / 2 {
-		for x := w / 2; x < m.Width*m.TileWidth+w/2; x += w / 2 {
+	for y := 0; y < m.Height*m.TileHeight+h/2; y += h / 2 {
+		for x := 0; x < m.Width*m.TileWidth+w/2; x += w / 2 {
 			areasCenters = append(areasCenters, struct{ x, y int }{x: x, y: y})
 		}
 	}
