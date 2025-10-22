@@ -194,7 +194,7 @@ class Game extends Phaser.Scene {
 
     update (time, delta) {
         // Movement
-        const move = 300;
+        const move = 200;
         const joy = this.joystick?.createCursorKeys?.() || {left:{isDown:false},right:{isDown:false},up:{isDown:false},down:{isDown:false}};
 
         this.player.body.setVelocity(0);
@@ -234,8 +234,8 @@ class Game extends Phaser.Scene {
 
         if (this.lastMoveSentTime + this.moveCommandInterval < time) {
             this.sendGameCommand('PlayerMoveCommand', {
-                x: this.player.x,
-                y: this.player.y,
+                x: Math.round(this.player.x),
+                y: Math.round(this.player.y),
                 direction: this.direction,
                 isMoving: this.isMoving
             });
