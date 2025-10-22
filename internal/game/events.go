@@ -24,7 +24,7 @@ type ArrowEvent struct {
 
 type DemonFireballEvent struct {
 	ClientID  uint64 `json:"clientId"`
-	MonsterID int    `json:"MonsterID"`
+	MonsterID int    `json:"monsterId"`
 	X1        int    `json:"x1"`
 	Y1        int    `json:"y1"`
 	X2        int    `json:"x2"`
@@ -33,7 +33,7 @@ type DemonFireballEvent struct {
 
 type FireCircleEvent struct {
 	ClientID  uint64 `json:"clientId"`
-	MonsterID int    `json:"MonsterID"`
+	MonsterID int    `json:"monsterId"`
 	X         int    `json:"x"`
 	Y         int    `json:"y"`
 }

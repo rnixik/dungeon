@@ -56,33 +56,15 @@ const GameEventHandler = {
     },
 
     DemonFireballEvent(data) {
-        const ar = this.physics.add.sprite(data.x1, data.y1, 'bullet', 0).setScale(1);
-        const dir = new Phaser.Math.Vector2(data.x2 - data.x1, data.y2 - data.y1).normalize();
-        ar.setVelocity(dir.x * 700, dir.y * 700);
-        this.physics.add.collider(ar, this.layerWalls, () => ar.destroy(), null, this);
-        this.physics.add.overlap(ar, this.player, () => {
-            ar.destroy();
-            this.sendGameCommand('HitPlayerCommand', {
-                monsterId: data.monsterId,
-                targetClientId: this.myClientId
-            });
-        }, null, this);
+        this.projectiles.castMonsterFirebolt(data.monsterId, data.x1, data.y1, data.x2, data.y2, 700)
     },
 
     FireCircleEvent(data) {
-        for (let i = 0; i < 8; i++) {
-            const angle = Phaser.Math.DegToRad(i * 45);
-            const dir = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
-            const ar = this.physics.add.sprite(data.x, data.y, 'bullet', 0).setScale(1);
-            ar.setVelocity(dir.x * 300, dir.y * 300);
-            this.physics.add.collider(ar, this.layerWalls, () => ar.destroy(), null, this);
-            this.physics.add.overlap(ar, this.player, () => {
-                ar.destroy();
-                this.sendGameCommand('HitPlayerCommand', {
-                    monsterId: data.monsterId,
-                    targetClientId: this.myClientId
-                });
-            }, null, this);
+        const numberOfProjectiles = 16;
+        for (let i = 0; i < numberOfProjectiles; i++) {
+            const angle = i * (Math.PI * 2) / numberOfProjectiles;
+            const vector = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
+            this.projectiles.castMonsterFireboltToVector(data.monsterId, data.x, data.y, vector, 300)
         }
     },
 
