@@ -1,6 +1,6 @@
 class Bullet extends Phaser.Physics.Arcade.Sprite
 {
-    fire (clientId, monsterId, x, y, velocityVector, animationKey)
+    fire (clientId, monsterId, x, y, velocityVector, animationKey, rotationOffset)
     {
         this.clientId = clientId;
         this.monsterId = monsterId;
@@ -12,7 +12,7 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
         this.setVisible(true);
 
         const rotationAngle = Math.atan2(velocityVector.y, velocityVector.x);
-        this.setRotation(rotationAngle);
+        this.setRotation(rotationAngle + rotationOffset);
         if (rotationAngle > 90 && rotationAngle < 270) {
             this.setFlipY(true);
         }
@@ -31,20 +31,26 @@ class Bullets extends Phaser.Physics.Arcade.Group
     onBulletHitMonster;
     gameScene;
     animationKey;
+    rotationOffset = 0;
 
-    constructor (key, animationKey, scale, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
+    constructor (key, animationKey, createConfigOverride, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
         super(scene.physics.world, scene);
 
-        this.sprites = this.createMultiple({
+        const config = Object.assign({
             frameQuantity: 100,
             key: key,
             active: false,
             visible: false,
             setDepth: {value: DEPTH_PROJECTILES, step: 0},
-            setScale: {x: scale, y: scale},
             classType: Bullet
-        });
+        }, createConfigOverride);
+
+        if (createConfigOverride && createConfigOverride.rotationOffset) {
+            this.rotationOffset = createConfigOverride.rotationOffset;
+        }
+
+        this.sprites = this.createMultiple(config);
 
         scene.physics.add.collider(this.sprites, layerWalls, this.bulletHitWall, null, this);
 
@@ -107,7 +113,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
     {
         const bullet = this.getFirstDead(true);
         if (bullet) {
-            bullet.fire(clientId, monsterId, x, y, vector, this.animationKey);
+            bullet.fire(clientId, monsterId, x, y, vector, this.animationKey, this.rotationOffset);
         }
 
         return bullet;
@@ -138,7 +144,7 @@ class FireballsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
-        super('fireball', 'fireball-loop', 1, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        super('fireball', 'fireball-loop', {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 }
 
@@ -146,7 +152,15 @@ class ArrowsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
-        super('arrow', null, 2, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        super(
+            'arrow',
+            null,
+            {setScale: {x: 2, y: 2}, rotationOffset: -Math.PI / 2},
+            scene,
+            layerWalls,
+            onBulletHitPlayer,
+            onBulletHitMonster
+        );
     }
 }
 
