@@ -210,9 +210,7 @@ class AllProjectilesGroup
     }
 
     getAllIlluminatedSprites() {
-        const children1 = this.fireballs.getChildren();
-        const children2 = this.firebolts.getChildren();
-        const children = children1.concat(children2);
+        const children = this.fireballs.getChildren();
         return children.filter(b => b.active);
     }
 
