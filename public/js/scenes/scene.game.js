@@ -188,6 +188,7 @@ class Game extends Phaser.Scene {
         }
 
         // UI
+        this.input.addPointer(1); // allow 2 simultaneous pointers for mobile
         this.addMobileButtons();
     }
 
