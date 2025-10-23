@@ -127,11 +127,15 @@ func (l *Lobby) Run() {
 }
 
 func (l *Lobby) RegisterTransportClient(tc ClientSender) {
+	log.Println("Register transport client")
 	l.register <- tc
+	log.Println("Registered transport client")
 }
 
 func (l *Lobby) UnregisterTransportClient(tc ClientSender) {
+	log.Println("Unregister transport client")
 	l.unregister <- tc
+	log.Println("Unregistered transport client")
 }
 
 func (l *Lobby) HandleClientCommand(tc ClientSender, clientCommand *ClientCommand) {

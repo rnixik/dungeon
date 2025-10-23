@@ -48,8 +48,10 @@ type WebSocketClient struct {
 
 func (c *WebSocketClient) readLoop() {
 	defer func() {
+		log.Println("stopping read loop")
 		c.Close()
 		c.lobby.UnregisterTransportClient(c)
+		log.Println("stopped read loop")
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
@@ -81,6 +83,7 @@ func (c *WebSocketClient) writeLoop() {
 		log.Println("stopping write loop")
 		ticker.Stop()
 		c.Close()
+		log.Println("stopped write loop")
 	}()
 	for {
 		select {
