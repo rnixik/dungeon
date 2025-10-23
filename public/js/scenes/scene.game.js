@@ -46,6 +46,8 @@ class Game extends Phaser.Scene {
     player;
     cursors;
     joystick;
+    buttonFire;
+    buttonFs;
     map;
     layerWalls;
     layerFloor;
@@ -403,6 +405,8 @@ class Game extends Phaser.Scene {
 
     addMobileButtons () {
         if (this.joystick) this.joystick.destroy(true, true);
+        if (this.buttonFire) this.buttonFire.destroy(true, true);
+        if (this.buttonFs) this.buttonFs.destroy(true, true);
 
         const joyStickConfig = {
             x: 85,
@@ -419,14 +423,14 @@ class Game extends Phaser.Scene {
 
         const btnScale = Math.max(this.uiScaleX, this.uiScaleY);
 
-        const buttonFire = this.add.sprite(this.scale.width - 85 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
-        buttonFire.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
-        buttonFire.on('pointerdown', () => this.castFireball());
+        this.buttonFire = this.add.sprite(this.scale.width - 85 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
+        this.buttonFire.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
+        this.buttonFire.on('pointerdown', () => this.castFireball());
 
         if (this.sys.game.device.fullscreen.available) {
-            const buttonFs = this.add.sprite(this.scale.width - 85 * this.uiScaleX, 40 * this.uiScaleY, 'controls', 'fullscreen1');
-            buttonFs.setAlpha(0.3).setScrollFactor(0, 0).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
-            buttonFs.on('pointerup', () => {
+            this.buttonFs = this.add.sprite(this.scale.width - 85 * this.uiScaleX, 40 * this.uiScaleY, 'controls', 'fullscreen1');
+            this.buttonFs.setAlpha(0.3).setScrollFactor(0, 0).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
+            this.buttonFs.on('pointerup', () => {
                 if (this.scale.isFullscreen) this.scale.stopFullscreen();
                 else this.scale.startFullscreen();
             });
