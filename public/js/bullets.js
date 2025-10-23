@@ -150,7 +150,13 @@ class FireballsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
-        super('fireball', 'fireball-loop', {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        super('fireball',
+            'fireball-loop',
+            {setScale: {x: 0.7, y: 0.7}},
+            scene,
+            layerWalls,
+            onBulletHitPlayer,
+            onBulletHitMonster);
     }
 }
 
@@ -158,7 +164,8 @@ class FireboltsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
-        super('bullet', null, {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        super(
+            'bullet', null, {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 }
 

@@ -13,7 +13,8 @@ var sceneConfigPreloader = {
         this.load.image('tiles', 'assets/catacombs.png');
 
         this.load.spritesheet('mage', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
+        //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('archer', 'assets/skeleton5.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('skeleton', 'assets/skeleton6.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('bow', 'assets/skeleton_bow.png', { frameWidth: 40, frameHeight: 40 });
@@ -66,8 +67,8 @@ var sceneConfigPreloader = {
         });
         this.anims.create({
             key: 'fireball-loop',
-            frames: this.anims.generateFrameNumbers('fireball', { start: 0, end: 11 }),
-            frameRate: 15,
+            frames: this.anims.generateFrameNumbers('fireball', { start: 0, end: 4 }),
+            frameRate: 10,
             repeat: -1
         });
         this.anims.create({

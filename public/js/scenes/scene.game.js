@@ -53,6 +53,7 @@ class Game extends Phaser.Scene {
     map;
     layerWalls;
     layerFloor;
+    layerDecor;
     projectiles;
 
     // lighting
@@ -120,6 +121,7 @@ class Game extends Phaser.Scene {
 
         this.layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0).setDepth(DEPTH_WALLS);
+        this.layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
         const layerWallsUpper = this.map.createBlankLayer('upper_walls', tiles, 0, 0, this.map.width, this.map.height);
