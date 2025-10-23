@@ -1,6 +1,8 @@
 const DEBUG = false;
 
 // Layering (z-index)
+const DEPTH_FLOOR = 0;
+const DEPTH_WALLS = 5;
 const DEPTH_DEAD = 10;
 const DEPTH_OBJECTS = 20;
 const DEPTH_PLAYER = 30;
@@ -116,8 +118,8 @@ class Game extends Phaser.Scene {
 
         const tiles = this.map.addTilesetImage('catacombs', 'tiles');
 
-        this.layerFloor = this.map.createLayer('floor', tiles, 0, 0);
-        this.layerWalls = this.map.createLayer('walls', tiles, 0, 0);
+        this.layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
+        this.layerWalls = this.map.createLayer('walls', tiles, 0, 0).setDepth(DEPTH_WALLS);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
         const layerWallsUpper = this.map.createBlankLayer('upper_walls', tiles, 0, 0, this.map.width, this.map.height);
