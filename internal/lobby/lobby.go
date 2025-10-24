@@ -105,6 +105,7 @@ func (l *Lobby) Run() {
 	for {
 		select {
 		case tc := <-l.register:
+			log.Println("read from register channel")
 			atomic.AddUint64(&lastClientId, 1)
 			lastClientIdSafe := atomic.LoadUint64(&lastClientId)
 			tc.SetID(lastClientIdSafe)
@@ -114,12 +115,15 @@ func (l *Lobby) Run() {
 				transportClient: tc,
 			}
 			l.clients[client.ID()] = client
+			log.Println("processed register channel")
 		case tc := <-l.unregister:
+			log.Println("read from unregister channel")
 			if client, ok := l.clients[tc.ID()]; ok {
 				client.CloseConnection()
 				delete(l.clients, client.ID())
 				l.onClientLeft(client)
 			}
+			log.Println("processed unregister channel")
 		case clientCommand := <-l.clientCommands:
 			l.onClientCommand(clientCommand)
 		}
@@ -281,6 +285,7 @@ func (l *Lobby) makeMatch(c ClientPlayer, mmSettings MatchMakerSettings) {
 
 func (l *Lobby) onClientCommand(cc *ClientCommand) {
 	if cc.Type == ClientCommandTypeLobby {
+		log.Println("lobby command received", cc.SubType)
 		if cc.SubType == ClientCommandLobbySubTypeJoin {
 			var nickname string
 			if err := json.Unmarshal(cc.Data, &nickname); err != nil {
@@ -302,11 +307,14 @@ func (l *Lobby) onClientCommand(cc *ClientCommand) {
 			}
 			l.makeMatch(cc.client, mmSettings)
 		}
+		log.Println("lobby command processed", cc.SubType)
 	} else if cc.Type == ClientCommandTypeRoom {
+		log.Println("room command received", cc.SubType)
 		if l.clientsJoinedRooms[cc.client] == nil {
 			return
 		}
 		l.clientsJoinedRooms[cc.client].onClientCommand(cc)
+		log.Println("room command processed", cc.SubType)
 	} else if cc.Type == ClientCommandTypeGame {
 		l.dispatchGameCommand(cc)
 	}
