@@ -121,8 +121,8 @@ func (c *WebSocketClient) writeLoop() {
 
 func (c *WebSocketClient) SendEvent(event interface{}) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	isClosed := c.sendIsClosed
+	c.mu.Unlock()
 
 	if isClosed {
 		return
@@ -148,19 +148,25 @@ func (c *WebSocketClient) SetID(id uint64) {
 
 func (c *WebSocketClient) Close() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if c.sendIsClosed {
+		c.mu.Unlock()
 		return
 	}
 
 	c.sendIsClosed = true
-	close(c.send)
+	c.mu.Unlock()
 
 	err := c.conn.Close()
 	if err != nil {
 		log.Println("Error closing websocket connection:", err)
 	}
+
+	// delayed close to fix sending on closed channel panic
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		close(c.send)
+		log.Println("WebSocketClient send channel closed")
+	}()
 }
 
 func ServeWebSocketRequest(lobby *lobby.Lobby, w http.ResponseWriter, r *http.Request) {
