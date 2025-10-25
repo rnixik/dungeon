@@ -82,7 +82,7 @@ class Game extends Phaser.Scene {
     isDead = false;
 
     lastMoveSentTime = 0;
-    moveCommandInterval = 1000 / 60; // ms
+    moveCommandInterval = 1000 / 45; // ms
 
     players = {};
     monsters = {};
@@ -236,7 +236,7 @@ class Game extends Phaser.Scene {
         // Raycast dynamic shadows
         this.updateMaskRaycast();
 
-        if (this.lastMoveSentTime + this.moveCommandInterval < time) {
+        if (this.isMoving && this.lastMoveSentTime + this.moveCommandInterval < time) {
             this.sendGameCommand('PlayerMoveCommand', {
                 x: Math.round(this.player.x),
                 y: Math.round(this.player.y),
