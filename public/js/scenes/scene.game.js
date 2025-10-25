@@ -51,9 +51,6 @@ class Game extends Phaser.Scene {
     buttonFire;
     buttonFs;
     map;
-    layerWalls;
-    layerFloor;
-    layerDecor;
     projectiles;
 
     // lighting
@@ -119,28 +116,28 @@ class Game extends Phaser.Scene {
 
         const tiles = this.map.addTilesetImage('catacombs', 'tiles');
 
-        this.layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
-        this.layerWalls = this.map.createLayer('walls', tiles, 0, 0).setDepth(DEPTH_WALLS);
-        this.layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
-        this.layerWalls.setCollisionByProperty({ collides: true });
+        const layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
+        const layerWalls = this.map.createLayer('walls', tiles, 0, 0).setDepth(DEPTH_WALLS);
+        const layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
+        layerWalls.setCollisionByProperty({ collides: true });
 
         const layerWallsUpper = this.map.createBlankLayer('upper_walls', tiles, 0, 0, this.map.width, this.map.height);
-        this.layerWalls.forEachTile((tile) => {
+        layerWalls.forEachTile((tile) => {
             if (tile.properties.extra_z === true) {
                 layerWallsUpper.putTileAt(tile, tile.x, tile.y);
-                this.layerWalls.removeTileAt(tile.x, tile.y);
+                layerWalls.removeTileAt(tile.x, tile.y);
             }
         });
         layerWallsUpper.setDepth(DEPTH_UPPER_WALLS);
 
         this.player = new MyPlayer('mage', this, gameData.playerData);
-        this.physics.add.collider(this.player, this.layerWalls);
+        this.physics.add.collider(this.player, layerWalls);
 
         // Camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
         this.cameras.main.startFollow(this.player);
 
-        this.projectiles = new AllProjectilesGroup(this, this.layerWalls, this.onBulletHitPlayer, this.onBulletHitMonster);
+        this.projectiles = new AllProjectilesGroup(this, layerWalls, this.onBulletHitPlayer, this.onBulletHitMonster);
         this.projectiles.addPlayer(this.player);
 
         // Spawn objects
@@ -178,7 +175,8 @@ class Game extends Phaser.Scene {
         }
 
         // Apply (optional) geometric mask to world layers/actors (not UI)
-        this.layerFloor.setMask(this.mask);
+        layerFloor.setMask(this.mask);
+        layerDecor.setMask(this.mask);
 
         // --- Build occluder rectangles from wall tiles ---
         const rectsByAreas = getCollisionRectsFromMapData(gameData.mapData);
