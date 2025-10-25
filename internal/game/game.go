@@ -242,6 +242,9 @@ func (g *Game) StartMainLoop() {
 
 			p := make([]PlayerPosition, 0, len(g.players))
 			for _, pl := range g.players {
+				if !pl.isMoving {
+					continue
+				}
 				p = append(p, PlayerPosition{
 					ClientID:  pl.client.ID(),
 					X:         pl.x,
@@ -252,6 +255,9 @@ func (g *Game) StartMainLoop() {
 			}
 			m := make([]MonsterPosition, 0, len(g.monsters))
 			for _, mon := range g.monsters {
+				if !mon.isMoving && !mon.isAttacking {
+					continue
+				}
 				m = append(m, MonsterPosition{
 					ID:          mon.id,
 					X:           mon.x,
