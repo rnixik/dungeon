@@ -22,24 +22,20 @@ const monsterKindArcher = "archer"
 const monsterKindSkeleton = "skeleton"
 const monsterKindDemon = "demon"
 
+const attackCooldown = time.Second / 2
+
 const objectKindChest = "chest"
 
 type Player struct {
-	client             lobby.ClientPlayer
-	lastSpellId        string
-	lastSpellIdShield  string
-	lastCastTime       time.Time
-	lastCastTimeShield time.Time
-	spellWasSent       bool
-	spellWasSentShield bool
-	hasActiveSpell     bool
-	color              string
-	maxHp              int
-	hp                 int
-	x                  int
-	y                  int
-	direction          string
-	isMoving           bool
+	client         lobby.ClientPlayer
+	lastAttackTime time.Time
+	color          string
+	maxHp          int
+	hp             int
+	x              int
+	y              int
+	direction      string
+	isMoving       bool
 }
 
 type Monster struct {
@@ -72,17 +68,14 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 	colorHex := fmt.Sprintf("0x%06x", rand.Intn(0xFFFFFF))
 
 	return &Player{
-		client:         client,
-		lastSpellId:    "",
-		lastCastTime:   time.Time{},
-		hasActiveSpell: false,
-		color:          colorHex,
-		maxHp:          maxHP,
-		hp:             maxHP,
-		x:              120,
-		y:              140,
-		direction:      "right",
-		isMoving:       false,
+		client:    client,
+		color:     colorHex,
+		maxHp:     maxHP,
+		hp:        maxHP,
+		x:         120,
+		y:         140,
+		direction: "right",
+		isMoving:  false,
 	}
 }
 
@@ -344,17 +337,28 @@ func (g *Game) movePlayerTo(clientID uint64, x int, y int, direction string, isM
 func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
 	isDead := false
 
+	var player *Player
 	g.mutex.Lock()
 	if p, ok := g.players[clientID]; ok {
+		player = p
 		if p.hp <= 0 {
 			isDead = true
 		}
 	}
 	g.mutex.Unlock()
 
+	if player == nil {
+		return
+	}
+
 	if isDead {
 		return
 	}
+
+	if time.Since(player.lastAttackTime) < attackCooldown {
+		return
+	}
+	player.lastAttackTime = time.Now()
 
 	g.broadcastEventFunc(FireballEvent{
 		ClientID:  clientID,
