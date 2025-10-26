@@ -90,6 +90,7 @@ type Game struct {
 	objects            map[uint64]*Object
 	gameMap            *Map
 	demonWasSpawned    bool
+	keysCollected      map[string]bool
 }
 
 func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map) *Game {
@@ -109,6 +110,11 @@ func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEve
 		monsters:           []*Monster{},
 		gameMap:            gameMap,
 		objects:            make(map[uint64]*Object),
+		keysCollected: map[string]bool{
+			"1": true,
+			"2": true,
+			"3": false,
+		},
 	}
 }
 
@@ -204,6 +210,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 			MaxHP:    pl.maxHp,
 			HP:       pl.hp,
 		},
+		"keysCollected": g.keysCollected,
 	}
 }
 

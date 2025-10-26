@@ -50,6 +50,14 @@ class Game extends Phaser.Scene {
     joystick;
     buttonFire;
     buttonFs;
+
+    key1;
+    key2;
+    key3;
+    key1Collected = true;
+    key2Collected = false;
+    key3Collected = false;
+
     map;
     layerWalls;
     projectiles;
@@ -150,6 +158,10 @@ class Game extends Phaser.Scene {
             this.physics.add.collider(this.player, this.gameObjects[id]);
         }
 
+        this.key1Collected = gameData.keysCollected["1"];
+        this.key2Collected = gameData.keysCollected["2"];
+        this.key3Collected = gameData.keysCollected["3"];
+
         // Input
         this.cursors = this.input.keyboard.createCursorKeys();
         const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -163,6 +175,7 @@ class Game extends Phaser.Scene {
         // Resize handler: rebuild RT & reposition UI
         this.scale.on('resize', () => {
             this._initDarknessRT();
+            this.addKeysIcons();
             this.addMobileButtons();
         });
 
@@ -193,6 +206,7 @@ class Game extends Phaser.Scene {
         }
 
         // UI
+        this.addKeysIcons();
         this.input.addPointer(1); // allow 2 simultaneous pointers for mobile
         this.addMobileButtons();
     }
@@ -403,6 +417,28 @@ class Game extends Phaser.Scene {
 
                 return;
             }
+        }
+    }
+
+    addKeysIcons() {
+        this.addKey(this.key1, this.key1Collected, 1);
+        this.addKey(this.key2, this.key2Collected, 2);
+        this.addKey(this.key3, this.key3Collected, 3);
+    }
+
+    addKey(spriteProp, isCollectedProp, number) {
+        if (spriteProp) spriteProp.destroy(true, true);
+
+        const btnScale = Math.max(this.uiScaleX, this.uiScaleY);
+
+        const offsetX = (number - 1) * 20;
+        spriteProp = this.add.sprite(40 * this.uiScaleX + offsetX, 40 * this.uiScaleY, 'key').anims.play('key');
+        spriteProp.setScrollFactor(0, 0).setScale(btnScale).setDepth(DEPTH_UI);
+
+        if (isCollectedProp) {
+            spriteProp.setTint(0xffffff);
+        } else {
+            spriteProp.setTint(0x000000);
         }
     }
 

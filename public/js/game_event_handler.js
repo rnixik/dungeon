@@ -100,5 +100,16 @@ const GameEventHandler = {
         } else {
             console.warn("no such chest to open:", objId);
         }
+    },
+
+    KeyCollectedEvent(data) {
+        switch (data.number) {
+            case "1": this.key1Collected = true; break;
+            case "2": this.key2Collected = true; break;
+            case "3": this.key3Collected = true; break;
+            default: console.warn("unknown key number:", data.number); break;
+        }
+
+        this.addKeysIcons();
     }
 }

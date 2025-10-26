@@ -100,3 +100,7 @@ type PlayerDeathEvent struct {
 type ChestOpenEvent struct {
 	ObjectID int `json:"objectId"`
 }
+
+type KeyCollectedEvent struct {
+	Number string `json:"number"`
+}
