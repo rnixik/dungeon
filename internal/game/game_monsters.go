@@ -14,6 +14,7 @@ const archerAttackDelay = 200 * time.Millisecond
 const archerAttackDuration = 600 * time.Millisecond
 
 const demonAttackFirecircleCooldown = 5 * time.Second
+const demonAttackLightningCooldown = 6 * time.Second
 const demonAttackCooldown = 2 * time.Second
 const demonAttackDelay = 300 * time.Millisecond
 const demonAttackDuration = time.Second
@@ -98,6 +99,7 @@ func (g *Game) intellectArcher(mon *Monster) {
 
 func (g *Game) intellectDemon(mon *Monster) {
 	closestPlayers := make([]*Player, 0)
+	hasOneOnDirectLines := false
 
 	for _, player := range g.players {
 		if player.hp <= 0 {
@@ -108,19 +110,25 @@ func (g *Game) intellectDemon(mon *Monster) {
 		if distance <= 30*tileSize &&
 			g.isVisible(mon.x, mon.y, player.x, player.y) {
 			closestPlayers = append(closestPlayers, player)
+			if abs(player.x-mon.x) < 2*tileSize || abs(player.y-mon.y) < 2*tileSize {
+				hasOneOnDirectLines = true
+			}
 		}
 	}
 
-	if time.Since(mon.firecircleStartedAt) >= demonAttackFirecircleCooldown {
-		mon.firecircleStartedAt = time.Now()
-		g.broadcastEventFunc(FireCircleEvent{
-			ClientID:  0,
+	if time.Since(mon.lightningStartedAt) >= demonAttackLightningCooldown {
+		mon.lightningStartedAt = time.Now()
+		g.broadcastEventFunc(DemonLightningEvent{
 			MonsterID: mon.id,
 			X:         mon.x,
 			Y:         mon.y,
 		})
+	}
 
-		g.broadcastEventFunc(DemonLightningEvent{
+	if hasOneOnDirectLines && time.Since(mon.firecircleStartedAt) >= demonAttackFirecircleCooldown {
+		mon.firecircleStartedAt = time.Now()
+		g.broadcastEventFunc(FireCircleEvent{
+			ClientID:  0,
 			MonsterID: mon.id,
 			X:         mon.x,
 			Y:         mon.y,
