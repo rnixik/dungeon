@@ -110,7 +110,7 @@ func (g *Game) intellectDemon(mon *Monster) {
 		if distance <= 30*tileSize &&
 			g.isVisible(mon.x, mon.y, player.x, player.y) {
 			closestPlayers = append(closestPlayers, player)
-			if abs(player.x-mon.x) < 2*tileSize || abs(player.y-mon.y) < 2*tileSize {
+			if abs(player.x-mon.x) < tileSize || abs(player.y-mon.y) < tileSize {
 				hasOneOnDirectLines = true
 			}
 		}

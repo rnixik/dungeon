@@ -254,7 +254,7 @@ class LightingGroup
     constructor (monsterId, x, y, scene)
     {
         const lightningLength = 280;
-        const lightningSpeed = 400;
+        const lightningSpeed = 600;
 
         const lightningL = scene.physics.add.sprite(x - lightningLength, y, 'lightning')
             .setOrigin(0, 0.5)
@@ -323,7 +323,7 @@ class LightingGroup
         this.gameScene.tweens.add({
             targets: bullet,
             props: props,
-            duration: 1000,
+            duration: 200,
             ease: 'Linear',
             onComplete: () => {
                 bullet.destroy();
