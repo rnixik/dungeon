@@ -30,6 +30,7 @@ var sceneConfigPreloader = {
 
         this.load.spritesheet('demon', 'assets/demon/IDLE.png', { frameWidth: 79, frameHeight: 69 });
         this.load.spritesheet('demon_attack', 'assets/demon/ATTACK.png', { frameWidth: 79, frameHeight: 69 });
+        this.load.spritesheet('firespot', 'assets/firespot.png', { frameWidth: 128, frameHeight: 128 });
 
         this.load.spritesheet('chest', 'assets/chest.png', { frameWidth: 32, frameHeight: 32 });
 
@@ -214,6 +215,12 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'bow_left',
             frames: this.anims.generateFrameNumbers('bow', { start: 18, end: 23}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'firespot',
+            frames: this.anims.generateFrameNumbers('firespot', { start: 0, end: 11}),
             frameRate: 8,
             repeat: -1
         });

@@ -60,11 +60,11 @@ const GameEventHandler = {
     },
 
     FireCircleEvent(data) {
-        const numberOfProjectiles = 16;
+        const numberOfProjectiles = 8;
         for (let i = 0; i < numberOfProjectiles; i++) {
             const angle = i * (Math.PI * 2) / numberOfProjectiles;
             const vector = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));
-            this.projectiles.castMonsterFireboltToVector(data.monsterId, data.x, data.y, vector, 300)
+            this.projectiles.castMonsterFirespotVector(data.monsterId, data.x, data.y, vector, 200)
         }
     },
 

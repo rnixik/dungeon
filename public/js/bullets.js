@@ -168,6 +168,14 @@ class FireboltsGroup extends Bullets
     }
 }
 
+class FirespotsGroup extends Bullets
+{
+    constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
+    {
+        super('firespot', 'firespot', {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+    }
+}
+
 class ArrowsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
@@ -188,12 +196,14 @@ class AllProjectilesGroup
 {
     fireballs;
     firebolts;
+    firespots;
     arrows;
 
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
         this.fireballs = new FireballsGroup(scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
         this.firebolts = new FireboltsGroup(scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        this.firespots = new FirespotsGroup(scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
         this.arrows = new ArrowsGroup(scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 
@@ -238,6 +248,11 @@ class AllProjectilesGroup
     castMonsterFireboltToVector(monsterId, x, y, vector, velocity)
     {
         return this.firebolts.shootToVector(null, monsterId, x, y, vector, velocity);
+    }
+
+    castMonsterFirespotVector(monsterId, x, y, vector, velocity)
+    {
+        return this.firespots.shootToVector(null, monsterId, x, y, vector, velocity);
     }
 
     shootMonsterArrow(monsterId, x, y, destX, destY, velocity)
