@@ -68,6 +68,10 @@ const GameEventHandler = {
         }
     },
 
+    DemonLightningEvent(data) {
+        new LightingGroup(data.monsterId, data.x, data.y, this);
+    },
+
     DamageEvent(data) {
         const pId = data.targetPlayerId;
         const mId = data.targetMonsterId;

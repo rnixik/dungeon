@@ -119,6 +119,12 @@ func (g *Game) intellectDemon(mon *Monster) {
 			X:         mon.x,
 			Y:         mon.y,
 		})
+
+		g.broadcastEventFunc(DemonLightningEvent{
+			MonsterID: mon.id,
+			X:         mon.x,
+			Y:         mon.y,
+		})
 	}
 
 	// Attack

@@ -164,8 +164,7 @@ class FireboltsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
-        super(
-            'bullet', null, {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        super('bullet', null, {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 }
 
@@ -244,5 +243,101 @@ class AllProjectilesGroup
     shootMonsterArrow(monsterId, x, y, destX, destY, velocity)
     {
         return this.arrows.shootToPoint(null, monsterId, x, y, destX, destY, velocity);
+    }
+}
+
+class LightingGroup
+{
+    onBulletHitPlayer;
+    gameScene;
+
+    constructor (monsterId, x, y, scene)
+    {
+        const lightningLength = 280;
+        const lightningSpeed = 400;
+
+        const lightningL = scene.physics.add.sprite(x - lightningLength, y, 'lightning')
+            .setOrigin(0, 0.5)
+            .setFlipX(true)
+            .setAlpha(0.7)
+            .setDepth(DEPTH_PROJECTILES)
+            .setMask(scene.mask)
+            .setVelocity(-lightningSpeed, 0);
+        lightningL.monsterId = monsterId;
+        lightningL.isHorizontal = true;
+        scene.physics.add.overlap(lightningL, scene.player, this.bulletHitPlayer, null, this);
+        scene.physics.add.collider(lightningL, scene.layerWalls, this.bulletHitWall, null, this);
+
+        const lightningD = scene.physics.add.sprite(x, y + lightningLength, 'lightning_v')
+            .setOrigin(0.5, 1)
+            .setAlpha(0.7)
+            .setDepth(DEPTH_PROJECTILES)
+            .setMask(scene.mask)
+            .setVelocity(0, lightningSpeed);
+        lightningD.monsterId = monsterId;
+        lightningD.isVertical = true;
+        scene.physics.add.overlap(lightningD, scene.player, this.bulletHitPlayer, null, this);
+        scene.physics.add.collider(lightningD, scene.layerWalls, this.bulletHitWall, null, this);
+
+        const lightningR = scene.physics.add.sprite(x + lightningLength, y, 'lightning')
+            .setOrigin(1, 0.5)
+            .setAlpha(0.7)
+            .setDepth(DEPTH_PROJECTILES)
+            .setMask(scene.mask)
+            .setVelocity(lightningSpeed, 0);
+        lightningR.monsterId = monsterId;
+        lightningR.isHorizontal = true;
+        scene.physics.add.overlap(lightningR, scene.player, this.bulletHitPlayer, null, this);
+        scene.physics.add.collider(lightningR, scene.layerWalls, this.bulletHitWall, null, this);
+
+        const lightningU = scene.physics.add.sprite(x, y - lightningLength, 'lightning_v')
+            .setOrigin(0.5, 0)
+            .setFlipY(true)
+            .setAlpha(0.7)
+            .setDepth(DEPTH_PROJECTILES)
+            .setMask(scene.mask)
+            .setVelocity(0, -lightningSpeed);
+        lightningU.monsterId = monsterId;
+        lightningU.isVertical = true;
+        scene.physics.add.overlap(lightningU, scene.player, this.bulletHitPlayer, null, this);
+        scene.physics.add.collider(lightningU, scene.layerWalls, this.bulletHitWall, null, this);
+
+        // destroy after some time
+        scene.time.delayedCall(10000, () => {
+            lightningL.destroy();
+            lightningD.destroy();
+            lightningR.destroy();
+            lightningU.destroy();
+        }, [], this);
+
+        this.gameScene = scene;
+        this.onBulletHitPlayer = scene.onBulletHitPlayer;
+    }
+
+    bulletHitWall (bullet, wall)
+    {
+        let props = {scaleX: 0};
+        if (bullet.isVertical) {
+            props = {scaleY: 0};
+        }
+        this.gameScene.tweens.add({
+            targets: bullet,
+            props: props,
+            duration: 1000,
+            ease: 'Linear',
+            onComplete: () => {
+                bullet.destroy();
+            }
+        });
+    }
+
+    bulletHitPlayer (bullet, player)
+    {
+        if (bullet.alreadyHitPlayer) {
+            return;
+        }
+
+        bullet.alreadyHitPlayer = true;
+        this.onBulletHitPlayer.apply(this.gameScene, [bullet, player]);
     }
 }
