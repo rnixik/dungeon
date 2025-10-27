@@ -579,9 +579,13 @@ function getCollisionRectsFromMapData(mapData) {
 
     const rectsLayer = mapData.layers.find(l => l.name === 'collision-rects');
     for (const r of rectsLayer.objects) {
+        const propertiesMap = {};
+        for (const p of r.properties) {
+            propertiesMap[p.name] = p.value;
+        }
         for (const area of rectsByAreas) {
-            aid = area.id;
-            if (r.properties["area_" + aid]) {
+            const aid = area.id;
+            if (propertiesMap["area_" + aid]) {
                 area.rects.push(new Rectangle(r.x, r.y, r.width, r.height));
             }
         }

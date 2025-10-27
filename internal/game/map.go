@@ -7,17 +7,17 @@ import (
 )
 
 type MapObject struct {
-	Id         int            `json:"id"`
-	Name       string         `json:"name"`
-	Type       string         `json:"type"`
-	Rotation   float64        `json:"rotation"`
-	Visible    bool           `json:"visible"`
-	Width      float64        `json:"width"`
-	Height     float64        `json:"height"`
-	X          float64        `json:"x"`
-	Y          float64        `json:"y"`
-	Properties map[string]any `json:"properties,omitempty"`
-	Point      bool           `json:"point,omitempty"`
+	Id         int           `json:"id"`
+	Name       string        `json:"name"`
+	Type       string        `json:"type"`
+	Rotation   float64       `json:"rotation"`
+	Visible    bool          `json:"visible"`
+	Width      float64       `json:"width"`
+	Height     float64       `json:"height"`
+	X          float64       `json:"x"`
+	Y          float64       `json:"y"`
+	Properties []MapProperty `json:"properties,omitempty"`
+	Point      bool          `json:"point,omitempty"`
 }
 
 type MapLayer struct {
@@ -233,8 +233,12 @@ func (m *Map) addLayerWithCollisionRectangles() error {
 			Height:   float64(r.Height),
 			X:        float64(r.X),
 			Y:        float64(r.Y),
-			Properties: map[string]any{
-				"collides": true,
+			Properties: []MapProperty{
+				{
+					Name:  "collides",
+					Type:  "bool",
+					Value: true,
+				},
 			},
 		})
 	}
@@ -297,7 +301,7 @@ func (m *Map) buildAreaOptimizedCollisionRects() {
 		Y:       0,
 	})
 
-	for _, rect := range rectsLayer.Objects {
+	for i, rect := range rectsLayer.Objects {
 		for ai, ac := range areasCenters {
 			isRelevant := false
 			// check if any corner is within area
@@ -312,10 +316,11 @@ func (m *Map) buildAreaOptimizedCollisionRects() {
 			}
 			if isRelevant {
 				propName := fmt.Sprintf("area_%d", ai+1)
-				if rect.Properties == nil {
-					rect.Properties = make(map[string]any)
-				}
-				rect.Properties[propName] = true
+				rectsLayer.Objects[i].Properties = append(rectsLayer.Objects[i].Properties, MapProperty{
+					Name:  propName,
+					Type:  "bool",
+					Value: true,
+				})
 			}
 		}
 	}
