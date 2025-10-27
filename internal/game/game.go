@@ -25,6 +25,7 @@ const monsterKindDemon = "demon"
 const attackCooldown = time.Second / 2
 
 const objectKindChest = "chest"
+const objectKindTrigger = "trigger"
 
 type Player struct {
 	client         lobby.ClientPlayer
@@ -529,10 +530,13 @@ func (g *Game) spawnInitialObjects() {
 	for _, obj := range spawnLayer.Objects {
 		var kind string
 		var state string
-		switch obj.Name {
+		switch obj.Type {
 		case "chest":
 			kind = objectKindChest
 			state = "closed"
+		case "trigger":
+			kind = objectKindTrigger
+			state = "ready"
 		default:
 			continue
 		}
