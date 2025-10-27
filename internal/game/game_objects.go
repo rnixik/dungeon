@@ -22,6 +22,8 @@ func (g *Game) startObjectsLoop() {
 				switch obj.Kind {
 				case objectKindChest:
 					g.tickChest(obj)
+				case objectKindTrigger:
+					g.tickTrigger(obj)
 				}
 
 			}
@@ -54,6 +56,42 @@ func (g *Game) tickChest(obj *Object) {
 
 			if allKeysCollected && g.demonWasSpawned == false {
 				g.spawnDemonUnsafe()
+			}
+		}
+	}
+}
+
+func (g *Game) tickTrigger(obj *Object) {
+	if obj.State != "ready" {
+		return
+	}
+
+	for _, player := range g.players {
+		if player.hp <= 0 {
+			continue
+		}
+
+		if pointInRect(player.x, player.y, obj.X, obj.Y, obj.Width, obj.Height) {
+			obj.State = "activated"
+
+			// find objects with target group
+			for _, targetObj := range g.objects {
+				if targetObj.PropertiesMap["group"] == obj.PropertiesMap["target"] {
+					x2 := targetObj.X
+					y2 := targetObj.Y
+					if targetObj.PropertiesMap["direction"] == "right" {
+						x2 = targetObj.X + tileSize
+					}
+					if targetObj.PropertiesMap["direction"] == "left" {
+						x2 = targetObj.X - tileSize
+					}
+					g.broadcastEventFunc(ArrowEvent{
+						X1: targetObj.X,
+						Y1: targetObj.Y,
+						X2: x2,
+						Y2: y2,
+					})
+				}
 			}
 		}
 	}

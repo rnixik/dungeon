@@ -26,6 +26,7 @@ const attackCooldown = time.Second / 2
 
 const objectKindChest = "chest"
 const objectKindTrigger = "trigger"
+const objectKindArrowTrap = "arrowTrap"
 
 type Player struct {
 	client         lobby.ClientPlayer
@@ -57,11 +58,14 @@ type Monster struct {
 }
 
 type Object struct {
-	ID    int    `json:"id"`
-	Kind  string `json:"kind"`
-	X     int    `json:"x"`
-	Y     int    `json:"y"`
-	State string `json:"state"`
+	ID            int                    `json:"id"`
+	Kind          string                 `json:"kind"`
+	X             int                    `json:"x"`
+	Y             int                    `json:"y"`
+	Width         int                    `json:"width"`
+	Height        int                    `json:"height"`
+	State         string                 `json:"state"`
+	PropertiesMap map[string]interface{} `json:"-"`
 }
 
 func newPlayer(client lobby.ClientPlayer) *Player {
@@ -537,15 +541,27 @@ func (g *Game) spawnInitialObjects() {
 		case "trigger":
 			kind = objectKindTrigger
 			state = "ready"
+		case "arrow_trap":
+			kind = objectKindArrowTrap
+			state = "ready"
 		default:
 			continue
 		}
+
+		propsMap := make(map[string]interface{})
+		for _, prop := range obj.Properties {
+			propsMap[prop.Name] = prop.Value
+		}
+
 		g.objects[uint64(len(g.objects)+1)] = &Object{
-			ID:    len(g.objects) + 1,
-			Kind:  kind,
-			X:     int(obj.X),
-			Y:     int(obj.Y),
-			State: state,
+			ID:            len(g.objects) + 1,
+			Kind:          kind,
+			X:             int(obj.X),
+			Y:             int(obj.Y),
+			Width:         int(obj.Width),
+			Height:        int(obj.Height),
+			State:         state,
+			PropertiesMap: propsMap,
 		}
 	}
 }
