@@ -111,5 +111,11 @@ const GameEventHandler = {
         }
 
         this.addKeysIcons();
+    },
+
+    UpdateTilesEvent(data) {
+        for (const t of data.tiles) {
+            this.layerFloor.putTileAt(t.tileId, t.x, t.y);
+        }
     }
 }

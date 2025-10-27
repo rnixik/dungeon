@@ -104,3 +104,14 @@ type ChestOpenEvent struct {
 type KeyCollectedEvent struct {
 	Number string `json:"number"`
 }
+
+type TileData struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	TileID int `json:"tileId"`
+}
+
+type UpdateTilesEvent struct {
+	LayerName string     `json:"layerName"`
+	Tiles     []TileData `json:"tiles"`
+}

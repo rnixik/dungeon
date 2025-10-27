@@ -74,6 +74,25 @@ func (g *Game) tickTrigger(obj *Object) {
 		if pointInRect(player.x, player.y, obj.X, obj.Y, obj.Width, obj.Height) {
 			obj.State = "activated"
 
+			// replace tiles from special layer "traps"
+			tilesToUpdate := []TileData{}
+			for tileIndex, tileID := range g.gameMap.getLayerByName("traps").Data {
+				tileX := (tileIndex % g.gameMap.Width) * tileSize
+				tileY := (tileIndex / g.gameMap.Width) * tileSize
+				if pointInRect(tileX, tileY, obj.X, obj.Y, obj.Width, obj.Height) {
+					tilesToUpdate = append(tilesToUpdate, TileData{
+						X:      tileX,
+						Y:      tileY,
+						TileID: tileID,
+					})
+				}
+			}
+
+			g.broadcastEventFunc(UpdateTilesEvent{
+				LayerName: "walls",
+				Tiles:     tilesToUpdate,
+			})
+
 			// find objects with target group
 			for _, targetObj := range g.objects {
 				if targetObj.PropertiesMap["group"] == obj.PropertiesMap["target"] {

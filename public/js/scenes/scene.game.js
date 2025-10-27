@@ -59,6 +59,7 @@ class Game extends Phaser.Scene {
     key3Collected = false;
 
     map;
+    layerFloor;
     layerWalls;
     projectiles;
 
@@ -125,7 +126,7 @@ class Game extends Phaser.Scene {
 
         const tiles = this.map.addTilesetImage('catacombs', 'tiles');
 
-        const layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
+        this.layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0).setDepth(DEPTH_WALLS);
         const layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
         this.layerWalls.setCollisionByProperty({ collides: true });
@@ -189,7 +190,7 @@ class Game extends Phaser.Scene {
         }
 
         // Apply (optional) geometric mask to world layers/actors (not UI)
-        layerFloor.setMask(this.mask);
+        this.layerFloor.setMask(this.mask);
         layerDecor.setMask(this.mask);
 
         // --- Build occluder rectangles from wall tiles ---
