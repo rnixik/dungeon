@@ -140,7 +140,7 @@ class Game extends Phaser.Scene {
         });
         layerWallsUpper.setDepth(DEPTH_UPPER_WALLS);
 
-        this.player = new MyPlayer('mage', this, gameData.playerData);
+        this.player = new MyPlayer('knight', this, gameData.playerData);
         this.physics.add.collider(this.player, this.layerWalls);
 
         // Camera
@@ -240,7 +240,9 @@ class Game extends Phaser.Scene {
             this.isMoving = false;
         }
 
-        if (this.isMoving) {
+        if (this.isAttacking) {
+            this.player.playAttackAnimation(this.direction);
+        } else if (this.isMoving) {
             this.player.playMoveAnimation(this.direction);
         } else {
             this.player.playIdleAnimation(this.direction);
@@ -295,6 +297,9 @@ class Game extends Phaser.Scene {
     }
 
     castFireball() {
+        this.isAttacking = true;
+        this.time.delayedCall(500, () => {this.isAttacking = false;}, [], this);
+
         this.sendGameCommand('CastFireballCommand', {
             x: Math.round(this.player.x),
             y: Math.round(this.player.y),

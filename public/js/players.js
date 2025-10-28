@@ -152,10 +152,14 @@ class Player extends Phaser.Physics.Arcade.Sprite
             moveAnimsKey = this.kind;
         }
 
+        if (!this.scene.anims.exists(moveAnimsKey)) {
+            moveAnimsKey = `${this.kind}_idle`;
+        }
+
         if (this.scene.anims.exists(moveAnimsKey)) {
             this.anims.play(moveAnimsKey, true);
         } else {
-            console.warn("missing move anims:", moveAnimsKey);
+            console.warn("missing move anims:", this.kind);
         }
     }
 
