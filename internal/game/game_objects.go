@@ -1,6 +1,7 @@
 package game
 
 import (
+	"log"
 	"time"
 )
 
@@ -96,20 +97,30 @@ func (g *Game) tickTrigger(obj *Object) {
 			// find objects with target group
 			for _, targetObj := range g.objects {
 				if targetObj.PropertiesMap["group"] == obj.PropertiesMap["target"] {
-					x2 := targetObj.X
-					y2 := targetObj.Y
-					if targetObj.PropertiesMap["direction"] == "right" {
-						x2 = targetObj.X + tileSize
+					log.Printf("trigger activated target object %d of kind %s", targetObj.ID, targetObj.Kind)
+					if targetObj.Kind == objectKindTrapArrow {
+						x2 := targetObj.X
+						y2 := targetObj.Y
+						if targetObj.PropertiesMap["direction"] == "right" {
+							x2 = targetObj.X + tileSize
+						}
+						if targetObj.PropertiesMap["direction"] == "left" {
+							x2 = targetObj.X - tileSize
+						}
+						g.broadcastEventFunc(ArrowEvent{
+							X1: targetObj.X,
+							Y1: targetObj.Y,
+							X2: x2,
+							Y2: y2,
+						})
 					}
-					if targetObj.PropertiesMap["direction"] == "left" {
-						x2 = targetObj.X - tileSize
+					if targetObj.Kind == objectKindTrapSpikes {
+						g.broadcastEventFunc(SpawnSpikeEvent{
+							X:          targetObj.X,
+							Y:          targetObj.Y,
+							StartFrame: targetObj.PropertiesMap["frame"].(string),
+						})
 					}
-					g.broadcastEventFunc(ArrowEvent{
-						X1: targetObj.X,
-						Y1: targetObj.Y,
-						X2: x2,
-						Y2: y2,
-					})
 				}
 			}
 		}

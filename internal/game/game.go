@@ -26,7 +26,8 @@ const attackCooldown = time.Second / 2
 
 const objectKindChest = "chest"
 const objectKindTrigger = "trigger"
-const objectKindArrowTrap = "arrowTrap"
+const objectKindTrapArrow = "trap_arrow"
+const objectKindTrapSpikes = "trap_spikes"
 
 type Player struct {
 	client         lobby.ClientPlayer
@@ -541,8 +542,11 @@ func (g *Game) spawnInitialObjects() {
 		case "trigger":
 			kind = objectKindTrigger
 			state = "ready"
-		case "arrow_trap":
-			kind = objectKindArrowTrap
+		case "trap_arrow":
+			kind = objectKindTrapArrow
+			state = "ready"
+		case "trap_spikes":
+			kind = objectKindTrapSpikes
 			state = "ready"
 		default:
 			continue

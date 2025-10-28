@@ -207,7 +207,7 @@
                          "value":"middle_hall_arrow_traps"
                         }],
                  "rotation":0,
-                 "type":"arrow_trap",
+                 "type":"trap_arrow",
                  "visible":true,
                  "width":0,
                  "x":868,
@@ -230,7 +230,7 @@
                          "value":"middle_hall_arrow_traps"
                         }],
                  "rotation":0,
-                 "type":"arrow_trap",
+                 "type":"trap_arrow",
                  "visible":true,
                  "width":0,
                  "x":1594,
@@ -288,6 +288,115 @@
                  "width":0,
                  "x":1518,
                  "y":684
+                }, 
+                {
+                 "height":56.6666666666666,
+                 "id":104,
+                 "name":"entrance_trigger_spikes",
+                 "properties":[
+                        {
+                         "name":"target",
+                         "type":"string",
+                         "value":"entrance_trap_spikes"
+                        }],
+                 "rotation":0,
+                 "type":"trigger",
+                 "visible":true,
+                 "width":32.6666666666666,
+                 "x":414,
+                 "y":264
+                }, 
+                {
+                 "height":0,
+                 "id":106,
+                 "name":"spike1",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"frame",
+                         "type":"string",
+                         "value":"1"
+                        }, 
+                        {
+                         "name":"group",
+                         "type":"string",
+                         "value":"entrance_trap_spikes"
+                        }],
+                 "rotation":0,
+                 "type":"trap_spikes",
+                 "visible":true,
+                 "width":0,
+                 "x":616.5,
+                 "y":313.833333333333
+                }, 
+                {
+                 "height":0,
+                 "id":110,
+                 "name":"spike0",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"frame",
+                         "type":"string",
+                         "value":"0"
+                        }, 
+                        {
+                         "name":"group",
+                         "type":"string",
+                         "value":"entrance_trap_spikes"
+                        }],
+                 "rotation":0,
+                 "type":"trap_spikes",
+                 "visible":true,
+                 "width":0,
+                 "x":615.5,
+                 "y":296.5
+                }, 
+                {
+                 "height":0,
+                 "id":111,
+                 "name":"spike2",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"frame",
+                         "type":"string",
+                         "value":"2"
+                        }, 
+                        {
+                         "name":"group",
+                         "type":"string",
+                         "value":"entrance_trap_spikes"
+                        }],
+                 "rotation":0,
+                 "type":"trap_spikes",
+                 "visible":true,
+                 "width":0,
+                 "x":617,
+                 "y":330.5
+                }, 
+                {
+                 "height":0,
+                 "id":112,
+                 "name":"spike3",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"frame",
+                         "type":"string",
+                         "value":"3"
+                        }, 
+                        {
+                         "name":"group",
+                         "type":"string",
+                         "value":"entrance_trap_spikes"
+                        }],
+                 "rotation":0,
+                 "type":"trap_spikes",
+                 "visible":true,
+                 "width":0,
+                 "x":617.5,
+                 "y":349
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -1215,7 +1324,7 @@
          "y":0
         }],
  "nextlayerid":9,
- "nextobjectid":101,
+ "nextobjectid":113,
  "orientation":"orthogonal",
  "renderorder":"left-up",
  "tiledversion":"1.11.2",

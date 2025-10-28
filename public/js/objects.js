@@ -34,6 +34,7 @@ class GameObject extends Phaser.Physics.Arcade.Sprite
     {
         switch (statData.kind) {
             case 'chest': return new Chest(scene, statData);
+            case 'trigger': return new DebugRectangle(scene, statData);
             default:
                 console.error('Unknown object kind:', statData.kind);
                 return null;
@@ -61,5 +62,15 @@ class Chest extends GameObject
         }
         this.isOpen = true;
         this.setFrame(1);
+    }
+}
+
+class DebugRectangle
+{
+    constructor (scene, statData)
+    {
+        const graphics = scene.add.graphics();
+        graphics.lineStyle(2, 0xff0000);
+        graphics.strokeRect(statData.x, statData.y, statData.width, statData.height);
     }
 }

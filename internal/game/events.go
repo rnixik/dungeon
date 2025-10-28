@@ -22,6 +22,12 @@ type ArrowEvent struct {
 	Y2        int    `json:"y2"`
 }
 
+type SpawnSpikeEvent struct {
+	X          int    `json:"x"`
+	Y          int    `json:"y"`
+	StartFrame string `json:"startFrame"`
+}
+
 type DemonFireballEvent struct {
 	ClientID  uint64 `json:"clientId"`
 	MonsterID int    `json:"monsterId"`

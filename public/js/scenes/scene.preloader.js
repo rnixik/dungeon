@@ -32,6 +32,7 @@ var sceneConfigPreloader = {
         this.load.spritesheet('demon_attack', 'assets/demon/ATTACK.png', { frameWidth: 79, frameHeight: 69 });
         this.load.spritesheet('firespot', 'assets/firespot.png', { frameWidth: 128, frameHeight: 128 });
         this.load.spritesheet('key', 'assets/key.png', { frameWidth: 16, frameHeight: 35 });
+        this.load.spritesheet('spikes', 'assets/MiniRouge/4 - Tiles/Tiles Animated/16x16/Spike-Sheet.png', { frameWidth: 16, frameHeight: 16 });
 
         this.load.spritesheet('chest', 'assets/chest.png', { frameWidth: 32, frameHeight: 32 });
 
@@ -228,6 +229,12 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'key',
             frames: this.anims.generateFrameNumbers('key', { start: 0, end: 11}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'spikes',
+            frames: this.anims.generateFrameNumbers('spikes', { start: 0, end: 11}),
             frameRate: 8,
             repeat: -1
         });

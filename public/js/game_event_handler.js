@@ -117,5 +117,10 @@ const GameEventHandler = {
         for (const t of data.tiles) {
             this.layerFloor.putTileAtWorldXY(t.tileId, t.x, t.y, false);
         }
+    },
+
+    SpawnSpikeEvent(data) {
+        console.log(data);
+        this.add.sprite(data.x, data.y, 'spikes').anims.play({ key: 'spikes', startFrame: Number(data.startFrame) });
     }
 }
