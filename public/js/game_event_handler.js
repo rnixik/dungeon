@@ -120,7 +120,27 @@ const GameEventHandler = {
     },
 
     SpawnSpikeEvent(data) {
-        console.log(data);
-        this.add.sprite(data.x, data.y, 'spikes').anims.play({ key: 'spikes', startFrame: Number(data.startFrame) });
+        const s = this.add.sprite(data.x, data.y, 'spikes')
+            .setOrigin(0, 0)
+            .anims.play({ key: 'spikes', startFrame: Number(data.startFrame) });
+        this.physics.add.existing(s);
+
+        const safeFrames = [4, 5, 6, 7, 8];
+        let canDamage = true;
+
+        this.physics.add.overlap(s, this.player, (s, p) => {
+            if (!canDamage) {
+                return;
+            }
+            console.log('overlap with spikes', s.anims.currentFrame.index);
+            if (!safeFrames.includes(s.anims.currentFrame.index) && !this.isDead) {
+                canDamage = false;
+                this.sendGameCommand('HitPlayerCommand', {
+                    monsterId: -1,
+                    targetClientId: this.myClientId
+                });
+                setTimeout(() => canDamage = true, 1000);
+            }
+        }, null, this);
     }
 }

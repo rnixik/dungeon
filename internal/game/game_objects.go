@@ -114,9 +114,12 @@ func (g *Game) tickTrigger(obj *Object) {
 						})
 					}
 					if targetObj.Kind == objectKindTrapSpikes {
+						// find closes tile coordinate and spawn spikes there
+						tileX := (targetObj.X / tileSize) * tileSize
+						tileY := (targetObj.Y / tileSize) * tileSize
 						g.broadcastEventFunc(SpawnSpikeEvent{
-							X:          targetObj.X,
-							Y:          targetObj.Y,
+							X:          tileX,
+							Y:          tileY,
 							StartFrame: targetObj.PropertiesMap["frame"].(string),
 						})
 					}
