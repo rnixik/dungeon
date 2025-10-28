@@ -74,12 +74,12 @@ func (g *Game) tickTrigger(obj *Object) {
 		if pointInRect(player.x, player.y, obj.X, obj.Y, obj.Width, obj.Height) {
 			obj.State = "activated"
 
-			// replace tiles from special layer "traps"
+			// replace tiles from special layer "replacements"
 			tilesToUpdate := []TileData{}
-			for tileIndex, tileID := range g.gameMap.getLayerByName("traps").Data {
+			for tileIndex, tileID := range g.gameMap.getLayerByName("replacements").Data {
 				tileX := (tileIndex % g.gameMap.Width) * tileSize
 				tileY := (tileIndex / g.gameMap.Width) * tileSize
-				if pointInRect(tileX, tileY, obj.X, obj.Y, obj.Width, obj.Height) {
+				if tileID > 0 && pointInRect(tileX, tileY, obj.X, obj.Y, obj.Width, obj.Height) {
 					tilesToUpdate = append(tilesToUpdate, TileData{
 						X:      tileX,
 						Y:      tileY,
@@ -89,7 +89,7 @@ func (g *Game) tickTrigger(obj *Object) {
 			}
 
 			g.broadcastEventFunc(UpdateTilesEvent{
-				LayerName: "walls",
+				LayerName: "floor",
 				Tiles:     tilesToUpdate,
 			})
 

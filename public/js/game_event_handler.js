@@ -115,7 +115,7 @@ const GameEventHandler = {
 
     UpdateTilesEvent(data) {
         for (const t of data.tiles) {
-            this.layerFloor.putTileAt(t.tileId, t.x, t.y);
+            this.layerFloor.putTileAtWorldXY(t.tileId, t.x, t.y, false);
         }
     }
 }

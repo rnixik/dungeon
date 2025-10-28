@@ -6,7 +6,7 @@ import (
 
 const period = time.Second / 5
 
-const tileSize = 32
+const tileSize = 16
 
 const skeletonAttackDuration = time.Second / 2
 const archerAttackCooldown = time.Second / 2
