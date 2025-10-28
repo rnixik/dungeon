@@ -74,7 +74,7 @@ var sceneConfigPreloader = {
         });
         this.anims.create({
             key: 'fireball-loop',
-            frames: this.anims.generateFrameNumbers('fireball', { start: 0, end: 4 }),
+            frames: this.anims.generateFrameNumbers('fireball', { start: 0, end: 3 }),
             frameRate: 10,
             repeat: -1
         });
@@ -237,7 +237,7 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'spikes',
             frames: this.anims.generateFrameNumbers('spikes', { start: 0, end: 11}),
-            frameRate: 8,
+            frameRate: 5,
             repeat: -1
         });
         this.anims.create({

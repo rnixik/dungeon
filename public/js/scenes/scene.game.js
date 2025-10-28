@@ -61,6 +61,7 @@ class Game extends Phaser.Scene {
     map;
     layerFloor;
     layerWalls;
+    layerDecor;
     projectiles;
 
     // lighting
@@ -128,7 +129,7 @@ class Game extends Phaser.Scene {
 
         this.layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0).setDepth(DEPTH_WALLS);
-        const layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
+        this.layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
         const layerWallsUpper = this.map.createBlankLayer('upper_walls', tiles, 0, 0, this.map.width, this.map.height);
@@ -191,7 +192,7 @@ class Game extends Phaser.Scene {
 
         // Apply (optional) geometric mask to world layers/actors (not UI)
         this.layerFloor.setMask(this.mask);
-        layerDecor.setMask(this.mask);
+        this.layerDecor.setMask(this.mask);
 
         // --- Build occluder rectangles from wall tiles ---
         const rectsByAreas = getCollisionRectsFromMapData(gameData.mapData);
