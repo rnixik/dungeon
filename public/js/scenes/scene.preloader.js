@@ -13,6 +13,7 @@ var sceneConfigPreloader = {
         this.load.image('tiles', 'assets/catacombs.png');
 
         this.load.spritesheet('mage', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('knight', 'assets/MiniRouge/3 - Heroes/Hero 03 Knight/32x32/Hero03 Knight Idle-Sheet2x.png', { frameWidth: 38, frameHeight: 40 });
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('archer', 'assets/skeleton5.png', { frameWidth: 32, frameHeight: 32 });
@@ -236,6 +237,12 @@ var sceneConfigPreloader = {
             key: 'spikes',
             frames: this.anims.generateFrameNumbers('spikes', { start: 0, end: 11}),
             frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'knight_idle',
+            frames: this.anims.generateFrameNumbers('knight', { start: 1, end: 11 }),
+            frameRate: 5,
             repeat: -1
         });
 

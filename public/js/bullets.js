@@ -38,7 +38,9 @@ class Bullets extends Phaser.Physics.Arcade.Group
         super(scene.physics.world, scene);
 
         const config = Object.assign({
-            frameQuantity: 100,
+            x: -100,
+            y: -100,
+            frameQuantity: 10,
             key: key,
             active: false,
             visible: false,
@@ -152,7 +154,7 @@ class FireballsGroup extends Bullets
     {
         super('fireball',
             'fireball-loop',
-            {setScale: {x: 0.7, y: 0.7}},
+            {frameQuantity: 20, setScale: {x: 0.7, y: 0.7}},
             scene,
             layerWalls,
             onBulletHitPlayer,
@@ -164,7 +166,7 @@ class FireboltsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
-        super('bullet', null, {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        super('bullet', null, {frameQuantity: 16}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 }
 
@@ -172,7 +174,7 @@ class FirespotsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
-        super('firespot', 'firespot', {}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        super('firespot', 'firespot', {frameQuantity: 16}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 }
 
@@ -183,7 +185,7 @@ class ArrowsGroup extends Bullets
         super(
             'arrow',
             null,
-            {setScale: {x: 2, y: 2}, rotationOffset: -Math.PI / 2},
+            {frameQuantity: 30, setScale: {x: 2, y: 2}, rotationOffset: -Math.PI / 2},
             scene,
             layerWalls,
             onBulletHitPlayer,
