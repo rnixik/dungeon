@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"encoding/json"
+	"sync"
 	"sync/atomic"
 )
 
@@ -15,11 +16,12 @@ type RoomMember struct {
 
 // Room represents place where some of the members want to start a new game.
 type Room struct {
-	id      uint64
-	owner   *RoomMember
-	members map[*RoomMember]bool
-	game    GameEventsDispatcher
-	lobby   *Lobby
+	id          uint64
+	owner       *RoomMember
+	members     map[*RoomMember]bool
+	game        GameEventsDispatcher
+	lobby       *Lobby
+	membersLock sync.RWMutex
 }
 
 func newRoom(roomId uint64, owner ClientPlayer, lobby *Lobby) *Room {
@@ -27,7 +29,7 @@ func newRoom(roomId uint64, owner ClientPlayer, lobby *Lobby) *Room {
 	ownerInRoom := newRoomMember(owner, false)
 	ownerInRoom.isPlayer = true
 	members[ownerInRoom] = true
-	room := &Room{roomId, ownerInRoom, members, nil, lobby}
+	room := &Room{roomId, ownerInRoom, members, nil, lobby, sync.RWMutex{}}
 	lobby.clientsJoinedRooms[owner] = room
 
 	return room
@@ -66,7 +68,10 @@ func (r *Room) removeClient(client ClientPlayer) (changedOwner bool, roomBecameE
 	if !ok {
 		return
 	}
+
+	r.membersLock.Lock()
 	delete(r.members, member)
+	r.membersLock.Unlock()
 
 	if r.game != nil {
 		r.game.OnClientRemoved(client)
@@ -128,6 +133,9 @@ func (r *Room) addBot(botClient ClientPlayer) {
 }
 
 func (r *Room) broadcastEvent(event interface{}, exceptClient ClientPlayer) {
+	r.membersLock.RLock()
+	defer r.membersLock.RUnlock()
+
 	for m := range r.members {
 		if exceptClient == nil || m.client.ID() != exceptClient.ID() {
 			m.client.SendEvent(event)
