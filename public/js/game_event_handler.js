@@ -4,7 +4,7 @@ const GameEventHandler = {
     },
 
     SwordAttackPrepareEvent(data) {
-        
+
     },
 
     SwordAttackEvent(data) {
@@ -31,7 +31,7 @@ const GameEventHandler = {
             }
 
             if (!this.players[id]) {
-                this.players[id] = new Player("mage", this, p)
+                this.players[id] = new Player(p.class, this, p)
                 this.projectiles.addPlayer(this.players[id]);
             }
 

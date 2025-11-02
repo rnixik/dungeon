@@ -143,7 +143,7 @@ class Game extends Phaser.Scene {
         });
         layerWallsUpper.setDepth(DEPTH_UPPER_WALLS);
 
-        this.player = new MyPlayer('knight', this, gameData.playerData);
+        this.player = new MyPlayer(gameData.playerData.class, this, gameData.playerData);
         this.physics.add.collider(this.player, this.layerWalls);
 
         // Camera
@@ -300,7 +300,14 @@ class Game extends Phaser.Scene {
     }
 
     attack() {
-        this.swordAttack();
+        switch (this.player.kind) {
+            case 'mage':
+                this.fireballAttack();
+                return;
+            case 'knight':
+                this.swordAttack();
+                return;
+        }
     }
 
     fireballAttack() {

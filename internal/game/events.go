@@ -94,6 +94,7 @@ type EndGameEvent struct {
 
 type PlayerStats struct {
 	PlayerPosition
+	Class    string `json:"class"`
 	Nickname string `json:"nickname"`
 	Color    string `json:"color"`
 	MaxHP    int    `json:"maxHp"`

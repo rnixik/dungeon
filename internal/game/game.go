@@ -13,7 +13,10 @@ import (
 const StatusStarted = "started"
 const StatusEnded = "ended"
 
-const maxHP = 200
+const ClassMage = "mage"
+const ClassKnight = "knight"
+const ClassRogue = "rogue"
+
 const fireballDamage = 25
 const swordDamage = 50
 const positionsUpdateTickPeriod = time.Second / 60
@@ -34,6 +37,7 @@ const objectKindTrapSpikes = "trap_spikes"
 
 type Player struct {
 	client         lobby.ClientPlayer
+	class          string
 	lastAttackTime time.Time
 	color          string
 	maxHp          int
@@ -76,11 +80,23 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 	// Assign a random hex color to the player
 	colorHex := fmt.Sprintf("0x%06x", rand.Intn(0xFFFFFF))
 
+	classes := []string{ClassMage, ClassKnight}
+	class := classes[rand.Intn(len(classes))]
+
+	currentMaxHP := 100
+	switch class {
+	case ClassMage:
+		currentMaxHP = 150
+	case ClassKnight:
+		currentMaxHP = 250
+	}
+
 	return &Player{
 		client:    client,
+		class:     class,
 		color:     colorHex,
-		maxHp:     maxHP,
-		hp:        maxHP,
+		maxHp:     currentMaxHP,
+		hp:        currentMaxHP,
 		x:         120,
 		y:         140,
 		direction: "right",
@@ -223,6 +239,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 				Direction: pl.direction,
 				IsMoving:  pl.isMoving,
 			},
+			Class:    pl.class,
 			Nickname: pl.client.Nickname(),
 			Color:    pl.color,
 			MaxHP:    pl.maxHp,
@@ -309,6 +326,7 @@ func (g *Game) StartMainLoop() {
 						Direction: pl.direction,
 						IsMoving:  pl.isMoving,
 					},
+					Class:    pl.class,
 					Nickname: pl.client.Nickname(),
 					Color:    pl.color,
 					MaxHP:    pl.maxHp,
