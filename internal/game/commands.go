@@ -27,6 +27,12 @@ type SwordAttackCommand struct {
 	Direction string `json:"direction"`
 }
 
+type ShootArrowCommand struct {
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Direction string `json:"direction"`
+}
+
 type HitPlayerCommand struct {
 	OriginClientID uint64 `json:"originClientId"`
 	MonsterID      int    `json:"monsterId"`

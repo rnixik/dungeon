@@ -261,6 +261,11 @@ class AllProjectilesGroup
     {
         return this.arrows.shootToPoint(null, monsterId, x, y, destX, destY, velocity);
     }
+
+    shootPlayerArrow(clientId, x, y, destX, destY, velocity)
+    {
+        return this.arrows.shootToPoint(clientId, null, x, y, destX, destY, velocity);
+    }
 }
 
 class LightingGroup

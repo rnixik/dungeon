@@ -15,6 +15,9 @@ var sceneConfigPreloader = {
         this.load.spritesheet('mage', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('knight', 'assets/MiniRouge/3 - Heroes/Hero 03 Knight/32x32/Hero03 Knight Idle-Sheet2x.png', { frameWidth: 38, frameHeight: 40 });
         this.load.spritesheet('knight_attack', 'assets/MiniRouge/3 - Heroes/Hero 03 Knight/32x32/Hero03 Knight Atk-Sheet2x.png', { frameWidth: 38, frameHeight: 40 });
+        this.load.spritesheet('rogue', 'assets/MiniRouge/3 - Heroes/Hero 02 Archer/32x32/Hero02 Archer Idle-Sheet2x.png', { frameWidth: 30, frameHeight: 34 });
+        this.load.spritesheet('rogue_attack', 'assets/MiniRouge/3 - Heroes/Hero 02 Archer/32x32/Hero02 Archer Atk-Sheet2x.png', { frameWidth: 30, frameHeight: 34 });
+
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('archer', 'assets/skeleton5.png', { frameWidth: 32, frameHeight: 32 });
@@ -250,6 +253,18 @@ var sceneConfigPreloader = {
             key: 'knight_attack',
             frames: this.anims.generateFrameNumbers('knight_attack', { start: 0, end: 5 }),
             frameRate: 6,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'rogue_idle',
+            frames: this.anims.generateFrameNumbers('rogue', { start: 0, end: 11 }),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'rogue_attack',
+            frames: this.anims.generateFrameNumbers('rogue_attack', { start: 0, end: 9 }),
+            frameRate: 20,
             repeat: -1
         });
 

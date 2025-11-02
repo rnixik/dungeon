@@ -307,6 +307,8 @@ class Game extends Phaser.Scene {
             case 'knight':
                 this.swordAttack();
                 return;
+            case 'rogue':
+                this.shotArrow();
         }
     }
 
@@ -332,6 +334,23 @@ class Game extends Phaser.Scene {
         this.time.delayedCall(1000, () => {if (attackTs === this.lastAttackTime) { this.isAttacking = false; } }, [], this);
 
         this.sendGameCommand('SwordAttackCommand', {
+            x: Math.round(this.player.x),
+            y: Math.round(this.player.y),
+            direction: this.direction,
+        });
+    }
+
+    shotArrow() {
+        if (this.isAttacking) {
+            return;
+        }
+        const attackTs = this.time.now;
+        this.lastAttackTime = attackTs;
+        this.isAttacking = true;
+
+        this.time.delayedCall(500, () => {if (attackTs === this.lastAttackTime) { this.isAttacking = false; } }, [], this);
+
+        this.sendGameCommand('ShootArrowCommand', {
             x: Math.round(this.player.x),
             y: Math.round(this.player.y),
             direction: this.direction,

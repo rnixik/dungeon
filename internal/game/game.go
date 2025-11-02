@@ -27,6 +27,7 @@ const monsterKindSkeleton = "skeleton"
 const monsterKindDemon = "demon"
 
 const attackCooldown = time.Second / 2
+const attackShotArrowCooldown = time.Second / 4
 const attackSwordCooldown = time.Second
 const attackSwordDelay = time.Millisecond * 700
 
@@ -80,7 +81,7 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 	// Assign a random hex color to the player
 	colorHex := fmt.Sprintf("0x%06x", rand.Intn(0xFFFFFF))
 
-	classes := []string{ClassMage, ClassKnight}
+	classes := []string{ClassMage, ClassKnight, ClassRogue}
 	class := classes[rand.Intn(len(classes))]
 
 	currentMaxHP := 100
@@ -89,6 +90,8 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 		currentMaxHP = 150
 	case ClassKnight:
 		currentMaxHP = 250
+	case ClassRogue:
+		currentMaxHP = 200
 	}
 
 	return &Player{
@@ -174,13 +177,22 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 		g.castFireball(client.ID(), c.X, c.Y, c.Direction)
 		break
 	case "SwordAttackCommand":
-		var c SwordAttackEvent
+		var c SwordAttackCommand
 		if err := json.Unmarshal(eventDataJson, &c); err != nil {
 			log.Printf("cannot decode SwordAttackCommand: %v\n", err)
 
 			return
 		}
 		g.attackWithSword(client.ID(), c.X, c.Y, c.Direction)
+		break
+	case "ShootArrowCommand":
+		var c ShootArrowCommand
+		if err := json.Unmarshal(eventDataJson, &c); err != nil {
+			log.Printf("cannot decode ShootArrowCommand: %v\n", err)
+
+			return
+		}
+		g.shootArrow(client.ID(), c.X, c.Y, c.Direction)
 		break
 	case "HitPlayerCommand":
 		var c HitPlayerCommand
@@ -411,6 +423,52 @@ func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
 	})
 }
 
+func (g *Game) shootArrow(clientID uint64, x int, y int, direction string) {
+	go func() {
+		time.Sleep(time.Millisecond * 200)
+
+		isDead := false
+
+		var player *Player
+		g.mutex.Lock()
+		if p, ok := g.players[clientID]; ok {
+			player = p
+			if p.hp <= 0 {
+				isDead = true
+			}
+		}
+		g.mutex.Unlock()
+
+		if player == nil {
+			return
+		}
+
+		if isDead {
+			return
+		}
+
+		if time.Since(player.lastAttackTime) < attackShotArrowCooldown {
+			return
+		}
+		player.lastAttackTime = time.Now()
+
+		const dispersion = 100.0
+		vecX, vecY := getVectorFromDirection(direction)
+		vecXDisp := vecX*1000 + (rand.Float64()*2-1)*dispersion
+		vecYDisp := vecY*1000 + (rand.Float64()*2-1)*dispersion
+		attackX, attackY := float64(x)+vecXDisp, float64(y)+vecYDisp
+
+		g.broadcastEventFunc(ShootArrowEvent{
+			ClientID: clientID,
+			X1:       x + 20*int(vecX), // fix offset from player center
+			Y1:       y + 20*int(vecY),
+			X2:       int(attackX),
+			Y2:       int(attackY),
+			Velocity: 700,
+		})
+	}()
+}
+
 func (g *Game) attackWithSword(clientID uint64, x int, y int, direction string) {
 	isDead := false
 
@@ -466,7 +524,7 @@ func (g *Game) attackWithSword(clientID uint64, x int, y int, direction string) 
 		}
 
 		vecX, vecY := getVectorFromDirection(direction)
-		attackX, attackY := player.x+vecX*length, player.y+vecY*length
+		attackX, attackY := player.x+int(vecX)*length, player.y+int(vecY)*length
 
 		g.mutex.Lock()
 		for _, p := range g.players {
@@ -715,7 +773,7 @@ func (g *Game) spawnDemonUnsafe() {
 	g.demonWasSpawned = true
 }
 
-func getVectorFromDirection(direction string) (int, int) {
+func getVectorFromDirection(direction string) (float64, float64) {
 	switch direction {
 	case "up":
 		return 0, -1

@@ -3,6 +3,10 @@ const GameEventHandler = {
         this.projectiles.castPlayerFireball(data.clientId, data.x, data.y, data.direction, 500)
     },
 
+    ShootArrowEvent(data) {
+        this.projectiles.shootPlayerArrow(data.clientId, data.x1, data.y1, data.x2, data.y2, data.velocity)
+    },
+
     SwordAttackPrepareEvent(data) {
 
     },
