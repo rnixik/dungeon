@@ -13,6 +13,22 @@ type FireballEvent struct {
 	Direction string `json:"direction"`
 }
 
+type SwordAttackPrepareEvent struct {
+	ClientID  uint64 `json:"clientId"`
+	X         int    `json:"x"`
+	Y         int    `json:"y"`
+	Direction string `json:"direction"`
+}
+
+type SwordAttackEvent struct {
+	ClientID    uint64 `json:"clientId"`
+	X           int    `json:"x"`
+	Y           int    `json:"y"`
+	AttackLineX int    `json:"attackLineX"`
+	AttackLineY int    `json:"attackLineY"`
+	Direction   string `json:"direction"`
+}
+
 type ArrowEvent struct {
 	ClientID  uint64 `json:"clientId"`
 	MonsterID int    `json:"monsterId"`

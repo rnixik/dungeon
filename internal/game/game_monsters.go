@@ -177,7 +177,7 @@ func (g *Game) intellectSkeleton(mon *Monster) {
 
 		distance := getDistance(mon.x, mon.y, player.x, player.y)
 		if distance < minDistance &&
-			distance <= 10*tileSize &&
+			distance <= 15*tileSize &&
 			g.isVisible(mon.x, mon.y, player.x, player.y) {
 			minDistance = distance
 			closestPlayer = player

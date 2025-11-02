@@ -89,6 +89,8 @@ class Game extends Phaser.Scene {
     myClientId;
     myNickname;
     sendGameCommand;
+    isAttacking = false;
+    lastAttackTime = 0;
     isMoving = false;
     isDead = false;
 
@@ -167,7 +169,7 @@ class Game extends Phaser.Scene {
         // Input
         this.cursors = this.input.keyboard.createCursorKeys();
         const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        spaceBar.on('down', () => this.castFireball());
+        spaceBar.on('down', () => this.attack());
 
         // Darkness RT + masks
         this._initDarknessRT();
@@ -297,11 +299,32 @@ class Game extends Phaser.Scene {
         this.monsters[m.id].updatePosition(m);
     }
 
-    castFireball() {
+    attack() {
+        this.swordAttack();
+    }
+
+    fireballAttack() {
         this.isAttacking = true;
         this.time.delayedCall(500, () => {this.isAttacking = false;}, [], this);
 
         this.sendGameCommand('CastFireballCommand', {
+            x: Math.round(this.player.x),
+            y: Math.round(this.player.y),
+            direction: this.direction,
+        });
+    }
+
+    swordAttack() {
+        if (this.isAttacking) {
+            return;
+        }
+        const attackTs = this.time.now;
+        this.lastAttackTime = attackTs;
+        this.isAttacking = true;
+
+        this.time.delayedCall(1000, () => {if (attackTs === this.lastAttackTime) { this.isAttacking = false; } }, [], this);
+
+        this.sendGameCommand('SwordAttackCommand', {
             x: Math.round(this.player.x),
             y: Math.round(this.player.y),
             direction: this.direction,
@@ -471,7 +494,7 @@ class Game extends Phaser.Scene {
 
         this.buttonFire = this.add.sprite(this.scale.width - 85 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
         this.buttonFire.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
-        this.buttonFire.on('pointerdown', () => this.castFireball());
+        this.buttonFire.on('pointerdown', () => this.attack());
 
         if (this.sys.game.device.fullscreen.available) {
             this.buttonFs = this.add.sprite(this.scale.width - 85 * this.uiScaleX, 40 * this.uiScaleY, 'controls', 'fullscreen1');
@@ -599,4 +622,13 @@ function getCollisionRectsFromMapData(mapData) {
     }
 
     return rectsByAreas;
+}
+
+function direction4xToVector(direction4x) {
+    switch (direction4x) {
+        case 'left': return new Phaser.Math.Vector2(-1, 0);
+        case 'right': return new Phaser.Math.Vector2(1, 0);
+        case 'up': return new Phaser.Math.Vector2(0, -1);
+        case 'down': return new Phaser.Math.Vector2(0, 1);
+    }
 }

@@ -13,8 +13,9 @@ import (
 const StatusStarted = "started"
 const StatusEnded = "ended"
 
-const maxHP = 150
+const maxHP = 200
 const fireballDamage = 25
+const swordDamage = 50
 const positionsUpdateTickPeriod = time.Second / 60
 const commonUpdateTickPeriod = time.Second / 3
 
@@ -23,6 +24,8 @@ const monsterKindSkeleton = "skeleton"
 const monsterKindDemon = "demon"
 
 const attackCooldown = time.Second / 2
+const attackSwordCooldown = time.Second
+const attackSwordDelay = time.Millisecond * 700
 
 const objectKindChest = "chest"
 const objectKindTrigger = "trigger"
@@ -154,6 +157,15 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 		}
 		g.castFireball(client.ID(), c.X, c.Y, c.Direction)
 		break
+	case "SwordAttackCommand":
+		var c SwordAttackEvent
+		if err := json.Unmarshal(eventDataJson, &c); err != nil {
+			log.Printf("cannot decode SwordAttackCommand: %v\n", err)
+
+			return
+		}
+		g.attackWithSword(client.ID(), c.X, c.Y, c.Direction)
+		break
 	case "HitPlayerCommand":
 		var c HitPlayerCommand
 		if err := json.Unmarshal(eventDataJson, &c); err != nil {
@@ -172,7 +184,7 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 
 			return
 		}
-		g.hitMonster(c.OriginClientID, c.MonsterID)
+		g.hitMonster(c.OriginClientID, c.MonsterID, fireballDamage)
 		break
 	}
 }
@@ -381,6 +393,92 @@ func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
 	})
 }
 
+func (g *Game) attackWithSword(clientID uint64, x int, y int, direction string) {
+	isDead := false
+
+	var player *Player
+	g.mutex.Lock()
+	if p, ok := g.players[clientID]; ok {
+		player = p
+		if p.hp <= 0 {
+			isDead = true
+		}
+	}
+	g.mutex.Unlock()
+
+	if player == nil {
+		return
+	}
+
+	if isDead {
+		return
+	}
+
+	if time.Since(player.lastAttackTime) < attackSwordCooldown {
+		return
+	}
+	player.lastAttackTime = time.Now()
+
+	g.broadcastEventFunc(SwordAttackPrepareEvent{
+		ClientID:  clientID,
+		X:         player.x,
+		Y:         player.y,
+		Direction: direction,
+	})
+
+	go func() {
+		time.Sleep(attackSwordDelay)
+		const length = 160
+		const radius = 50
+
+		g.mutex.Lock()
+		if p, ok := g.players[clientID]; ok {
+			player = p
+			if p.hp <= 0 {
+				isDead = true
+			}
+		}
+		g.mutex.Unlock()
+
+		if player == nil {
+			return
+		}
+		if isDead {
+			return
+		}
+
+		vecX, vecY := getVectorFromDirection(direction)
+		attackX, attackY := player.x+vecX*length, player.y+vecY*length
+
+		g.mutex.Lock()
+		for _, p := range g.players {
+			if p.client.ID() == clientID {
+				continue
+			}
+			if (g.isSwordAttackHit(player.x, player.y, attackX, attackY, p.x, p.y, radius)) == false {
+				continue
+			}
+			g.hitPlayerUnsafe(p.client.ID(), swordDamage)
+		}
+		for _, m := range g.monsters {
+			if (g.isSwordAttackHit(player.x, player.y, attackX, attackY, m.x, m.y, radius)) == false {
+				continue
+			}
+			g.hitMonsterUnsafe(m.id, swordDamage)
+		}
+		g.mutex.Unlock()
+
+		g.broadcastEventFunc(SwordAttackEvent{
+			ClientID:    clientID,
+			X:           player.x,
+			Y:           player.y,
+			Direction:   direction,
+			AttackLineX: attackX,
+			AttackLineY: attackY,
+		})
+	}()
+}
+
 func (g *Game) hitPlayerUnsafe(targetClientID uint64, damage int) {
 	if p, ok := g.players[targetClientID]; ok {
 		if p.hp == 0 {
@@ -411,19 +509,23 @@ func (g *Game) killPlayer(clientID uint64) {
 	}
 }
 
-func (g *Game) hitMonster(originClientID uint64, monsterID int) {
+func (g *Game) hitMonster(originClientID uint64, monsterID int, damage int) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
+	g.hitMonsterUnsafe(monsterID, damage)
+}
+
+func (g *Game) hitMonsterUnsafe(monsterID int, damage int) {
 	for _, m := range g.monsters {
 		if m.id == monsterID && m.hp > 0 {
-			m.hp -= fireballDamage
+			m.hp -= damage
 			if m.hp < 0 {
 				m.hp = 0
 			}
 
 			g.broadcastEventFunc(DamageEvent{
 				TargetMonsterID: monsterID,
-				Damage:          fireballDamage,
+				Damage:          damage,
 			})
 
 			break
@@ -593,4 +695,24 @@ func (g *Game) spawnDemonUnsafe() {
 	}
 
 	g.demonWasSpawned = true
+}
+
+func getVectorFromDirection(direction string) (int, int) {
+	switch direction {
+	case "up":
+		return 0, -1
+	case "down":
+		return 0, 1
+	case "left":
+		return -1, 0
+	case "right":
+		return 1, 0
+	default:
+		return 0, 0
+	}
+}
+
+func (g *Game) isSwordAttackHit(attackerX, attackerY, attackLineX, attackLineY, targetX, targetY, targetRadius int) bool {
+	return lineIntersectsRect(attackerX, attackerY, attackLineX, attackLineY, targetX-targetRadius, targetY-targetRadius, 2*targetRadius, 2*targetRadius) &&
+		g.isVisible(attackerX, attackerY, targetX, targetY)
 }

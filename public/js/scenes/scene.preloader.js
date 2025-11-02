@@ -249,7 +249,7 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'knight_attack',
             frames: this.anims.generateFrameNumbers('knight_attack', { start: 0, end: 5 }),
-            frameRate: 15,
+            frameRate: 6,
             repeat: -1
         });
 

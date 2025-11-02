@@ -3,6 +3,25 @@ const GameEventHandler = {
         this.projectiles.castPlayerFireball(data.clientId, data.x, data.y, data.direction, 500)
     },
 
+    SwordAttackPrepareEvent(data) {
+        
+    },
+
+    SwordAttackEvent(data) {
+        const graphics = this.add.graphics();
+        graphics.lineStyle(2, 0xff0000);
+
+        graphics.beginPath();
+        graphics.moveTo(data.x, data.y);
+        graphics.lineTo(data.attackLineX, data.attackLineY);
+        graphics.closePath();
+        graphics.strokePath();
+
+        this.time.delayedCall(200, () => {
+            graphics.destroy();
+        });
+    },
+
     CreaturesStatsUpdateEvent(data) {
         for (const p of data.players) {
             const id = p.clientId;
