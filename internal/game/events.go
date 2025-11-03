@@ -124,8 +124,9 @@ type PlayerStats struct {
 
 type MonsterStats struct {
 	MonsterPosition
-	Kind string `json:"kind"`
-	HP   int    `json:"hp"`
+	Kind  string `json:"kind"`
+	HP    int    `json:"hp"`
+	MaxHP int    `json:"maxHp"`
 }
 
 type CreaturesStatsUpdateEvent struct {

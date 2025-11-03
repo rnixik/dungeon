@@ -58,6 +58,7 @@ type Monster struct {
 	id                  int
 	kind                string
 	hp                  int
+	maxHP               int
 	x                   int
 	y                   int
 	direction           string
@@ -367,8 +368,9 @@ func (g *Game) StartMainLoop() {
 						IsMoving:    mon.isMoving,
 						IsAttacking: mon.isAttacking,
 					},
-					Kind: mon.kind,
-					HP:   mon.hp,
+					Kind:  mon.kind,
+					HP:    mon.hp,
+					MaxHP: mon.maxHP,
 				})
 			}
 
@@ -464,19 +466,24 @@ func (g *Game) shootArrow(clientID uint64, x int, y int, direction string) {
 		player.lastAttackTime = time.Now()
 
 		const dispersion = 100.0
-		vecX, vecY := getVectorFromDirection(direction)
-		vecXDisp := vecX*1000 + (rand.Float64()*2-1)*dispersion
-		vecYDisp := vecY*1000 + (rand.Float64()*2-1)*dispersion
-		attackX, attackY := float64(x)+vecXDisp, float64(y)+vecYDisp
 
-		g.broadcastEventFunc(ShootArrowEvent{
-			ClientID: clientID,
-			X1:       x + 20*int(vecX), // fix offset from player center
-			Y1:       y + 20*int(vecY),
-			X2:       int(attackX),
-			Y2:       int(attackY),
-			Velocity: 700,
-		})
+		for i := 0; i < player.level; i++ {
+			vecX, vecY := getVectorFromDirection(direction)
+			vecXDisp := vecX*1000 + (rand.Float64()*2-1)*dispersion
+			vecYDisp := vecY*1000 + (rand.Float64()*2-1)*dispersion
+			attackX, attackY := float64(x)+vecXDisp, float64(y)+vecYDisp
+
+			g.broadcastEventFunc(ShootArrowEvent{
+				ClientID: clientID,
+				X1:       x + 20*int(vecX), // fix offset from player center
+				Y1:       y + 20*int(vecY),
+				X2:       int(attackX),
+				Y2:       int(attackY),
+				Velocity: 700,
+			})
+
+			time.Sleep(time.Millisecond * 30)
+		}
 	}()
 }
 
@@ -741,6 +748,7 @@ func (g *Game) spawnInitialMonsters() {
 			id:        len(g.monsters) + 1,
 			kind:      kind,
 			hp:        hp,
+			maxHP:     hp,
 			x:         int(obj.X),
 			y:         int(obj.Y),
 			direction: "left",
