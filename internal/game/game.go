@@ -36,11 +36,16 @@ const objectKindTrigger = "trigger"
 const objectKindTrapArrow = "trap_arrow"
 const objectKindTrapSpikes = "trap_spikes"
 
+const xpPerMonsterKill = 250
+
 type Player struct {
 	client         lobby.ClientPlayer
 	class          string
 	lastAttackTime time.Time
 	color          string
+	level          int
+	xp             int
+	nextLevelXP    int
 	maxHp          int
 	hp             int
 	x              int
@@ -95,15 +100,17 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 	}
 
 	return &Player{
-		client:    client,
-		class:     class,
-		color:     colorHex,
-		maxHp:     currentMaxHP,
-		hp:        currentMaxHP,
-		x:         120,
-		y:         140,
-		direction: "right",
-		isMoving:  false,
+		client:      client,
+		class:       class,
+		color:       colorHex,
+		level:       1,
+		nextLevelXP: 500,
+		maxHp:       currentMaxHP,
+		hp:          currentMaxHP,
+		x:           120,
+		y:           140,
+		direction:   "right",
+		isMoving:    false,
 	}
 }
 
@@ -183,7 +190,7 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 
 			return
 		}
-		g.attackWithSword(client.ID(), c.X, c.Y, c.Direction)
+		g.attackWithSword(client.ID())
 		break
 	case "ShootArrowCommand":
 		var c ShootArrowCommand
@@ -251,11 +258,14 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 				Direction: pl.direction,
 				IsMoving:  pl.isMoving,
 			},
-			Class:    pl.class,
-			Nickname: pl.client.Nickname(),
-			Color:    pl.color,
-			MaxHP:    pl.maxHp,
-			HP:       pl.hp,
+			Class:       pl.class,
+			Nickname:    pl.client.Nickname(),
+			Color:       pl.color,
+			Level:       pl.level,
+			XP:          pl.xp,
+			NextLevelXP: pl.nextLevelXP,
+			MaxHP:       pl.maxHp,
+			HP:          pl.hp,
 		},
 		"keysCollected": g.keysCollected,
 	}
@@ -341,6 +351,7 @@ func (g *Game) StartMainLoop() {
 					Class:    pl.class,
 					Nickname: pl.client.Nickname(),
 					Color:    pl.color,
+					Level:    pl.level,
 					MaxHP:    pl.maxHp,
 					HP:       pl.hp,
 				})
@@ -469,7 +480,7 @@ func (g *Game) shootArrow(clientID uint64, x int, y int, direction string) {
 	}()
 }
 
-func (g *Game) attackWithSword(clientID uint64, x int, y int, direction string) {
+func (g *Game) attackWithSword(clientID uint64) {
 	isDead := false
 
 	var player *Player
@@ -499,13 +510,11 @@ func (g *Game) attackWithSword(clientID uint64, x int, y int, direction string) 
 		ClientID:  clientID,
 		X:         player.x,
 		Y:         player.y,
-		Direction: direction,
+		Direction: player.direction,
 	})
 
 	go func() {
 		time.Sleep(attackSwordDelay)
-		const length = 160
-		const radius = 50
 
 		g.mutex.Lock()
 		if p, ok := g.players[clientID]; ok {
@@ -523,7 +532,11 @@ func (g *Game) attackWithSword(clientID uint64, x int, y int, direction string) 
 			return
 		}
 
-		vecX, vecY := getVectorFromDirection(direction)
+		length := 50 + 60*player.level
+		radius := 20 + 20*player.level
+		damage := swordDamage + 10*(player.level-1)
+
+		vecX, vecY := getVectorFromDirection(player.direction)
 		attackX, attackY := player.x+int(vecX)*length, player.y+int(vecY)*length
 
 		g.mutex.Lock()
@@ -534,13 +547,13 @@ func (g *Game) attackWithSword(clientID uint64, x int, y int, direction string) 
 			if (g.isSwordAttackHit(player.x, player.y, attackX, attackY, p.x, p.y, radius)) == false {
 				continue
 			}
-			g.hitPlayerUnsafe(p.client.ID(), swordDamage)
+			g.hitPlayerUnsafe(p.client.ID(), damage)
 		}
 		for _, m := range g.monsters {
 			if (g.isSwordAttackHit(player.x, player.y, attackX, attackY, m.x, m.y, radius)) == false {
 				continue
 			}
-			g.hitMonsterUnsafe(m.id, swordDamage)
+			g.hitMonsterUnsafe(clientID, m.id, damage)
 		}
 		g.mutex.Unlock()
 
@@ -548,9 +561,10 @@ func (g *Game) attackWithSword(clientID uint64, x int, y int, direction string) 
 			ClientID:    clientID,
 			X:           player.x,
 			Y:           player.y,
-			Direction:   direction,
+			Direction:   player.direction,
 			AttackLineX: attackX,
 			AttackLineY: attackY,
+			Radius:      radius,
 		})
 	}()
 }
@@ -588,10 +602,10 @@ func (g *Game) killPlayer(clientID uint64) {
 func (g *Game) hitMonster(originClientID uint64, monsterID int, damage int) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.hitMonsterUnsafe(monsterID, damage)
+	g.hitMonsterUnsafe(originClientID, monsterID, damage)
 }
 
-func (g *Game) hitMonsterUnsafe(monsterID int, damage int) {
+func (g *Game) hitMonsterUnsafe(originClientID uint64, monsterID int, damage int) {
 	for _, m := range g.monsters {
 		if m.id == monsterID && m.hp > 0 {
 			m.hp -= damage
@@ -604,8 +618,40 @@ func (g *Game) hitMonsterUnsafe(monsterID int, damage int) {
 				Damage:          damage,
 			})
 
+			if m.hp == 0 {
+				g.addXPToPlayerUnSafe(originClientID, xpPerMonsterKill)
+			}
+
 			break
 		}
+	}
+}
+
+func (g *Game) addXPToPlayerUnSafe(clientID uint64, xp int) {
+	if p, ok := g.players[clientID]; ok {
+		p.xp += xp
+		gotNewLevel := false
+		if p.xp >= p.nextLevelXP && p.level < 3 {
+			p.maxHp += 30
+			p.hp = p.maxHp
+			p.level = p.level + 1
+			gotNewLevel = true
+
+			if p.level == 3 {
+				p.xp = p.nextLevelXP
+			} else {
+				p.xp -= p.nextLevelXP
+				p.nextLevelXP += p.nextLevelXP / 2
+			}
+		}
+
+		p.client.SendEvent(XPEvent{
+			TargetPlayerId: clientID,
+			XP:             p.xp,
+			NextLevelXP:    p.nextLevelXP,
+			Level:          p.level,
+			GotNewLevel:    gotNewLevel,
+		})
 	}
 }
 

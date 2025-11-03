@@ -6,6 +6,14 @@ type DamageEvent struct {
 	Damage          int    `json:"damage"`
 }
 
+type XPEvent struct {
+	TargetPlayerId uint64 `json:"clientId"`
+	XP             int    `json:"xp"`
+	NextLevelXP    int    `json:"nextLevelXp"`
+	Level          int    `json:"level"`
+	GotNewLevel    bool   `json:"gotNewLevel"`
+}
+
 type FireballEvent struct {
 	ClientID  uint64 `json:"clientId"`
 	X         int    `json:"x"`
@@ -35,6 +43,7 @@ type SwordAttackEvent struct {
 	Y           int    `json:"y"`
 	AttackLineX int    `json:"attackLineX"`
 	AttackLineY int    `json:"attackLineY"`
+	Radius      int    `json:"radius"`
 	Direction   string `json:"direction"`
 }
 
@@ -103,11 +112,14 @@ type EndGameEvent struct {
 
 type PlayerStats struct {
 	PlayerPosition
-	Class    string `json:"class"`
-	Nickname string `json:"nickname"`
-	Color    string `json:"color"`
-	MaxHP    int    `json:"maxHp"`
-	HP       int    `json:"hp"`
+	Class       string `json:"class"`
+	Nickname    string `json:"nickname"`
+	Color       string `json:"color"`
+	MaxHP       int    `json:"maxHp"`
+	HP          int    `json:"hp"`
+	Level       int    `json:"level"`
+	XP          int    `json:"xp"`
+	NextLevelXP int    `json:"nextLevelXp"`
 }
 
 type MonsterStats struct {

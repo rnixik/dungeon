@@ -101,6 +101,11 @@ class Game extends Phaser.Scene {
     monsters = {};
     gameObjects = {};
 
+    level = 1;
+    xp;
+    nextLevelXp;
+    xpBar;
+
     constructor () {
         super({ key: 'Game' });
 
@@ -144,6 +149,10 @@ class Game extends Phaser.Scene {
         layerWallsUpper.setDepth(DEPTH_UPPER_WALLS);
 
         this.player = new MyPlayer(gameData.playerData.class, this, gameData.playerData);
+        this.level = gameData.playerData.level;
+        this.xp = gameData.playerData.xp;
+        this.nextLevelXp = gameData.playerData.nextLevelXp;
+
         this.physics.add.collider(this.player, this.layerWalls);
 
         // Camera
@@ -180,6 +189,7 @@ class Game extends Phaser.Scene {
         this.scale.on('resize', () => {
             this._initDarknessRT();
             this.addKeysIcons();
+            this.updateXpBar();
             this.addMobileButtons();
         });
 
@@ -211,6 +221,7 @@ class Game extends Phaser.Scene {
 
         // UI
         this.addKeysIcons();
+        this.updateXpBar();
         this.input.addPointer(1); // allow 2 simultaneous pointers for mobile
         this.addMobileButtons();
     }
@@ -496,6 +507,26 @@ class Game extends Phaser.Scene {
         } else {
             spriteProp.setTint(0x000000);
         }
+    }
+
+    updateXpBar() {
+        if (this.xpBar) {
+            this.xpBar.destroy(true, true);
+        }
+
+        const barWidth = 200 * this.uiScaleX;
+        const barHeight = 20 * this.uiScaleY;
+        const x = (this.scale.width - barWidth) / 2;
+        const y = this.scale.height - 40 * this.uiScaleY;
+
+        this.xpBar = this.add.graphics();
+        this.xpBar.setScrollFactor(0, 0).setDepth(DEPTH_UI);
+        this.xpBar.fillStyle(0x000000, 0.5);
+        this.xpBar.fillRect(x, y, barWidth, barHeight);
+
+        const xpRatio = Phaser.Math.Clamp(this.xp / this.nextLevelXp, 0, 1);
+        this.xpBar.fillStyle(0x00ff00, 1);
+        this.xpBar.fillRect(x + 2, y + 2, (barWidth - 4) * xpRatio, barHeight - 4);
     }
 
     addMobileButtons () {

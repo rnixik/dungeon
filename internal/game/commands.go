@@ -22,9 +22,6 @@ type CastFireballCommand struct {
 }
 
 type SwordAttackCommand struct {
-	X         int    `json:"x"`
-	Y         int    `json:"y"`
-	Direction string `json:"direction"`
 }
 
 type ShootArrowCommand struct {

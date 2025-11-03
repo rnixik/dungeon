@@ -2,7 +2,6 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 {
     id;
     kind;
-    maxHp = 100;
     hp = 100;
     hpText;
     isAttacking = false;
@@ -27,7 +26,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 
         this.id = statData.id;
         this.hp = statData.hp;
-        this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + this.maxHp, { font: '10px Arial', fill: '#ffffff' })
+        this.hpText = this.scene.add.text(statData.x, statData.y, statData.hp + '/' + statData.maxHp, { font: '10px Arial', fill: '#ffffff' })
             .setOrigin(0.5, 1)
             .setDepth(DEPTH_MONSTER + 1)
             .setMask(this.scene.mask);
@@ -57,7 +56,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         if (this.hp !== statData.hp) {
             this.hp = statData.hp;
             if (this.hpText) {
-                this.hpText.setText(statData.hp + '/' + this.maxHp);
+                this.hpText.setText(statData.hp + '/' + statData.maxHp);
             }
         }
 

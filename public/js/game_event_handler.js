@@ -21,6 +21,9 @@ const GameEventHandler = {
         graphics.closePath();
         graphics.strokePath();
 
+        graphics.strokeRect(data.x - data.radius, data.y - data.radius, data.radius * 2, data.radius * 2);
+        graphics.strokeRect(data.attackLineX - data.radius, data.attackLineY - data.radius, data.radius * 2, data.radius * 2);
+
         this.time.delayedCall(200, () => {
             graphics.destroy();
         });
@@ -165,5 +168,21 @@ const GameEventHandler = {
                 setTimeout(() => canDamage = true, 1000);
             }
         }, null, this);
+    },
+
+    XPEvent(data) {
+        this.level = data.level;
+        this.xp = data.xp;
+        this.nextLevelXp = data.nextLevelXp;
+        this.updateXpBar();
+        if (data.gotNewLevel) {
+            const lvlUpText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'LEVEL UP!', { font: '24px Arial', fill: '#00ff00' })
+                .setOrigin(0.5, 0.5)
+                .setScrollFactor(0, 0)
+                .setDepth(DEPTH_UI);
+            this.time.delayedCall(2000, () => {
+                lvlUpText.destroy();
+            });
+        }
     }
 }
