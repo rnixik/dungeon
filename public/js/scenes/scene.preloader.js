@@ -30,6 +30,7 @@ var sceneConfigPreloader = {
         this.load.image('spinner', 'assets/spinner.png');
         this.load.image('lightning', 'assets/lightning.png');
         this.load.image('lightning_v', 'assets/lightning_v.png');
+        this.load.image('melee_attack', 'assets/melee_attack.png');
         //this.load.image('archer', 'assets/archer.png');
         //this.load.image('skeleton', 'assets/archer.png');
 
@@ -271,9 +272,17 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'explosion',
             frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 13 }),
-            frameRate: 12,
+            frameRate: 20,
             repeat: 0
         });
+        this.anims.create({
+            key: 'melee_attack',
+            frames: this.anims.generateFrameNumbers('melee_attack', { start: 0, end: 9 }),
+            frameRate: 20,
+            repeat: 0
+        });
+
+
 
         this.scene.switch('MainMenu');
     }

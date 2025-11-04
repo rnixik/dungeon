@@ -46,7 +46,7 @@ class Fireball extends Bullet
 
         const explosion = this.scene.add.sprite(this.x, this.y, 'explosion')
             .setDepth(DEPTH_PROJECTILES)
-            .setScale(2)
+            .setScale(1.5)
             .setMask(this.scene.mask);
         explosion.anims.play('explosion', true);
         explosion.on('animationcomplete', () => {
