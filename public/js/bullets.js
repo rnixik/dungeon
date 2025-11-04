@@ -60,9 +60,13 @@ class Fireball extends Bullet
 
         this.scene.physics.add.existing(explosion);
 
+        const playersArray = [];
+        for (const id in this.scene.players) {
+            playersArray.push(this.scene.players[id]);
+        }
         let cannotDamage = {};
-        this.scene.physics.add.overlap(explosion, this.scene.players, (s, p) => {
-            if (!cannotDamage[p.id]) {
+        this.scene.physics.add.overlap(explosion, playersArray, (s, p) => {
+            if (cannotDamage[p.id]) {
                 return;
             }
             cannotDamage[p.id] = true;
@@ -73,9 +77,14 @@ class Fireball extends Bullet
             setTimeout(() => cannotDamage[p.id] = false, 1000);
         }, null, this);
 
+        const monstersArray = [];
+        for (const id in this.scene.monsters) {
+            monstersArray.push(this.scene.monsters[id]);
+        }
+
         let cannotDamageMonsters = {};
-        this.scene.physics.add.overlap(explosion, this.scene.monsters, (s, m) => {
-            if (!cannotDamageMonsters[m.id]) {
+        this.scene.physics.add.overlap(explosion, monstersArray, (s, m) => {
+            if (cannotDamageMonsters[m.id]) {
                 return;
             }
             cannotDamageMonsters[m.id] = true;

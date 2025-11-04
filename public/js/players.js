@@ -24,6 +24,14 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.y = statData.y;
         this.setScale(PLAYER_SCALE);
         this.setDepth(DEPTH_PLAYER);
+        this.setMask(this.scene.mask);
+
+        if (this.hp <= 0) {
+            this.isCorpse = true;
+            this.convertToCorpse();
+
+            return;
+        }
 
         this.initialTint = Number(statData.color)
         this.setTint(this.initialTint);
@@ -38,12 +46,6 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
         this.body.setSize(30, 20).setOffset(0, 10);
-        this.setMask(this.scene.mask);
-
-        if (this.hp <= 0) {
-            this.isCorpse = true;
-            this.convertToCorpse();
-        }
     }
 
     preUpdate(time, delta)
