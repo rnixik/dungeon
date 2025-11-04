@@ -1,6 +1,6 @@
 class Bullet extends Phaser.Physics.Arcade.Sprite
 {
-    fire (clientId, monsterId, x, y, velocityVector, animationKey, rotationOffset)
+    fire (clientId, monsterId, x, y, velocityVector, animationKey, rotationOffset, distance)
     {
         this.clientId = clientId;
         this.monsterId = monsterId;
@@ -21,6 +21,70 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
         if (animationKey) {
             this.anims.play(animationKey, true);
         }
+
+        if (distance) {
+            const travelTime = (distance / velocityVector.length()) * 1000;
+            this.scene.time.delayedCall(travelTime, () => {
+                this.onTravelEnd();
+            }, [], this);
+        }
+    }
+
+    onTravelEnd()
+    {
+        this.setActive(false);
+        this.setVisible(false);
+        this.disableBody();
+    }
+}
+
+class Fireball extends Bullet
+{
+    onTravelEnd() {
+        this.setVisible(false);
+        this.disableBody();
+
+        const explosion = this.scene.add.sprite(this.x, this.y, 'explosion')
+            .setDepth(DEPTH_PROJECTILES)
+            .setScale(2)
+            .setMask(this.scene.mask);
+        explosion.anims.play('explosion', true);
+        explosion.on('animationcomplete', () => {
+            explosion.destroy();
+            this.setActive(false);
+        });
+
+        if (this.clientId !== this.scene.myClientId) {
+            return;
+        }
+
+        this.scene.physics.add.existing(explosion);
+
+        let cannotDamage = {};
+        this.scene.physics.add.overlap(explosion, this.scene.players, (s, p) => {
+            if (!cannotDamage[p.id]) {
+                return;
+            }
+            cannotDamage[p.id] = true;
+            this.scene.sendGameCommand('HitPlayerCommand', {
+                monsterId: -1,
+                targetClientId: p.id
+            });
+            setTimeout(() => cannotDamage[p.id] = false, 1000);
+        }, null, this);
+
+        let cannotDamageMonsters = {};
+        this.scene.physics.add.overlap(explosion, this.scene.monsters, (s, m) => {
+            if (!cannotDamageMonsters[m.id]) {
+                return;
+            }
+            cannotDamageMonsters[m.id] = true;
+            this.scene.sendGameCommand('HitMonsterCommand', {
+                originClientId: this.clientId,
+                monsterId: m.id
+            });
+            setTimeout(() => cannotDamage[m.id] = false, 1000);
+        }, null, this);
     }
 }
 
@@ -106,22 +170,20 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
     hideBullet (bullet)
     {
-        bullet.setActive(false);
-        bullet.setVisible(false);
-        bullet.disableBody();
+        bullet.onTravelEnd();
     }
 
-    fireBullet (clientId, monsterId, x, y, vector)
+    fireBullet (clientId, monsterId, x, y, vector, distance)
     {
         const bullet = this.getFirstDead(true);
         if (bullet) {
-            bullet.fire(clientId, monsterId, x, y, vector, this.animationKey, this.rotationOffset);
+            bullet.fire(clientId, monsterId, x, y, vector, this.animationKey, this.rotationOffset, distance);
         }
 
         return bullet;
     }
 
-    shootToDirection4x(clientId, monsterId, x, y, direction4x, velocity) {
+    shootToDirection4x(clientId, monsterId, x, y, direction4x, velocity, distance) {
         let vector = new Phaser.Math.Vector2(1, 0);
         switch (direction4x) {
             case 'left': vector = new Phaser.Math.Vector2(-1, 0); break;
@@ -131,7 +193,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
         }
         vector = vector.normalize().scale(velocity);
 
-        return this.fireBullet(clientId, monsterId, x, y, vector);
+        return this.fireBullet(clientId, monsterId, x, y, vector, distance);
     }
 
     shootToVector(clientId, monsterId, x, y, vector, velocity) {
@@ -154,7 +216,7 @@ class FireballsGroup extends Bullets
     {
         super('fireball',
             'fireball-loop',
-            {frameQuantity: 20, setScale: {x: 0.7, y: 0.7}},
+            {frameQuantity: 20, setScale: {x: 0.7, y: 0.7}, classType: Fireball},
             scene,
             layerWalls,
             onBulletHitPlayer,
@@ -232,9 +294,9 @@ class AllProjectilesGroup
         return children.filter(b => b.active);
     }
 
-    castPlayerFireball(clientId, x, y, direction4x, velocity)
+    castPlayerFireball(clientId, x, y, direction4x, velocity, distance)
     {
-        return this.fireballs.shootToDirection4x(clientId, null, x, y, direction4x, velocity);
+        return this.fireballs.shootToDirection4x(clientId, null, x, y, direction4x, velocity, distance);
     }
 
     castMonsterFireball(monsterId, x, y, destX, destY, velocity)

@@ -26,7 +26,7 @@ const monsterKindArcher = "archer"
 const monsterKindSkeleton = "skeleton"
 const monsterKindDemon = "demon"
 
-const attackCooldown = time.Second / 2
+const attackFireballCooldown = time.Second
 const attackShotArrowCooldown = time.Second / 4
 const attackSwordCooldown = time.Second
 const attackSwordDelay = time.Millisecond * 700
@@ -423,16 +423,19 @@ func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
 		return
 	}
 
-	if time.Since(player.lastAttackTime) < attackCooldown {
+	if time.Since(player.lastAttackTime) < attackFireballCooldown {
 		return
 	}
 	player.lastAttackTime = time.Now()
+
+	distance := 200 * player.level
 
 	g.broadcastEventFunc(FireballEvent{
 		ClientID:  clientID,
 		X:         x,
 		Y:         y,
 		Direction: direction,
+		Distance:  distance,
 	})
 }
 

@@ -19,6 +19,7 @@ type FireballEvent struct {
 	X         int    `json:"x"`
 	Y         int    `json:"y"`
 	Direction string `json:"direction"`
+	Distance  int    `json:"distance"`
 }
 
 type ShootArrowEvent struct {

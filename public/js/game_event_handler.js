@@ -1,6 +1,6 @@
 const GameEventHandler = {
     FireballEvent(data) {
-        this.projectiles.castPlayerFireball(data.clientId, data.x, data.y, data.direction, 500)
+        this.projectiles.castPlayerFireball(data.clientId, data.x, data.y, data.direction, 500, data.distance)
     },
 
     ShootArrowEvent(data) {

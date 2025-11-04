@@ -521,11 +521,11 @@ class Game extends Phaser.Scene {
 
         this.xpBar = this.add.graphics();
         this.xpBar.setScrollFactor(0, 0).setDepth(DEPTH_UI);
-        this.xpBar.fillStyle(0x000000, 0.5);
+        this.xpBar.fillStyle(0xffffff, 0.5);
         this.xpBar.fillRect(x, y, barWidth, barHeight);
 
         const xpRatio = Phaser.Math.Clamp(this.xp / this.nextLevelXp, 0, 1);
-        this.xpBar.fillStyle(0x00ff00, 1);
+        this.xpBar.fillStyle(0xffffff, 1);
         this.xpBar.fillRect(x + 2, y + 2, (barWidth - 4) * xpRatio, barHeight - 4);
     }
 

@@ -1305,6 +1305,18 @@
                  "width":0,
                  "x":533.333333333333,
                  "y":2018.18181818182
+                }, 
+                {
+                 "height":0,
+                 "id":113,
+                 "name":"skeleton",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":699,
+                 "y":138
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -1324,7 +1336,7 @@
          "y":0
         }],
  "nextlayerid":9,
- "nextobjectid":113,
+ "nextobjectid":114,
  "orientation":"orthogonal",
  "renderorder":"left-up",
  "tiledversion":"1.11.2",

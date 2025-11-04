@@ -40,6 +40,7 @@ var sceneConfigPreloader = {
         this.load.spritesheet('spikes', 'assets/MiniRouge/4 - Tiles/Tiles Animated/32x32/Spike2x-Sheet_N.png', { frameWidth: 32, frameHeight: 32 });
 
         this.load.spritesheet('chest', 'assets/chest.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 32, frameHeight: 32 });
 
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },
@@ -266,6 +267,12 @@ var sceneConfigPreloader = {
             frames: this.anims.generateFrameNumbers('rogue_attack', { start: 0, end: 9 }),
             frameRate: 20,
             repeat: -1
+        });
+        this.anims.create({
+            key: 'explosion',
+            frames: this.anims.generateFrameNumbers('explosion', { start: 0, end: 13 }),
+            frameRate: 12,
+            repeat: 0
         });
 
         this.scene.switch('MainMenu');
