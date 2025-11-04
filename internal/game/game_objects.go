@@ -88,10 +88,12 @@ func (g *Game) tickTrigger(obj *Object) {
 				}
 			}
 
-			g.broadcastEventFunc(UpdateTilesEvent{
+			tileEvent := UpdateTilesEvent{
 				LayerName: "floor",
 				Tiles:     tilesToUpdate,
-			})
+			}
+			g.updateTilesEvents = append(g.updateTilesEvents, tileEvent)
+			g.broadcastEventFunc(tileEvent)
 
 			// find objects with target group
 			for _, targetObj := range g.objects {
@@ -117,11 +119,15 @@ func (g *Game) tickTrigger(obj *Object) {
 						// find closes tile coordinate and spawn spikes there
 						tileX := (targetObj.X / tileSize) * tileSize
 						tileY := (targetObj.Y / tileSize) * tileSize
-						g.broadcastEventFunc(SpawnSpikeEvent{
+
+						event := SpawnSpikeEvent{
 							X:          tileX,
 							Y:          tileY,
 							StartFrame: targetObj.PropertiesMap["frame"].(string),
-						})
+						}
+
+						g.spikeEvents = append(g.spikeEvents, event)
+						g.broadcastEventFunc(event)
 					}
 				}
 			}

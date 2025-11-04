@@ -175,6 +175,13 @@ class Game extends Phaser.Scene {
         this.key2Collected = gameData.keysCollected["2"];
         this.key3Collected = gameData.keysCollected["3"];
 
+        for (const i in gameData.spikeEvents) {
+            this.SpawnSpikeEvent(gameData.spikeEvents[i]);
+        }
+        for (const i in gameData.updateTilesEvents) {
+            this.UpdateTilesEvent(gameData.updateTilesEvents[i]);
+        }
+
         // Input
         this.cursors = this.input.keyboard.createCursorKeys();
         const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);

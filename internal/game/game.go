@@ -127,6 +127,8 @@ type Game struct {
 	gameMap            *Map
 	demonWasSpawned    bool
 	keysCollected      map[string]bool
+	spikeEvents        []SpawnSpikeEvent
+	updateTilesEvents  []UpdateTilesEvent
 }
 
 func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map) *Game {
@@ -151,6 +153,8 @@ func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEve
 			"2": true,
 			"3": false,
 		},
+		spikeEvents:       make([]SpawnSpikeEvent, 0),
+		updateTilesEvents: make([]UpdateTilesEvent, 0),
 	}
 }
 
@@ -268,7 +272,9 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 			MaxHP:       pl.maxHp,
 			HP:          pl.hp,
 		},
-		"keysCollected": g.keysCollected,
+		"keysCollected":     g.keysCollected,
+		"spikeEvents":       g.spikeEvents,
+		"updateTilesEvents": g.updateTilesEvents,
 	}
 }
 
