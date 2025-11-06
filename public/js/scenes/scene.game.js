@@ -261,6 +261,12 @@ class Game extends Phaser.Scene {
             this.isMoving = false;
         }
 
+        this.player.isAttacking = this.isAttacking;
+
+        if (this.player.shouldStopMovement()) {
+            this.player.body.setVelocity(0);
+        }
+
         if (this.isAttacking) {
             this.player.playAttackAnimation(this.direction);
         } else if (this.isMoving) {

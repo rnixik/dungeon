@@ -106,9 +106,11 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.y = posData.y;
 
         if (posData.isAttacking) {
+            this.isAttacking = true;
             this.playAttackAnimation(posData.direction);
             return;
         }
+        this.isAttacking = false;
 
         if (posData.isMoving) {
             this.playMoveAnimation(posData.direction);
@@ -123,6 +125,12 @@ class Player extends Phaser.Physics.Arcade.Sprite
         let attackAnimsKey = `${this.kind}_attack_${direction}`;
         if (!this.scene.anims.exists(attackAnimsKey)) {
             attackAnimsKey = `${this.kind}_attack`;
+
+            if (direction === 'left') {
+                this.setAngle(0).setFlipX(true);
+            } else if (direction === 'right') {
+                this.setAngle(0).setFlipX(false);
+            }
         }
 
         if (this.scene.anims.exists(attackAnimsKey)) {
@@ -202,5 +210,14 @@ class MyPlayer extends Player
                 this.hpText.setText(statData.hp + '/' + statData.maxHp);
             }
         }
+    }
+
+    shouldStopMovement()
+    {
+        if (this.kind !== 'knight') {
+            return false;
+        }
+
+        return this.isAttacking && this.anims.currentFrame.index >= 4;
     }
 }
