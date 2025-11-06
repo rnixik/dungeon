@@ -34,9 +34,11 @@ type HitPlayerCommand struct {
 	OriginClientID uint64 `json:"originClientId"`
 	MonsterID      int    `json:"monsterId"`
 	TargetClientID uint64 `json:"targetClientId"`
+	Kind           string `json:"kind"`
 }
 
 type HitMonsterCommand struct {
 	OriginClientID uint64 `json:"originClientId"`
 	MonsterID      int    `json:"monsterId"`
+	Kind           string `json:"kind"`
 }

@@ -76,8 +76,10 @@ class Fireball extends Bullet
             }
             canDamagePlayer = false;
             this.scene.sendGameCommand('HitPlayerCommand', {
+                originClientId: this.scene.myClientId,
                 monsterId: -1,
                 targetClientId: this.scene.myClientId,
+                kind: 'explosion'
             });
             setTimeout(() => canDamagePlayer = false, 1000);
         }, null, this);
@@ -94,8 +96,10 @@ class Fireball extends Bullet
             }
             cannotDamage[p.id] = true;
             this.scene.sendGameCommand('HitPlayerCommand', {
+                originClientId: this.scene.myClientId,
                 monsterId: -1,
-                targetClientId: p.id
+                targetClientId: p.id,
+                kind: 'explosion'
             });
             setTimeout(() => cannotDamage[p.id] = false, 300);
         }, null, this);
@@ -114,7 +118,8 @@ class Fireball extends Bullet
             cannotDamageMonsters[m.id] = true;
             this.scene.sendGameCommand('HitMonsterCommand', {
                 originClientId: this.clientId,
-                monsterId: m.id
+                monsterId: m.id,
+                kind: 'explosion'
             });
             setTimeout(() => cannotDamage[m.id] = false, 1000);
         }, null, this);
@@ -123,6 +128,7 @@ class Fireball extends Bullet
 
 class Bullets extends Phaser.Physics.Arcade.Group
 {
+    kind;
     sprites;
     onBulletHitPlayer;
     onBulletHitMonster;
@@ -153,6 +159,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
         scene.physics.add.collider(this.sprites, layerWalls, this.bulletHitWall, null, this);
 
+        this.kind = key;
         this.animationKey = animationKey;
         this.gameScene = scene;
         this.onBulletHitPlayer = onBulletHitPlayer;
@@ -188,7 +195,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
             return;
         }
         this.hideBullet(bullet);
-        this.onBulletHitPlayer.apply(this.gameScene, [bullet, player]);
+        this.onBulletHitPlayer.apply(this.gameScene, [bullet, player, this.kind]);
     }
 
     bulletHitMonster (bullet, monster)
@@ -198,7 +205,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
             return;
         }
         this.hideBullet(bullet);
-        this.onBulletHitMonster.apply(this.gameScene, [bullet, monster]);
+        this.onBulletHitMonster.apply(this.gameScene, [bullet, monster, this.kind]);
     }
 
     hideBullet (bullet)

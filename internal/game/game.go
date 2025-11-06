@@ -17,8 +17,6 @@ const ClassMage = "mage"
 const ClassKnight = "knight"
 const ClassRogue = "rogue"
 
-const fireballDamage = 25
-const swordDamage = 50
 const positionsUpdateTickPeriod = time.Second / 60
 const commonUpdateTickPeriod = time.Second / 3
 
@@ -213,8 +211,9 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 
 			return
 		}
+
 		g.mutex.Lock()
-		g.hitPlayerUnsafe(c.TargetClientID, fireballDamage)
+		g.hitPlayerWithKindUnsafe(c.TargetClientID, c.Kind)
 		g.mutex.Unlock()
 		break
 	case "HitMonsterCommand":
@@ -224,7 +223,8 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 
 			return
 		}
-		g.hitMonster(c.OriginClientID, c.MonsterID, fireballDamage)
+		damage := g.getDamageFromKind(c.Kind)
+		g.hitMonster(c.OriginClientID, c.MonsterID, damage)
 		break
 	}
 }
@@ -550,7 +550,7 @@ func (g *Game) attackWithSword(clientID uint64) {
 
 		length := 50 + 60*player.level
 		radius := 20 + 20*player.level
-		damage := swordDamage + 10*(player.level-1)
+		damage := 50 + 5*(player.level-1)
 
 		vecX, vecY := getVectorFromDirection(player.direction)
 		attackX, attackY := player.x+int(vecX)*length, player.y+int(vecY)*length
@@ -589,6 +589,36 @@ func (g *Game) hitPlayerUnsafe(targetClientID uint64, damage int) {
 	if p, ok := g.players[targetClientID]; ok {
 		if p.hp == 0 {
 			return
+		}
+
+		p.hp -= damage
+		if p.hp < 0 {
+			p.hp = 0
+		}
+
+		g.broadcastEventFunc(DamageEvent{
+			TargetPlayerId: targetClientID,
+			Damage:         damage,
+		})
+
+		if p.hp == 0 {
+			g.killPlayer(targetClientID)
+		}
+	}
+}
+
+func (g *Game) hitPlayerWithKindUnsafe(targetClientID uint64, kind string) {
+	if p, ok := g.players[targetClientID]; ok {
+		if p.hp == 0 {
+			return
+		}
+
+		damage := g.getDamageFromKind(kind)
+		if (kind == "fireball" || kind == "explosion") && p.class == ClassMage {
+			damage = damage / 2
+		}
+		if kind == "arrow" && p.class == ClassKnight {
+			damage = damage / 2
 		}
 
 		p.hp -= damage
@@ -854,4 +884,17 @@ func getVectorFromDirection(direction string) (float64, float64) {
 func (g *Game) isSwordAttackHit(attackerX, attackerY, attackLineX, attackLineY, targetX, targetY, targetRadius int) bool {
 	return lineIntersectsRect(attackerX, attackerY, attackLineX, attackLineY, targetX-targetRadius, targetY-targetRadius, 2*targetRadius, 2*targetRadius) &&
 		g.isVisible(attackerX, attackerY, targetX, targetY)
+}
+
+func (g *Game) getDamageFromKind(kind string) int {
+	switch kind {
+	case "fireball":
+		return 40
+	case "explosion":
+		return 20
+	case "arrow":
+		return 30
+	default:
+		return 0
+	}
 }

@@ -377,14 +377,15 @@ class Game extends Phaser.Scene {
         });
     }
 
-    onBulletHitPlayer(bullet, player)
+    onBulletHitPlayer(bullet, player, kind)
     {
         console.log('hit player', bullet.clientId, player.id);
         if (bullet.monsterId && player.id === this.myClientId) {
             // hit caused by monster's bullet on ourselves
             this.sendGameCommand('HitPlayerCommand', {
                 monsterId: bullet.monsterId,
-                targetClientId: this.myClientId
+                targetClientId: this.myClientId,
+                kind: kind,
             });
             return;
         }
@@ -394,11 +395,12 @@ class Game extends Phaser.Scene {
         }
         this.sendGameCommand('HitPlayerCommand', {
             originClientId: bullet.clientId,
-            targetClientId: player.id
+            targetClientId: player.id,
+            kind: kind,
         });
     }
 
-    onBulletHitMonster(bullet, monster)
+    onBulletHitMonster(bullet, monster, kind)
     {
         console.log('hit monster', bullet.clientId, this.myClientId, bullet.monsterId, monster.id);
         if (bullet.monsterId) {
@@ -410,7 +412,8 @@ class Game extends Phaser.Scene {
         }
         this.sendGameCommand('HitMonsterCommand', {
             originClientId: bullet.clientId,
-            monsterId: monster.id
+            monsterId: monster.id,
+            kind: kind,
         });
         console.log('monster hit command sent');
     }
