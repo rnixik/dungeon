@@ -491,7 +491,7 @@ func (g *Game) shootArrow(clientID uint64, x int, y int, direction string) {
 				Velocity: 700,
 			})
 
-			time.Sleep(time.Millisecond * 30)
+			time.Sleep(time.Millisecond * 50)
 		}
 	}()
 }

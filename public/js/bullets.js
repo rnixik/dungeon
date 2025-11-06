@@ -40,7 +40,14 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
 
 class Fireball extends Bullet
 {
+    hasActiveExplosion = false;
+
     onTravelEnd() {
+        if (this.hasActiveExplosion) {
+            return;
+        }
+        this.hasActiveExplosion = true;
+
         this.setVisible(false);
         this.disableBody();
 
@@ -52,6 +59,7 @@ class Fireball extends Bullet
         explosion.on('animationcomplete', () => {
             explosion.destroy();
             this.setActive(false);
+            this.hasActiveExplosion = false;
         });
 
         if (this.clientId !== this.scene.myClientId) {
@@ -60,6 +68,21 @@ class Fireball extends Bullet
 
         this.scene.physics.add.existing(explosion);
 
+        // attack my player
+        let canDamagePlayer = true;
+        this.scene.physics.add.overlap(explosion, this.scene.player, (s, p) => {
+            if (!canDamagePlayer) {
+                return;
+            }
+            canDamagePlayer = false;
+            this.scene.sendGameCommand('HitPlayerCommand', {
+                monsterId: -1,
+                targetClientId: this.scene.myClientId,
+            });
+            setTimeout(() => canDamagePlayer = false, 1000);
+        }, null, this);
+
+        // attack other players
         const playersArray = [];
         for (const id in this.scene.players) {
             playersArray.push(this.scene.players[id]);
@@ -74,9 +97,10 @@ class Fireball extends Bullet
                 monsterId: -1,
                 targetClientId: p.id
             });
-            setTimeout(() => cannotDamage[p.id] = false, 1000);
+            setTimeout(() => cannotDamage[p.id] = false, 300);
         }, null, this);
 
+        // attack monsters
         const monstersArray = [];
         for (const id in this.scene.monsters) {
             monstersArray.push(this.scene.monsters[id]);
