@@ -235,15 +235,17 @@ class Game extends Phaser.Scene {
 
     update (time, delta) {
         // Movement
-        const move = 180;
         const joy = this.joystick?.createCursorKeys?.() || {left:{isDown:false},right:{isDown:false},up:{isDown:false},down:{isDown:false}};
 
         this.player.body.setVelocity(0);
-        if (this.cursors.left.isDown || joy.left.isDown)  this.player.body.setVelocityX(-move);
-        else if (this.cursors.right.isDown || joy.right.isDown) this.player.body.setVelocityX(move);
+        const velocity = this.player.getMovementVelocity();
+        this.player.isAttacking = this.isAttacking;
 
-        if (this.cursors.up.isDown || joy.up.isDown)      this.player.body.setVelocityY(-move);
-        else if (this.cursors.down.isDown || joy.down.isDown) this.player.body.setVelocityY(move);
+        if (this.cursors.left.isDown || joy.left.isDown)  this.player.body.setVelocityX(-velocity);
+        else if (this.cursors.right.isDown || joy.right.isDown) this.player.body.setVelocityX(velocity);
+
+        if (this.cursors.up.isDown || joy.up.isDown)      this.player.body.setVelocityY(-velocity);
+        else if (this.cursors.down.isDown || joy.down.isDown) this.player.body.setVelocityY(velocity);
 
         if (this.cursors.left.isDown || joy.left.isDown) {
             this.direction='left';
@@ -259,12 +261,6 @@ class Game extends Phaser.Scene {
             this.isMoving = true;
         } else {
             this.isMoving = false;
-        }
-
-        this.player.isAttacking = this.isAttacking;
-
-        if (this.player.shouldStopMovement()) {
-            this.player.body.setVelocity(0);
         }
 
         if (this.isAttacking) {

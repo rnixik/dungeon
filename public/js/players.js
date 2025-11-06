@@ -220,4 +220,29 @@ class MyPlayer extends Player
 
         return this.isAttacking && this.anims.currentFrame.index >= 4;
     }
+
+    getMovementVelocity()
+    {
+        let velocity = 180;
+        switch (this.kind) {
+            case 'knight':
+                if (this.isAttacking && this.anims.currentFrame.index >= 3) {
+                    velocity = 0;
+                }
+                break;
+            case 'rogue': {
+                if (this.isAttacking) {
+                    velocity = 220;
+                }
+                break;
+            }
+            case 'mage':
+                if (this.isAttacking) {
+                    velocity = 140;
+                }
+                break;
+        }
+
+        return velocity;
+    }
 }
