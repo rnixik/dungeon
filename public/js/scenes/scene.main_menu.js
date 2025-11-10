@@ -85,10 +85,12 @@ class MainMenu extends Phaser.Scene
         const wsConnect = (nickname) => {
             self.wsConnection = new WebSocket(WEBSOCKET_URL);
             self.wsConnection.onopen = function () {
+                console.log('WebSocket connected');
                 self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'join', data: nickname}));
                 self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'makeMatch', data: {roomName: self.roomName}}));
             };
             self.wsConnection.onclose = () => {
+                console.log('WebSocket disconnected');
                 window.setTimeout(function () {
                     location.reload();
                 }, 3000);
@@ -110,6 +112,7 @@ class MainMenu extends Phaser.Scene
         };
 
         wsConnect(this.nickname);
+        console.log('Connecting to WebSocket server...');
     };
 
     onIncomingMessage(json, evt)
@@ -134,6 +137,7 @@ class MainMenu extends Phaser.Scene
 
     startGame(gameData)
     {
+        console.log('Starting game scene');
         const self = this;
         this.scene.start('Game', {
             gameData: gameData,

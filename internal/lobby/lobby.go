@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sync/atomic"
+	"time"
 )
 
 var lastClientId uint64
@@ -51,9 +52,6 @@ type Lobby struct {
 	// Commands from clients
 	clientCommands chan *ClientCommand
 
-	// Started games
-	games []GameEventsDispatcher
-
 	// Rooms created by clients
 	roomsCreatedByClients map[ClientPlayer]*Room
 
@@ -74,7 +72,6 @@ func NewLobby(newGameFunc NewGameFunc, newBotFunc NewBotFunc, matchMaker MatchMa
 		unregister:            make(chan ClientSender),
 		clients:               make(map[uint64]ClientPlayer),
 		clientCommands:        make(chan *ClientCommand),
-		games:                 make([]GameEventsDispatcher, 0),
 		roomsCreatedByClients: make(map[ClientPlayer]*Room),
 		clientsJoinedRooms:    make(map[ClientPlayer]*Room),
 		newGameFunc:           newGameFunc,
@@ -102,8 +99,16 @@ func (l *Lobby) Run() {
 		}
 	}()
 
+	debugTicker := time.NewTicker(time.Second * 30)
+	defer debugTicker.Stop()
+
 	for {
 		select {
+		case <-debugTicker.C:
+			log.Printf("Lobby debug: clients=%d, rooms=%d\n",
+				len(l.clients),
+				len(l.roomsCreatedByClients),
+			)
 		case tc := <-l.register:
 			log.Println("read from register channel")
 			atomic.AddUint64(&lastClientId, 1)
@@ -154,6 +159,7 @@ func (l *Lobby) broadcastEvent(event interface{}) {
 }
 
 func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
+	log.Println("Client joining lobby with nickname:", nickname)
 	c.SetNickname(nickname)
 
 	broadcastEvent := &ClientBroadCastJoinedEvent{
@@ -187,6 +193,7 @@ func (l *Lobby) joinLobbyCommand(c ClientPlayer, nickname string) {
 }
 
 func (l *Lobby) onClientLeft(client ClientPlayer) {
+	log.Println("Client left lobby:", client.ID())
 	l.matchMaker.Cancel(client)
 	room := l.clientsJoinedRooms[client]
 	if room != nil {
@@ -199,6 +206,7 @@ func (l *Lobby) onClientLeft(client ClientPlayer) {
 }
 
 func (l *Lobby) CreateNewRoomCommand(c ClientPlayer) *Room {
+	log.Println("Client creating new room:", c.ID())
 	_, roomExists := l.roomsCreatedByClients[c]
 	if roomExists {
 		errEvent := &ClientCommandError{errorYouCanCreateOneRoomOnly}
