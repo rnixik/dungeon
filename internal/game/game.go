@@ -549,7 +549,7 @@ func (g *Game) attackWithSword(clientID uint64) {
 		}
 
 		length := 50 + 60*player.level
-		radius := 20 + 20*player.level
+		radius := 20 + 12*player.level
 		damage := 50 + 5*(player.level-1)
 
 		vecX, vecY := getVectorFromDirection(player.direction)

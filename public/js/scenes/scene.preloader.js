@@ -30,7 +30,6 @@ var sceneConfigPreloader = {
         this.load.image('spinner', 'assets/spinner.png');
         this.load.image('lightning', 'assets/lightning.png');
         this.load.image('lightning_v', 'assets/lightning_v.png');
-        this.load.image('melee_attack', 'assets/melee_attack.png');
         //this.load.image('archer', 'assets/archer.png');
         //this.load.image('skeleton', 'assets/archer.png');
 
@@ -42,6 +41,7 @@ var sceneConfigPreloader = {
 
         this.load.spritesheet('chest', 'assets/chest.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('melee_attack', 'assets/melee_attack.png', { frameWidth: 32, frameHeight: 32 });
 
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },

@@ -27,6 +27,51 @@ const GameEventHandler = {
         this.time.delayedCall(200, () => {
             graphics.destroy();
         });
+
+        const scale = data.radius / 16; // assuming original sprite size is 32x32
+
+        const attackSprite1 = this.add.sprite(data.x, data.y, 'melee_attack')
+            .setScale(scale)
+            .setDepth(DEPTH_MONSTER + 0.1)
+            .setOrigin(0.5, 0.5)
+            .setMask(this.mask);
+        attackSprite1.anims.play('melee_attack', true);
+        attackSprite1.on('animationcomplete', () => {
+            attackSprite1.destroy();
+        });
+        const attackSprite2 = this.add.sprite(data.attackLineX, data.attackLineY, 'melee_attack')
+            .setScale(scale)
+            .setDepth(DEPTH_MONSTER + 0.1)
+            .setOrigin(0.5, 0.5)
+            .setMask(this.mask);
+        attackSprite2.anims.play('melee_attack', true);
+        attackSprite2.on('animationcomplete', () => {
+            attackSprite2.destroy();
+        });
+
+
+        if (data.attackLineX - data.x > 0) {
+            // right
+            attackSprite1.x = data.x + 20;
+        }
+        if (data.attackLineX - data.x < 0) {
+            // left
+            attackSprite1.flipX = true;
+            attackSprite2.flipX = true;
+            attackSprite1.x = data.x - 20;
+        }
+        if (data.attackLineY - data.y < 0) {
+            // up
+            attackSprite1.setAngle(-90);
+            attackSprite2.setAngle(-90);
+            attackSprite1.y = data.y - 20;
+        }
+        if (data.attackLineY - data.y > 0) {
+            // down
+            attackSprite1.setAngle(90);
+            attackSprite2.setAngle(90);
+            attackSprite1.y = data.y + 20;
+        }
     },
 
     CreaturesStatsUpdateEvent(data) {
