@@ -28,14 +28,14 @@ const GameEventHandler = {
             graphics.destroy();
         });
 
-        const scale = data.radius / 16; // assuming original sprite size is 32x32
+        const scale = data.radius / 32; // assuming original sprite size is 32x32
 
-        const attackSprite1 = this.add.sprite(data.x, data.y, 'melee_attack')
+        const attackSprite1 = this.add.sprite(data.x-20, data.y, 'melee_surround')
             .setScale(scale)
-            .setDepth(DEPTH_MONSTER + 0.1)
+            .setDepth(DEPTH_PLAYER - 0.1)
             .setOrigin(0.5, 0.5)
             .setMask(this.mask);
-        attackSprite1.anims.play('melee_attack', true);
+        attackSprite1.anims.play('melee_surround', true);
         attackSprite1.on('animationcomplete', () => {
             attackSprite1.destroy();
         });
@@ -48,6 +48,8 @@ const GameEventHandler = {
         attackSprite2.on('animationcomplete', () => {
             attackSprite2.destroy();
         });
+
+        this.cameras?.main?.shake(80, 0.01);
 
 
         if (data.attackLineX - data.x > 0) {

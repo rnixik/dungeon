@@ -41,7 +41,8 @@ var sceneConfigPreloader = {
 
         this.load.spritesheet('chest', 'assets/chest.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('explosion', 'assets/explosion.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('melee_attack', 'assets/melee_attack.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('melee_attack', 'assets/melee_attack_wide.png', { frameWidth: 160, frameHeight: 64 });
+        this.load.spritesheet('melee_surround', 'assets/melee_surround.png', { frameWidth: 64, frameHeight: 64 });
 
         this.load.plugin('rexvirtualjoystickplugin', 'js/rexvirtualjoystickplugin.min.js', true);
     },
@@ -277,12 +278,16 @@ var sceneConfigPreloader = {
         });
         this.anims.create({
             key: 'melee_attack',
-            frames: this.anims.generateFrameNumbers('melee_attack', { start: 0, end: 9 }),
+            frames: this.anims.generateFrameNumbers('melee_attack', { start: 0, end: 15 }),
             frameRate: 20,
             repeat: 0
         });
-
-
+        this.anims.create({
+            key: 'melee_surround',
+            frames: this.anims.generateFrameNumbers('melee_surround', { start: 0, end: 4 }),
+            frameRate: 10,
+            repeat: 0
+        });
 
         this.scene.switch('MainMenu');
     }
