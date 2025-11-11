@@ -3,11 +3,13 @@ package transport
 import (
 	"dungeon/internal/lobby"
 	"encoding/json"
-	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -64,9 +66,12 @@ func (c *WebSocketClient) readLoop() {
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
+			log.Println("read error:", err)
 			break
 		}
-		// log.Printf("Incoming message: %s", message)
+		if !strings.Contains(string(message), `"type":"game"`) {
+			log.Printf("Incoming message: %s", message)
+		}
 
 		var clientCommand lobby.ClientCommand
 		if err := json.Unmarshal(message, &clientCommand); err != nil {

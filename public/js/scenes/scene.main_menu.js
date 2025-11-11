@@ -88,6 +88,7 @@ class MainMenu extends Phaser.Scene
                 console.log('WebSocket connected');
                 self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'join', data: nickname}));
                 self.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'makeMatch', data: {roomName: self.roomName}}));
+                console.log("Sent commands to join lobby and make/join match");
             };
             self.wsConnection.onclose = () => {
                 console.log('WebSocket disconnected');
