@@ -14,6 +14,8 @@ type ClientPlayer interface {
 	SetNickname(string)
 	Nickname() string
 	CloseConnection()
+	GetAdditionalProperties() map[string]interface{}
+	SetAdditionalProperties(properties map[string]interface{})
 }
 
 type Client struct {
@@ -21,8 +23,9 @@ type Client struct {
 
 	transportClient ClientSender
 
-	nickname string
-	room     *Room
+	nickname             string
+	room                 *Room
+	additionalProperties map[string]interface{}
 }
 
 func (c *Client) SendEvent(event interface{}) {
@@ -44,4 +47,12 @@ func (c *Client) Nickname() string {
 
 func (c *Client) CloseConnection() {
 	c.transportClient.Close()
+}
+
+func (c *Client) SetAdditionalProperties(properties map[string]interface{}) {
+	c.additionalProperties = properties
+}
+
+func (c *Client) GetAdditionalProperties() map[string]interface{} {
+	return c.additionalProperties
 }

@@ -40,7 +40,8 @@ const (
 	// ClientCommandRoomSubTypeAddBot command to add a bot to the game
 	ClientCommandRoomSubTypeAddBot = "addBot"
 	// ClientCommandRoomSubTypeRemoveBots command to remove all bots from the game
-	ClientCommandRoomSubTypeRemoveBots = "removeBots"
+	ClientCommandRoomSubTypeRemoveBots       = "removeBots"
+	ClientCommandRoomSetAdditionalProperties = "setAdditionalProperties"
 )
 
 // ClientCommand is a command message from connected client.

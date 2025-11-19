@@ -37,10 +37,6 @@ func (mm *MatchMaker) MakeMatch(
 
 		return
 	}
-
-	if room.Game() == nil {
-		room.OnStartGameCommand(*client)
-	}
 }
 
 func (mm *MatchMaker) Cancel(client lobby.ClientPlayer) {

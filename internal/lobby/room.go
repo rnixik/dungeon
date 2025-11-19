@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"encoding/json"
+	"log"
 	"sync"
 	"sync/atomic"
 )
@@ -114,10 +115,6 @@ func (r *Room) addClient(client ClientPlayer) {
 
 	roomJoinedEvent := &RoomJoinedEvent{r.toRoomInfo()}
 	client.SendEvent(roomJoinedEvent)
-
-	if r.game != nil {
-		r.game.OnClientJoined(client)
-	}
 }
 
 func (r *Room) addBot(botClient ClientPlayer) {
@@ -244,6 +241,12 @@ func (r *Room) setPlayerStatus(memberId uint64, playerStatus bool) {
 }
 
 func (r *Room) OnStartGameCommand(c ClientPlayer) {
+	if r.Game() != nil {
+		log.Println("game has been already started in the room:", r.ID())
+		r.Game().OnClientJoined(c)
+
+		return
+	}
 	pls := r.getPlayers()
 	if len(pls) < r.lobby.minPlayersInRoom {
 		errEvent := &ClientCommandError{errorNeedMorePlayers}
@@ -376,6 +379,13 @@ func (r *Room) onClientCommand(cc *ClientCommand) {
 		r.onAddBotCommand(cc.client)
 	case ClientCommandRoomSubTypeRemoveBots:
 		r.onRemoveBotsCommand(cc.client)
+	case ClientCommandRoomSetAdditionalProperties:
+		log.Println("setting additional properties for client:", cc.Data)
+		var propertiesData map[string]interface{}
+		if err := json.Unmarshal(cc.Data, &propertiesData); err != nil {
+			return
+		}
+		cc.client.SetAdditionalProperties(propertiesData)
 	}
 }
 

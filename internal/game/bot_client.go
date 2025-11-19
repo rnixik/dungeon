@@ -8,11 +8,12 @@ import (
 
 type BotClient struct {
 	lobby.Client
-	id               uint64
-	incomingEvents   chan interface{}
-	outgoingCommands chan *GameBotCommandWithName
-	sendGameCommand  func(client lobby.ClientPlayer, commandType string, commandData json.RawMessage)
-	stopped          bool
+	id                   uint64
+	incomingEvents       chan interface{}
+	outgoingCommands     chan *GameBotCommandWithName
+	sendGameCommand      func(client lobby.ClientPlayer, commandType string, commandData json.RawMessage)
+	stopped              bool
+	additionalProperties map[string]interface{}
 }
 
 type GameBotCommandWithName struct {
@@ -87,4 +88,12 @@ func (bc *BotClient) sendingCommandsToGame() {
 
 func (bc *BotClient) CloseConnection() {
 	bc.stopped = true
+}
+
+func (c *BotClient) SetAdditionalProperties(properties map[string]interface{}) {
+	c.additionalProperties = properties
+}
+
+func (c *BotClient) GetAdditionalProperties() map[string]interface{} {
+	return c.additionalProperties
 }

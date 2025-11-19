@@ -57,7 +57,10 @@ class MainMenu extends Phaser.Scene
         this.nickname = this.nickname.substring(0, 10);
         console.log("Using nickname: " + this.nickname);
 
-        this.actionPlay();
+        this.loadingSpinner.setVisible(true);
+        this.connectToServer();
+
+        this.displayCharacterCreation();
     };
 
     update(game)
@@ -65,21 +68,63 @@ class MainMenu extends Phaser.Scene
         this.loadingSpinner.angle += 2;
     };
 
-    actionPlay()
+    displayCharacterCreation()
     {
-        console.log('play');
-        this.loadingSpinner.setVisible(true);
-        this.connectToServer();
-    };
+        this.make.text({
+            x: 20,
+            y: 100,
+            text: "Knight",
+            style: {
+                fontFamily: 'Arial',
+                color: '#aa0000',
+            },
+            add: true
+        }).setInteractive({useHandCursor: true}).on('pointerdown', () => {
+            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'setAdditionalProperties', data: {"class": "knight" }}));
+        });
+
+        this.make.text({
+            x: 100,
+            y: 100,
+            text: "Rogue",
+            style: {
+                fontFamily: 'Arial',
+                color: '#00aa00',
+            },
+            add: true
+        }).setInteractive({useHandCursor: true}).on('pointerdown', () => {
+            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'setAdditionalProperties', data: {"class": "rogue" }}));
+        });
+
+        this.make.text({
+            x: 180,
+            y: 100,
+            text: "Wizard",
+            style: {
+                fontFamily: 'Arial',
+                color: '#0000aa',
+            },
+            add: true
+        }).setInteractive({useHandCursor: true}).on('pointerdown', () => {
+            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'setAdditionalProperties', data: {"class": "mage" }}));
+        });
+
+        this.make.text({
+            x: 40,
+            y: 300,
+            text: "Start",
+            style: {
+                fontFamily: 'Arial',
+                color: '#eeeeee',
+            },
+            add: true
+        }).setInteractive({useHandCursor: true}).on('pointerdown', () => {
+            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'startGame'}));
+        });
+    }
 
     connectToServer()
     {
-        if (this.wsConnection) {
-            this.wsConnection.send(JSON.stringify({type: 'lobby', subType: 'makeMatch'}));
-
-            return;
-        }
-
         const self = this;
         this.connectingText.x = 0;
         const wsConnect = (nickname) => {
@@ -126,6 +171,8 @@ class MainMenu extends Phaser.Scene
             this.myClientId = json.data.yourId;
             console.log('My client id = ' + this.myClientId);
             this.connectingText.x = 10000;
+            this.loadingSpinner.setVisible(false);
+            this.displayCharacterCreation();
             return;
         }
         if (json.name === 'JoinToStartedGameEvent') {

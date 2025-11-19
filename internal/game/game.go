@@ -88,6 +88,11 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 	classes := []string{ClassMage, ClassKnight, ClassRogue}
 	class := classes[rand.Intn(len(classes))]
 
+	props := client.GetAdditionalProperties()
+	if cls, ok := props["class"].(string); ok {
+		class = cls
+	}
+
 	currentMaxHP := 100
 	switch class {
 	case ClassMage:
