@@ -63,6 +63,9 @@ class Game extends Phaser.Scene {
     layerWalls;
     layerDecor;
     projectiles;
+    
+    // traps
+    traps = {};
 
     // lighting
     rt;               // RenderTexture for darkness
@@ -175,6 +178,14 @@ class Game extends Phaser.Scene {
         this.key2Collected = gameData.keysCollected["2"];
         this.key3Collected = gameData.keysCollected["3"];
 
+        // Initialize traps from new system
+        if (gameData.traps) {
+            for (const trapData of gameData.traps) {
+                this.createTrapSprite(trapData.trapId, trapData.x, trapData.y, trapData.frame);
+            }
+        }
+        
+        // Legacy spike events support
         for (const i in gameData.spikeEvents) {
             this.SpawnSpikeEvent(gameData.spikeEvents[i]);
         }
