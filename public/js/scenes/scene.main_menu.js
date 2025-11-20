@@ -59,8 +59,6 @@ class MainMenu extends Phaser.Scene
 
         this.loadingSpinner.setVisible(true);
         this.connectToServer();
-
-        this.displayCharacterCreation();
     };
 
     update(game)
@@ -70,57 +68,176 @@ class MainMenu extends Phaser.Scene
 
     displayCharacterCreation()
     {
+        const centerX = this.cameras.main.width / 2;
+        const startY = 150;
+        const spacing = 150;
+
+        // Title
         this.make.text({
-            x: 20,
-            y: 100,
+            x: centerX,
+            y: 50,
+            text: "Choose Your Hero",
+            origin: { x: 0.5, y: 0.5 },
+            style: {
+                fontFamily: 'Arial',
+                fontSize: '32px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            },
+            add: true
+        });
+
+        // Knight
+        const knightSprite = this.add.sprite(centerX - spacing, startY, 'knight');
+        knightSprite.setScale(2.5);
+        knightSprite.play('knight_idle');
+        knightSprite.setInteractive({useHandCursor: true});
+        
+        const knightText = this.make.text({
+            x: centerX - spacing,
+            y: startY + 80,
             text: "Knight",
+            origin: { x: 0.5, y: 0.5 },
             style: {
                 fontFamily: 'Arial',
-                color: '#aa0000',
+                fontSize: '24px',
+                color: '#ff6b6b',
+                stroke: '#000000',
+                strokeThickness: 3
             },
             add: true
-        }).setInteractive({useHandCursor: true}).on('pointerdown', () => {
-            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'setAdditionalProperties', data: {"class": "knight" }}));
+        });
+        
+        knightSprite.on('pointerdown', () => {
+            this.selectCharacter('knight');
+            this.highlightSelected(knightSprite, knightText);
+        });
+        knightSprite.on('pointerover', () => {
+            knightSprite.setScale(2.7);
+        });
+        knightSprite.on('pointerout', () => {
+            knightSprite.setScale(2.5);
         });
 
-        this.make.text({
-            x: 100,
-            y: 100,
+        // Rogue (Archer)
+        const rogueSprite = this.add.sprite(centerX, startY, 'rogue');
+        rogueSprite.setScale(2.5);
+        rogueSprite.play('rogue_idle');
+        rogueSprite.setInteractive({useHandCursor: true});
+        
+        const rogueText = this.make.text({
+            x: centerX,
+            y: startY + 80,
             text: "Rogue",
+            origin: { x: 0.5, y: 0.5 },
             style: {
                 fontFamily: 'Arial',
-                color: '#00aa00',
+                fontSize: '24px',
+                color: '#51cf66',
+                stroke: '#000000',
+                strokeThickness: 3
             },
             add: true
-        }).setInteractive({useHandCursor: true}).on('pointerdown', () => {
-            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'setAdditionalProperties', data: {"class": "rogue" }}));
+        });
+        
+        rogueSprite.on('pointerdown', () => {
+            this.selectCharacter('rogue');
+            this.highlightSelected(rogueSprite, rogueText);
+        });
+        rogueSprite.on('pointerover', () => {
+            rogueSprite.setScale(2.7);
+        });
+        rogueSprite.on('pointerout', () => {
+            rogueSprite.setScale(2.5);
         });
 
-        this.make.text({
-            x: 180,
-            y: 100,
+        // Mage
+        const mageSprite = this.add.sprite(centerX + spacing, startY, 'mage');
+        mageSprite.setScale(2.5);
+        mageSprite.play('mage_idle');
+        mageSprite.setInteractive({useHandCursor: true});
+        
+        const mageText = this.make.text({
+            x: centerX + spacing,
+            y: startY + 80,
             text: "Wizard",
+            origin: { x: 0.5, y: 0.5 },
             style: {
                 fontFamily: 'Arial',
-                color: '#0000aa',
+                fontSize: '24px',
+                color: '#74c0fc',
+                stroke: '#000000',
+                strokeThickness: 3
             },
             add: true
-        }).setInteractive({useHandCursor: true}).on('pointerdown', () => {
-            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'setAdditionalProperties', data: {"class": "mage" }}));
+        });
+        
+        mageSprite.on('pointerdown', () => {
+            this.selectCharacter('mage');
+            this.highlightSelected(mageSprite, mageText);
+        });
+        mageSprite.on('pointerover', () => {
+            mageSprite.setScale(2.7);
+        });
+        mageSprite.on('pointerout', () => {
+            mageSprite.setScale(2.5);
         });
 
-        this.make.text({
-            x: 40,
-            y: 300,
-            text: "Start",
+        // Store references for highlighting
+        this.characterSprites = [
+            { sprite: knightSprite, text: knightText },
+            { sprite: rogueSprite, text: rogueText },
+            { sprite: mageSprite, text: mageText }
+        ];
+
+        // Start button
+        const startButton = this.make.text({
+            x: centerX,
+            y: startY + 180,
+            text: "START GAME",
+            origin: { x: 0.5, y: 0.5 },
             style: {
                 fontFamily: 'Arial',
-                color: '#eeeeee',
+                fontSize: '28px',
+                color: '#ffec99',
+                stroke: '#000000',
+                strokeThickness: 4
             },
             add: true
-        }).setInteractive({useHandCursor: true}).on('pointerdown', () => {
+        }).setInteractive({useHandCursor: true});
+        
+        startButton.on('pointerdown', () => {
             this.wsConnection.send(JSON.stringify({type: 'room', subType: 'startGame'}));
         });
+        startButton.on('pointerover', () => {
+            startButton.setStyle({ color: '#ffffff' });
+        });
+        startButton.on('pointerout', () => {
+            startButton.setStyle({ color: '#ffec99' });
+        });
+    }
+
+    selectCharacter(characterClass)
+    {
+        this.wsConnection.send(JSON.stringify({
+            type: 'room', 
+            subType: 'setAdditionalProperties', 
+            data: {"class": characterClass }
+        }));
+    }
+
+    highlightSelected(selectedSprite, selectedText)
+    {
+        // Reset all sprites
+        this.characterSprites.forEach(char => {
+            char.sprite.clearTint();
+            char.text.setAlpha(1);
+        });
+        
+        // Highlight selected
+        selectedSprite.setTint(0xffff00);
+        selectedText.setAlpha(1);
     }
 
     connectToServer()
