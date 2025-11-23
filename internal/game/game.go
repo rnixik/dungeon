@@ -231,6 +231,9 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 		damage := g.getDamageFromKind(c.Kind)
 		g.hitMonster(c.OriginClientID, c.MonsterID, damage)
 		break
+	case "RespawnCommand":
+		g.respawnPlayer(client.ID())
+		break
 	}
 }
 
@@ -901,5 +904,27 @@ func (g *Game) getDamageFromKind(kind string) int {
 		return 30
 	default:
 		return 0
+	}
+}
+
+func (g *Game) respawnPlayer(clientID uint64) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	if p, ok := g.players[clientID]; ok {
+		if p.hp > 0 {
+			return
+		}
+
+		p.hp = p.maxHp
+		p.x = 120
+		p.y = 140
+		p.direction = "right"
+		p.isMoving = false
+
+		g.broadcastEventFunc(PlayerRespawnEvent{
+			ClientID: clientID,
+			X:        p.x,
+			Y:        p.y,
+		})
 	}
 }

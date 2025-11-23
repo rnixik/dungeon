@@ -96,6 +96,8 @@ class Game extends Phaser.Scene {
     lastAttackTime = 0;
     isMoving = false;
     isDead = false;
+    deadText = null;
+    respawnButton = null;
 
     lastMoveSentTime = 0;
     moveCommandInterval = 1000 / 45; // ms

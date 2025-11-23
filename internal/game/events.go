@@ -161,3 +161,9 @@ type UpdateTilesEvent struct {
 	LayerName string     `json:"layerName"`
 	Tiles     []TileData `json:"tiles"`
 }
+
+type PlayerRespawnEvent struct {
+	ClientID uint64 `json:"clientId"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+}

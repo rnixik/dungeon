@@ -115,12 +115,28 @@ const GameEventHandler = {
 
     PlayerDeathEvent(data) {
         if (data.clientId === this.myClientId) {
-            this.add.text(this.scale.width / 2, this.scale.height / 2, 'YOU DIED', { font: '24px Arial', fill: '#ff0000' })
+            this.deadText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'YOU DIED', { font: '24px Arial', fill: '#ff0000' })
                 .setOrigin(0.5, 0.5)
                 .setScrollFactor(0, 0)
                 .setDepth(DEPTH_UI);
             this.isDead = true;
-            console.log('this is my death');
+
+            this.respawnButton = this.add.text(this.scale.width / 2, this.scale.height / 2 + 40, 'RESPAWN', { font: '12px Arial', fill: '#f3c800' })
+                .setOrigin(0.5, 0.5)
+                .setScrollFactor(0, 0)
+                .setDepth(DEPTH_UI).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
+                    this.sendGameCommand('RespawnCommand');
+                });
+        }
+    },
+
+    PlayerRespawnEvent(data) {
+        if (data.clientId === this.myClientId) {
+            this.player.x = data.x;
+            this.player.y = data.y;
+            this.isDead = false;
+            this.deadText.destroy();
+            this.respawnButton.destroy();
         }
     },
 
