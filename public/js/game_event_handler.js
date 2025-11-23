@@ -226,7 +226,8 @@ const GameEventHandler = {
                 canDamage = false;
                 this.sendGameCommand('HitPlayerCommand', {
                     monsterId: -1,
-                    targetClientId: this.myClientId
+                    targetClientId: this.myClientId,
+                    kind: "spike"
                 });
                 setTimeout(() => canDamage = true, 1000);
             }

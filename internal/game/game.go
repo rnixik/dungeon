@@ -902,6 +902,8 @@ func (g *Game) getDamageFromKind(kind string) int {
 		return 20
 	case "arrow":
 		return 30
+	case "spike":
+		return 25
 	default:
 		return 0
 	}
