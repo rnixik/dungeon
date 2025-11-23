@@ -79,7 +79,7 @@ class Fireball extends Bullet
                 originClientId: this.scene.myClientId,
                 monsterId: -1,
                 targetClientId: this.scene.myClientId,
-                kind: 'explosion'
+                kind: DAMAGE_KIND_EXPLOSION
             });
             setTimeout(() => canDamagePlayer = false, 1000);
         }, null, this);
@@ -99,7 +99,7 @@ class Fireball extends Bullet
                 originClientId: this.scene.myClientId,
                 monsterId: -1,
                 targetClientId: p.id,
-                kind: 'explosion'
+                kind: DAMAGE_KIND_EXPLOSION
             });
             setTimeout(() => cannotDamage[p.id] = false, 300);
         }, null, this);
@@ -183,7 +183,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
     bulletHitWall (bullet, wall)
     {
-        console.log('hit wall');
+        console.log('hit wall', this.kind);
         this.hideBullet(bullet);
     }
 
@@ -314,18 +314,17 @@ class AllProjectilesGroup
     addPlayer(player) {
         this.fireballs.addPlayer(player);
         this.firebolts.addPlayer(player);
+        this.firespots.addPlayer(player);
         this.arrows.addPlayer(player);
     }
 
     addMonster(monster) {
         this.fireballs.addMonster(monster);
-        this.firebolts.addMonster(monster);
         this.arrows.addMonster(monster);
     }
 
     addObject(object) {
         this.fireballs.addObject(object);
-        this.firebolts.addObject(object);
         this.arrows.addObject(object);
     }
 

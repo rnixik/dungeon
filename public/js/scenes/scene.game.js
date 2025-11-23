@@ -37,6 +37,11 @@ const FILL_COLOR = BLACK;
 const DEBUG_STROKE_COLOR = WHITE;
 const DEBUG_FILL_COLOR = 0xff0000;
 
+const DAMAGE_KIND_FIREBALL = 'fireball';
+const DAMAGE_KIND_ARROW = 'arrow';
+const DAMAGE_KIND_EXPLOSION  = 'explosion';
+const DAMAGE_KIND_SPIKE = 'spike';
+
 // Phaser shortcuts
 const { Circle, Line, Point, Rectangle } = Phaser.Geom;
 const { EPSILON } = Phaser.Math;
@@ -392,7 +397,7 @@ class Game extends Phaser.Scene {
 
     onBulletHitPlayer(bullet, player, kind)
     {
-        console.log('hit player', bullet.clientId, player.id);
+        console.log('hit player', bullet.clientId, player.id, kind);
         if (bullet.monsterId && player.id === this.myClientId) {
             // hit caused by monster's bullet on ourselves
             this.sendGameCommand('HitPlayerCommand', {
@@ -415,7 +420,7 @@ class Game extends Phaser.Scene {
 
     onBulletHitMonster(bullet, monster, kind)
     {
-        console.log('hit monster', bullet.clientId, this.myClientId, bullet.monsterId, monster.id);
+        console.log('hit monster', bullet.clientId, this.myClientId, bullet.monsterId, monster.id, kind);
         if (bullet.monsterId) {
             return; // ignore hitting monsters by monster bullets
         }

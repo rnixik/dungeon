@@ -34,6 +34,13 @@ const objectKindTrigger = "trigger"
 const objectKindTrapArrow = "trap_arrow"
 const objectKindTrapSpikes = "trap_spikes"
 
+const damageKindFireball = "fireball"
+const damageKindArrow = "arrow"
+const damageKindExplosion = "explosion"
+const damageKindBullet = "bullet"
+const damageKindFirespot = "firespot"
+const damageKindSpike = "spike"
+
 const xpPerMonsterKill = 250
 
 type Player struct {
@@ -622,10 +629,13 @@ func (g *Game) hitPlayerWithKindUnsafe(targetClientID uint64, kind string) {
 		}
 
 		damage := g.getDamageFromKind(kind)
-		if (kind == "fireball" || kind == "explosion") && p.class == ClassMage {
+		if (kind == damageKindFireball || kind == damageKindExplosion || kind == damageKindFirespot) && p.class == ClassMage {
 			damage = damage / 2
 		}
-		if kind == "arrow" && p.class == ClassKnight {
+		if (kind == damageKindSpike || kind == damageKindArrow) && p.class == ClassKnight {
+			damage = damage / 2
+		}
+		if (kind == damageKindBullet) && p.class == ClassRogue {
 			damage = damage / 2
 		}
 
@@ -896,16 +906,20 @@ func (g *Game) isSwordAttackHit(attackerX, attackerY, attackLineX, attackLineY, 
 
 func (g *Game) getDamageFromKind(kind string) int {
 	switch kind {
-	case "fireball":
+	case damageKindFireball:
 		return 40
-	case "explosion":
+	case damageKindExplosion:
 		return 20
-	case "arrow":
+	case damageKindArrow:
 		return 30
-	case "spike":
+	case damageKindSpike:
 		return 25
+	case damageKindBullet:
+		return 25
+	case damageKindFirespot:
+		return 20
 	default:
-		return 0
+		return 20
 	}
 }
 
