@@ -127,16 +127,30 @@ const GameEventHandler = {
                 .setDepth(DEPTH_UI).setInteractive({ useHandCursor: true }).on('pointerdown', () => {
                     this.sendGameCommand('RespawnCommand');
                 });
+
+            return;
         }
+
+        const deadText = this.add.text(10, 10, data.nickname + ' dead', { font: '12px Arial', fill: '#ff0000' })
+            .setOrigin(0, 0)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI);
+        this.time.delayedCall(5000, () => {
+            deadText.destroy();
+        });
     },
 
     PlayerRespawnEvent(data) {
         if (data.clientId === this.myClientId) {
-            this.player.x = data.x;
-            this.player.y = data.y;
+            this.player.respawn(data.x, data.y)
             this.isDead = false;
             this.deadText.destroy();
             this.respawnButton.destroy();
+        } else {
+            const p = this.players[data.clientId];
+            if (p) {
+                p.respawn(data.x, data.y);
+            }
         }
     },
 

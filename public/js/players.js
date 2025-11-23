@@ -79,6 +79,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
     {
         if (this.hpText) {
             this.hpText.destroy();
+            this.hpText = null;
         }
 
         this.setDepth(DEPTH_DEAD);
@@ -94,6 +95,14 @@ class Player extends Phaser.Physics.Arcade.Sprite
             // avoid late changes of damage effect
             this.scene.time.delayedCall(110, () => this.setTint(0xff3333), [], this);
         }
+    }
+
+    respawn(x, y)
+    {
+        this.isCorpse = false;
+        this.enableBody(true, x, y, true, true);
+        this.setDepth(DEPTH_PLAYER);
+        this.setTint(this.initialTint);
     }
 
     updatePosition(posData)

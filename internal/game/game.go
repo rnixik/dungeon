@@ -659,7 +659,10 @@ func (g *Game) killPlayer(clientID uint64) {
 	if p, ok := g.players[clientID]; ok {
 		p.hp = 0
 
-		g.broadcastEventFunc(PlayerDeathEvent{ClientID: clientID})
+		g.broadcastEventFunc(PlayerDeathEvent{
+			ClientID: clientID,
+			Nickname: p.client.Nickname(),
+		})
 	}
 }
 
