@@ -15,6 +15,8 @@ class MainMenu extends Phaser.Scene
     nickname = 'default';
     roomName = 'default';
 
+    roomPlayersListText = null;
+
     constructor ()
     {
         super({ key: 'MainMenu' });
@@ -240,6 +242,19 @@ class MainMenu extends Phaser.Scene
         selectedText.setAlpha(1);
     }
 
+    updateRoomPlayerList(playerList)
+    {
+        let playerListStr = "Players in Room:\n";
+        for (const player of playerList) {
+            playerListStr += "- " + player.nickname;
+            if (player.id === this.myClientId) {
+                playerListStr += " (You)";
+            }
+            playerListStr += "\n";
+        }
+        this.roomPlayersListText.setText(playerListStr);
+    }
+
     connectToServer()
     {
         const self = this;
@@ -290,6 +305,29 @@ class MainMenu extends Phaser.Scene
             this.connectingText.x = 10000;
             this.loadingSpinner.setVisible(false);
             this.displayCharacterCreation();
+
+            return;
+        }
+        if (json.name === 'RoomJoinedEvent') {
+            this.roomPlayersListText = this.make.text({
+                x: 10,
+                y: 10,
+                text: "Players in Room:\n",
+                style: {
+                    fontFamily: 'Arial',
+                    fontSize: '10px',
+                    color: '#ffffff',
+                },
+                add: true
+            });
+
+            this.updateRoomPlayerList(json.data.room.members);
+
+            return;
+        }
+        if (json.name === 'RoomPlayersUpdateEvent') {
+            this.updateRoomPlayerList(json.data.room.members);
+
             return;
         }
         if (json.name === 'JoinToStartedGameEvent') {
