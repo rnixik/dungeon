@@ -1,3 +1,5 @@
+const DEBUG_TRAPS = false; // Set to true to show trap debug rectangles
+
 const GameEventHandler = {
     FireballEvent(data) {
         this.projectiles.castPlayerFireball(data.clientId, data.x, data.y, data.direction, 500, data.distance)
@@ -276,7 +278,7 @@ const GameEventHandler = {
         // 7-11: Active start (rising animation)
         
         // Update debug rectangle color based on state
-        if (trap.debugGraphics) {
+        if (DEBUG_TRAPS && trap.debugGraphics) {
             trap.debugGraphics.clear();
             let debugColor = 0xff6600; // Default orange
             
@@ -307,10 +309,13 @@ const GameEventHandler = {
             .setFrame(startFrame || 0);
         this.physics.add.existing(s);
         
-        // Debug rectangle to show trap area (similar to triggers)
-        const debugGraphics = this.add.graphics();
-        debugGraphics.lineStyle(2, 0xff6600); // Orange color for traps
-        debugGraphics.strokeRect(x, y, 32, 32); // 32x32 tile size
+        // Debug rectangle to show trap area
+        let debugGraphics = null;
+        if (DEBUG_TRAPS) {
+            debugGraphics = this.add.graphics();
+            debugGraphics.lineStyle(2, 0xff6600); // Orange color for traps
+            debugGraphics.strokeRect(x, y, 32, 32); // 32x32 tile size
+        }
         
         const trap = {
             sprite: s,
