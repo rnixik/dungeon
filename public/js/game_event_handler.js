@@ -178,6 +178,12 @@ const GameEventHandler = {
     DamageEvent(data) {
         const pId = data.targetPlayerId;
         const mId = data.targetMonsterId;
+        
+        // Show floating damage text
+        if (data.x && data.y && data.damage) {
+            this.showDamageText(data.x, data.y, data.damage);
+        }
+        
         if (pId === this.myClientId) {
             this.player.takeDamage(data.damage)
         }
@@ -193,6 +199,29 @@ const GameEventHandler = {
                 m.takeDamage(data.damage);
             }
         }
+    },
+
+    showDamageText(x, y, damage) {
+        const damageText = this.add.text(x, y - 10, `-${damage}`, {
+            font: '16px Arial',
+            fill: '#ff0000',
+            stroke: '#000000',
+            strokeThickness: 3
+        })
+        .setDepth(DEPTH_UI)
+        .setOrigin(0.5, 0.5);
+
+        // Animate the text floating upwards and fading
+        this.tweens.add({
+            targets: damageText,
+            y: y - 50,
+            alpha: 0,
+            duration: 800,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                damageText.destroy();
+            }
+        });
     },
 
     ChestOpenEvent(data) {
@@ -223,29 +252,78 @@ const GameEventHandler = {
     },
 
     SpawnSpikeEvent(data) {
-        const s = this.add.sprite(data.x, data.y, 'spikes')
+        // Legacy support - convert old spike events to new trap system
+        const trapId = `spike_${data.x}_${data.y}`;
+        this.createTrapSprite(trapId, data.x, data.y, Number(data.startFrame));
+    },
+
+    TrapStateChangedEvent(data) {
+        const trapId = data.trapId;
+        let trap = this.traps[trapId];
+        
+        if (!trap) {
+            // Create trap sprite if it doesn't exist
+            trap = this.createTrapSprite(trapId, data.x, data.y, data.frame);
+        }
+        
+        // Update trap state and animation
+        trap.state = data.state;
+        
+        // Frame mapping (updated):
+        // 0: Active peak (fully extended)
+        // 1-4: Cooldown (retracting)
+        // 5: Armed (hidden)
+        // 7-11: Active start (rising animation)
+        
+        // Update debug rectangle color based on state
+        if (trap.debugGraphics) {
+            trap.debugGraphics.clear();
+            let debugColor = 0xff6600; // Default orange
+            
+            switch (data.state) {
+                case 'armed':
+                    debugColor = 0x00ff00; // Green - safe
+                    break;
+                case 'active':
+                    debugColor = 0xff0000; // Red - dangerous!
+                    break;
+                case 'cooldown':
+                    debugColor = 0x00aaff; // Blue - cooling down
+                    break;
+            }
+            
+            trap.debugGraphics.lineStyle(2, debugColor);
+            trap.debugGraphics.strokeRect(trap.x, trap.y, 32, 32);
+        }
+        
+        // Update sprite frame based on server data
+        trap.sprite.setFrame(data.frame);
+        trap.sprite.clearTint();
+    },
+
+    createTrapSprite(trapId, x, y, startFrame) {
+        const s = this.add.sprite(x, y, 'spikes')
             .setOrigin(0, 0)
-            .anims.play({ key: 'spikes', startFrame: Number(data.startFrame) });
+            .setFrame(startFrame || 0);
         this.physics.add.existing(s);
-
-        const safeFrames = [4, 5, 6, 7, 8];
-        let canDamage = true;
-
-        this.physics.add.overlap(s, this.player, (s, p) => {
-            if (!canDamage) {
-                return;
-            }
-            console.log('overlap with spikes', s.anims.currentFrame.index);
-            if (!safeFrames.includes(s.anims.currentFrame.index) && !this.isDead) {
-                canDamage = false;
-                this.sendGameCommand('HitPlayerCommand', {
-                    monsterId: -1,
-                    targetClientId: this.myClientId,
-                    kind: DAMAGE_KIND_SPIKE
-                });
-                setTimeout(() => canDamage = true, 1000);
-            }
-        }, null, this);
+        
+        // Debug rectangle to show trap area (similar to triggers)
+        const debugGraphics = this.add.graphics();
+        debugGraphics.lineStyle(2, 0xff6600); // Orange color for traps
+        debugGraphics.strokeRect(x, y, 32, 32); // 32x32 tile size
+        
+        const trap = {
+            sprite: s,
+            debugGraphics: debugGraphics,
+            state: 'armed',
+            x: x,
+            y: y
+        };
+        
+        this.traps = this.traps || {};
+        this.traps[trapId] = trap;
+        
+        return trap;
     },
 
     XPEvent(data) {

@@ -9,6 +9,8 @@ const objectsPeriod = time.Second / 10
 func (g *Game) startObjectsLoop() {
 	ticker := time.NewTicker(objectsPeriod)
 	defer ticker.Stop()
+	deltaTime := objectsPeriod.Seconds()
+	
 	for {
 		select {
 		case <-ticker.C:
@@ -18,6 +20,7 @@ func (g *Game) startObjectsLoop() {
 
 			g.mutex.Lock()
 
+			// Update objects
 			for _, obj := range g.objects {
 				switch obj.Kind {
 				case objectKindChest:
@@ -25,8 +28,10 @@ func (g *Game) startObjectsLoop() {
 				case objectKindTrigger:
 					g.tickTrigger(obj)
 				}
-
 			}
+
+			// Update traps
+			g.tickTraps(deltaTime)
 
 			g.mutex.Unlock()
 		}
@@ -116,20 +121,67 @@ func (g *Game) tickTrigger(obj *Object) {
 						})
 					}
 					if targetObj.Kind == objectKindTrapSpikes {
-						// find closes tile coordinate and spawn spikes there
-						tileX := (targetObj.X / tileSize) * tileSize
-						tileY := (targetObj.Y / tileSize) * tileSize
-
-						event := SpawnSpikeEvent{
-							X:          tileX,
-							Y:          tileY,
-							StartFrame: targetObj.PropertiesMap["frame"].(string),
+						// Activate trap using new trap system
+						trapID := targetObj.PropertiesMap["trapId"]
+						if trapIDStr, ok := trapID.(string); ok {
+							if trap, exists := g.traps[trapIDStr]; exists {
+								trap.Activate()
+								g.broadcastEventFunc(TrapStateChangedEvent{
+									TrapID: trap.ID,
+									State:  trap.State,
+									X:      trap.Params.X,
+									Y:      trap.Params.Y,
+									Frame:  trap.GetCurrentFrame(),
+								})
+							}
 						}
-
-						g.spikeEvents = append(g.spikeEvents, event)
-						g.broadcastEventFunc(event)
 					}
 				}
+			}
+		}
+	}
+}
+
+func (g *Game) tickTraps(deltaTime float64) {
+	for _, trap := range g.traps {
+		stateChanged, newState := trap.Tick(deltaTime)
+		
+		if stateChanged {
+			// Broadcast state change to clients
+			g.broadcastEventFunc(TrapStateChangedEvent{
+				TrapID: trap.ID,
+				State:  newState,
+				X:      trap.Params.X,
+				Y:      trap.Params.Y,
+				Frame:  trap.GetCurrentFrame(),
+			})
+		}
+
+		// Check for damage if trap is active
+		if trap.IsActive() {
+			g.checkTrapDamage(trap)
+		}
+	}
+}
+
+func (g *Game) checkTrapDamage(trap *Trap) {
+	// Check collision with players
+	for _, player := range g.players {
+		if player.hp <= 0 {
+			continue
+		}
+
+		// Check if player is on the trap tile
+		if pointInRect(player.x, player.y, trap.Params.X, trap.Params.Y, tileSize, tileSize) {
+			// Track if this player was already damaged by this trap activation
+			// to prevent damage on every tick
+			if trap.LastDamagedPlayers == nil {
+				trap.LastDamagedPlayers = make(map[uint64]bool)
+			}
+			
+			if !trap.LastDamagedPlayers[player.client.ID()] {
+				g.hitPlayerUnsafe(player.client.ID(), trap.Params.Damage)
+				trap.LastDamagedPlayers[player.client.ID()] = true
 			}
 		}
 	}

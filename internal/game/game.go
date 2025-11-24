@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -139,6 +140,7 @@ type Game struct {
 	keysCollected      map[string]bool
 	spikeEvents        []SpawnSpikeEvent
 	updateTilesEvents  []UpdateTilesEvent
+	traps              map[string]*Trap
 }
 
 func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map) *Game {
@@ -165,6 +167,7 @@ func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEve
 		},
 		spikeEvents:       make([]SpawnSpikeEvent, 0),
 		updateTilesEvents: make([]UpdateTilesEvent, 0),
+		traps:             make(map[string]*Trap),
 	}
 }
 
@@ -267,6 +270,18 @@ func (g *Game) GetCommonInitialGameData() map[string]interface{} {
 }
 
 func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
+	// Convert traps to initial state data
+	trapsData := make([]map[string]interface{}, 0, len(g.traps))
+	for _, trap := range g.traps {
+		trapsData = append(trapsData, map[string]interface{}{
+			"trapId": trap.ID,
+			"state":  trap.State,
+			"x":      trap.Params.X,
+			"y":      trap.Params.Y,
+			"frame":  trap.GetCurrentFrame(),
+		})
+	}
+	
 	return map[string]interface{}{
 		"mapData":     g.gameMap,
 		"gameObjects": g.objects,
@@ -290,6 +305,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 		"keysCollected":     g.keysCollected,
 		"spikeEvents":       g.spikeEvents,
 		"updateTilesEvents": g.updateTilesEvents,
+		"traps":             trapsData,
 	}
 }
 
@@ -614,6 +630,8 @@ func (g *Game) hitPlayerUnsafe(targetClientID uint64, damage int) {
 		g.broadcastEventFunc(DamageEvent{
 			TargetPlayerId: targetClientID,
 			Damage:         damage,
+			X:              p.x,
+			Y:              p.y,
 		})
 
 		if p.hp == 0 {
@@ -683,6 +701,8 @@ func (g *Game) hitMonsterUnsafe(originClientID uint64, monsterID int, damage int
 			g.broadcastEventFunc(DamageEvent{
 				TargetMonsterID: monsterID,
 				Damage:          damage,
+				X:               m.x,
+				Y:               m.y,
 			})
 
 			if m.hp == 0 {
@@ -827,6 +847,13 @@ func (g *Game) spawnInitialObjects() {
 	for _, obj := range spawnLayer.Objects {
 		var kind string
 		var state string
+		
+		// Parse properties first for all object types
+		propsMap := make(map[string]interface{})
+		for _, prop := range obj.Properties {
+			propsMap[prop.Name] = prop.Value
+		}
+		
 		switch obj.Type {
 		case "chest":
 			kind = objectKindChest
@@ -840,13 +867,85 @@ func (g *Game) spawnInitialObjects() {
 		case "trap_spikes":
 			kind = objectKindTrapSpikes
 			state = "ready"
+			
+			// Create new trap instance using FSM
+			tileX := (int(obj.X) / tileSize) * tileSize
+			tileY := (int(obj.Y) / tileSize) * tileSize
+			
+			trapID := obj.Name
+			if trapID == "" {
+				trapID = "trap_" + string(rune(len(g.traps)+1))
+			}
+			
+			// Default trap parameters (percent-based timing)
+			// Default: 70% armed, 10% active (with rising animation), 20% cooldown
+			params := TrapParams{
+				ActivePercent:   10.0,
+				CooldownPercent: 20.0,
+				Damage:          18,
+				X:               tileX,
+				Y:               tileY,
+			}
+			
+			// Override from properties if provided
+			if activePercent, ok := propsMap["activePercent"].(float64); ok {
+				params.ActivePercent = activePercent
+			}
+			if cooldownPercent, ok := propsMap["cooldownPercent"].(float64); ok {
+				params.CooldownPercent = cooldownPercent
+			}
+			if damage, ok := propsMap["damage"].(float64); ok {
+				params.Damage = int(damage)
+			}
+			
+			// Validate and normalize percentages (total should not exceed 100%)
+			totalPercent := params.ActivePercent + params.CooldownPercent
+			if totalPercent > 100 {
+				// Scale down to fit 100%
+				scale := 100.0 / totalPercent
+				params.ActivePercent *= scale
+				params.CooldownPercent *= scale
+			}
+			// Armed percent is implicit: 100% - active% - cooldown%
+			
+			// Parse activator from properties
+			activator := TrapActivator{
+				Type:   ActivatorTimer,
+				Period: 4.0, // Default 4 second period
+				Phase:  0,
+			}
+			
+			if activatorType, ok := propsMap["activator"].(string); ok {
+				switch activatorType {
+				case "timer":
+					activator.Type = ActivatorTimer
+					if period, ok := propsMap["period"].(float64); ok {
+						activator.Period = period
+					}
+					// Parse phase - support both float and string
+					if phase, ok := propsMap["phase"].(float64); ok {
+						activator.Phase = phase
+					} else if phaseStr, ok := propsMap["phase"].(string); ok {
+						if phaseVal, err := strconv.ParseFloat(phaseStr, 64); err == nil {
+							activator.Phase = phaseVal
+						}
+					}
+				case "link":
+					activator.Type = ActivatorLink
+					if linkID, ok := propsMap["linkId"].(string); ok {
+						activator.LinkID = linkID
+					}
+				}
+			}
+			
+			trap := NewTrap(trapID, TrapTypeSpikes, params, activator)
+			g.traps[trapID] = trap
+			
+			// Store trapId in object properties for linking
+			propsMap["trapId"] = trapID
+			
 		default:
 			continue
-		}
-
-		propsMap := make(map[string]interface{})
-		for _, prop := range obj.Properties {
-			propsMap[prop.Name] = prop.Value
 		}
 
 		g.objects[uint64(len(g.objects)+1)] = &Object{

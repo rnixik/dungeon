@@ -4,6 +4,8 @@ type DamageEvent struct {
 	TargetPlayerId  uint64 `json:"targetPlayerId"`
 	TargetMonsterID int    `json:"targetMonsterId"`
 	Damage          int    `json:"damage"`
+	X               int    `json:"x"` // Position for damage text
+	Y               int    `json:"y"` // Position for damage text
 }
 
 type XPEvent struct {
@@ -61,6 +63,14 @@ type SpawnSpikeEvent struct {
 	X          int    `json:"x"`
 	Y          int    `json:"y"`
 	StartFrame string `json:"startFrame"`
+}
+
+type TrapStateChangedEvent struct {
+	TrapID string    `json:"trapId"`
+	State  TrapState `json:"state"`
+	X      int       `json:"x"`
+	Y      int       `json:"y"`
+	Frame  int       `json:"frame"`
 }
 
 type DemonFireballEvent struct {
