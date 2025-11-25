@@ -5,12 +5,13 @@ import (
 )
 
 const objectsPeriod = time.Second / 10
+const trapSize = 64
 
 func (g *Game) startObjectsLoop() {
 	ticker := time.NewTicker(objectsPeriod)
 	defer ticker.Stop()
 	deltaTime := objectsPeriod.Seconds()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -145,7 +146,7 @@ func (g *Game) tickTrigger(obj *Object) {
 func (g *Game) tickTraps(deltaTime float64) {
 	for _, trap := range g.traps {
 		stateChanged, newState := trap.Tick(deltaTime)
-		
+
 		if stateChanged {
 			// Broadcast state change to clients
 			g.broadcastEventFunc(TrapStateChangedEvent{
@@ -172,13 +173,13 @@ func (g *Game) checkTrapDamage(trap *Trap) {
 		}
 
 		// Check if player is on the trap tile
-		if pointInRect(player.x, player.y, trap.Params.X, trap.Params.Y, tileSize, tileSize) {
+		if pointInRect(player.x, player.y, trap.Params.X, trap.Params.Y, trapSize, trapSize) {
 			// Track if this player was already damaged by this trap activation
 			// to prevent damage on every tick
 			if trap.LastDamagedPlayers == nil {
 				trap.LastDamagedPlayers = make(map[uint64]bool)
 			}
-			
+
 			if !trap.LastDamagedPlayers[player.client.ID()] {
 				g.hitPlayerUnsafe(player.client.ID(), trap.Params.Damage)
 				trap.LastDamagedPlayers[player.client.ID()] = true

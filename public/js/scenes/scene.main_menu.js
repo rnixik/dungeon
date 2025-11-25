@@ -295,7 +295,12 @@ class MainMenu extends Phaser.Scene
 
     onIncomingMessage(json, evt)
     {
-        if (json.name !== 'CreaturesPosUpdateEvent' && json.name !== 'CreaturesStatsUpdateEvent') {
+        const spammingEvents = [
+            'CreaturesPosUpdateEvent',
+            'CreaturesStatsUpdateEvent',
+            'TrapStateChangedEvent'
+        ];
+        if (json.name && !spammingEvents.includes(json.name)) {
             console.log('INCOMING', json);
         }
 

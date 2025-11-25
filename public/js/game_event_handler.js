@@ -262,7 +262,7 @@ const GameEventHandler = {
     TrapStateChangedEvent(data) {
         const trapId = data.trapId;
         let trap = this.traps[trapId];
-        
+
         if (!trap) {
             // Create trap sprite if it doesn't exist
             trap = this.createTrapSprite(trapId, data.x, data.y, data.frame);
