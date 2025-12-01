@@ -316,6 +316,26 @@ const GameEventHandler = {
             debugGraphics.lineStyle(2, 0xff6600); // Orange color for traps
             debugGraphics.strokeRect(x, y, 32, 32); // 32x32 tile size
         }
+
+        const safeFrames = [4, 5, 6, 7, 8];
+        let canDamage = true;
+
+        this.physics.add.overlap(s, this.player, (s, p) => {
+            if (!canDamage) {
+                return;
+            }
+            const f = s.frame.name;
+            console.log('overlap with spikes', f);
+            if (!safeFrames.includes(f) && !this.isDead) {
+                canDamage = false;
+                this.sendGameCommand('HitPlayerCommand', {
+                    monsterId: -1,
+                    targetClientId: this.myClientId,
+                    kind: DAMAGE_KIND_SPIKE
+                });
+                setTimeout(() => canDamage = true, 1000);
+            }
+        }, null, this);
         
         const trap = {
             sprite: s,

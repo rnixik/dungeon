@@ -157,33 +157,5 @@ func (g *Game) tickTraps(deltaTime float64) {
 				Frame:  trap.GetCurrentFrame(),
 			})
 		}
-
-		// Check for damage if trap is active
-		if trap.IsActive() {
-			g.checkTrapDamage(trap)
-		}
-	}
-}
-
-func (g *Game) checkTrapDamage(trap *Trap) {
-	// Check collision with players
-	for _, player := range g.players {
-		if player.hp <= 0 {
-			continue
-		}
-
-		// Check if player is on the trap tile
-		if pointInRect(player.x, player.y, trap.Params.X, trap.Params.Y, trapSize, trapSize) {
-			// Track if this player was already damaged by this trap activation
-			// to prevent damage on every tick
-			if trap.LastDamagedPlayers == nil {
-				trap.LastDamagedPlayers = make(map[uint64]bool)
-			}
-
-			if !trap.LastDamagedPlayers[player.client.ID()] {
-				g.hitPlayerUnsafe(player.client.ID(), trap.Params.Damage)
-				trap.LastDamagedPlayers[player.client.ID()] = true
-			}
-		}
 	}
 }
