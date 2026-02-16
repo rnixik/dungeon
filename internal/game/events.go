@@ -101,6 +101,7 @@ type PlayerPosition struct {
 	Y         int    `json:"y"`
 	Direction string `json:"direction"`
 	IsMoving  bool   `json:"isMoving"`
+	IsDodging bool   `json:"isDodging"`
 }
 
 type MonsterPosition struct {

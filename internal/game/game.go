@@ -58,6 +58,7 @@ type Player struct {
 	y              int
 	direction      string
 	isMoving       bool
+	isDodging      bool
 }
 
 type Monster struct {
@@ -219,6 +220,15 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 		}
 		g.shootArrow(client.ID(), c.X, c.Y, c.Direction)
 		break
+	case "DodgeCommand":
+		var c DodgeCommand
+		if err := json.Unmarshal(eventDataJson, &c); err != nil {
+			log.Printf("cannot decode DodgeCommand: %v\n", err)
+
+			return
+		}
+		g.dodge(client.ID(), c.X, c.Y, c.Direction, true)
+		break
 	case "HitPlayerCommand":
 		var c HitPlayerCommand
 		if err := json.Unmarshal(eventDataJson, &c); err != nil {
@@ -281,7 +291,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 			"frame":  trap.GetCurrentFrame(),
 		})
 	}
-	
+
 	return map[string]interface{}{
 		"mapData":     g.gameMap,
 		"gameObjects": g.objects,
@@ -292,6 +302,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 				Y:         pl.y,
 				Direction: pl.direction,
 				IsMoving:  pl.isMoving,
+				IsDodging: pl.isDodging,
 			},
 			Class:       pl.class,
 			Nickname:    pl.client.Nickname(),
@@ -347,6 +358,7 @@ func (g *Game) StartMainLoop() {
 					Y:         pl.y,
 					Direction: pl.direction,
 					IsMoving:  pl.isMoving,
+					IsDodging: pl.isDodging,
 				})
 			}
 			m := make([]MonsterPosition, 0, len(g.monsters))
@@ -436,6 +448,18 @@ func (g *Game) movePlayerTo(clientID uint64, x int, y int, direction string, isM
 		p.y = y
 		p.direction = direction
 		p.isMoving = isMoving
+	}
+}
+
+func (g *Game) dodge(clientID uint64, x int, y int, direction string, isMoving bool) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	if p, ok := g.players[clientID]; ok {
+		p.x = x
+		p.y = y
+		p.direction = direction
+		p.isMoving = isMoving
+		p.isDodging = true
 	}
 }
 
@@ -847,13 +871,13 @@ func (g *Game) spawnInitialObjects() {
 	for _, obj := range spawnLayer.Objects {
 		var kind string
 		var state string
-		
+
 		// Parse properties first for all object types
 		propsMap := make(map[string]interface{})
 		for _, prop := range obj.Properties {
 			propsMap[prop.Name] = prop.Value
 		}
-		
+
 		switch obj.Type {
 		case "chest":
 			kind = objectKindChest
@@ -867,16 +891,16 @@ func (g *Game) spawnInitialObjects() {
 		case "trap_spikes":
 			kind = objectKindTrapSpikes
 			state = "ready"
-			
+
 			// Create new trap instance using FSM
 			tileX := (int(obj.X) / tileSize) * tileSize
 			tileY := (int(obj.Y) / tileSize) * tileSize
-			
+
 			trapID := obj.Name
 			if trapID == "" {
 				trapID = "trap_" + string(rune(len(g.traps)+1))
 			}
-			
+
 			// Default trap parameters (percent-based timing)
 			// Default: 70% armed, 10% active (with rising animation), 20% cooldown
 			params := TrapParams{
@@ -886,7 +910,7 @@ func (g *Game) spawnInitialObjects() {
 				X:               tileX,
 				Y:               tileY,
 			}
-			
+
 			// Override from properties if provided
 			if activePercent, ok := propsMap["activePercent"].(float64); ok {
 				params.ActivePercent = activePercent
@@ -897,7 +921,7 @@ func (g *Game) spawnInitialObjects() {
 			if damage, ok := propsMap["damage"].(float64); ok {
 				params.Damage = int(damage)
 			}
-			
+
 			// Validate and normalize percentages (total should not exceed 100%)
 			totalPercent := params.ActivePercent + params.CooldownPercent
 			if totalPercent > 100 {
@@ -907,14 +931,14 @@ func (g *Game) spawnInitialObjects() {
 				params.CooldownPercent *= scale
 			}
 			// Armed percent is implicit: 100% - active% - cooldown%
-			
+
 			// Parse activator from properties
 			activator := TrapActivator{
 				Type:   ActivatorTimer,
 				Period: 4.0, // Default 4 second period
 				Phase:  0,
 			}
-			
+
 			if activatorType, ok := propsMap["activator"].(string); ok {
 				switch activatorType {
 				case "timer":
@@ -937,13 +961,13 @@ func (g *Game) spawnInitialObjects() {
 					}
 				}
 			}
-			
+
 			trap := NewTrap(trapID, TrapTypeSpikes, params, activator)
 			g.traps[trapID] = trap
-			
+
 			// Store trapId in object properties for linking
 			propsMap["trapId"] = trapID
-			
+
 		default:
 			continue
 		}

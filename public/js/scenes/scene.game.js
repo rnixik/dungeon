@@ -54,6 +54,7 @@ class Game extends Phaser.Scene {
     cursors;
     joystick;
     buttonFire;
+    buttonDodge;
     buttonFs;
 
     key1;
@@ -100,12 +101,15 @@ class Game extends Phaser.Scene {
     isAttacking = false;
     lastAttackTime = 0;
     isMoving = false;
+    isDodging = false;
+    lastDodgeTime = 0;
     isDead = false;
     deadText = null;
     respawnButton = null;
 
     lastMoveSentTime = 0;
     moveCommandInterval = 1000 / 45; // ms
+    dodgeInterval = 2000;
 
     players = {};
     monsters = {};
@@ -203,7 +207,9 @@ class Game extends Phaser.Scene {
         // Input
         this.cursors = this.input.keyboard.createCursorKeys();
         const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-        spaceBar.on('down', () => this.attack());
+        spaceBar.on('down', () => this.dodge());
+        const enter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+        enter.on('down', () => this.attack());
 
         // Darkness RT + masks
         this._initDarknessRT();
@@ -256,32 +262,43 @@ class Game extends Phaser.Scene {
         const joy = this.joystick?.createCursorKeys?.() || {left:{isDown:false},right:{isDown:false},up:{isDown:false},down:{isDown:false}};
 
         this.player.body.setVelocity(0);
-        const velocity = this.player.getMovementVelocity();
-        this.player.isAttacking = this.isAttacking;
-
-        if (this.cursors.left.isDown || joy.left.isDown)  this.player.body.setVelocityX(-velocity);
-        else if (this.cursors.right.isDown || joy.right.isDown) this.player.body.setVelocityX(velocity);
-
-        if (this.cursors.up.isDown || joy.up.isDown)      this.player.body.setVelocityY(-velocity);
-        else if (this.cursors.down.isDown || joy.down.isDown) this.player.body.setVelocityY(velocity);
-
-        if (this.cursors.left.isDown || joy.left.isDown) {
-            this.direction='left';
-            this.isMoving = true;
-        } else if (this.cursors.right.isDown || joy.right.isDown) {
-            this.direction='right';
-            this.isMoving = true;
-        } else if (this.cursors.up.isDown || joy.up.isDown) {
-            this.direction='up';
-            this.isMoving = true;
-        } else if (this.cursors.down.isDown || joy.down.isDown) {
-            this.direction='down';
-            this.isMoving = true;
+        if (this.isDodging) {
+            const velocity = 300;
+            const vector = direction4xToVector(this.direction);
+            this.player.body.setVelocityX(vector.x * velocity);
+            this.player.body.setVelocityY(vector.y * velocity);
         } else {
-            this.isMoving = false;
+            const velocity = this.player.getMovementVelocity();
+            this.player.isAttacking = this.isAttacking;
+
+            if (this.cursors.left.isDown || joy.left.isDown)  this.player.body.setVelocityX(-velocity);
+            else if (this.cursors.right.isDown || joy.right.isDown) this.player.body.setVelocityX(velocity);
+
+            if (this.cursors.up.isDown || joy.up.isDown)      this.player.body.setVelocityY(-velocity);
+            else if (this.cursors.down.isDown || joy.down.isDown) this.player.body.setVelocityY(velocity);
+
+            // do not change the direction while dodging
+            if (this.cursors.left.isDown || joy.left.isDown) {
+                this.direction='left';
+                this.isMoving = true;
+            } else if (this.cursors.right.isDown || joy.right.isDown) {
+                this.direction='right';
+                this.isMoving = true;
+            } else if (this.cursors.up.isDown || joy.up.isDown) {
+                this.direction='up';
+                this.isMoving = true;
+            } else if (this.cursors.down.isDown || joy.down.isDown) {
+                this.direction='down';
+                this.isMoving = true;
+            } else {
+                this.isMoving = false;
+            }
         }
 
-        if (this.isAttacking) {
+        if (this.isDodging) {
+            // TODO: replace with dodge animation
+            this.player.playIdleAnimation(this.direction);
+        } else if (this.isAttacking) {
             this.player.playAttackAnimation(this.direction);
         } else if (this.isMoving) {
             this.player.playMoveAnimation(this.direction);
@@ -295,7 +312,7 @@ class Game extends Phaser.Scene {
         // Raycast dynamic shadows
         this.updateMaskRaycast();
 
-        if (this.isMoving && this.lastMoveSentTime + this.moveCommandInterval < time) {
+        if ((this.isMoving || this.isDodging) && this.lastMoveSentTime + this.moveCommandInterval < time) {
             this.sendGameCommand('PlayerMoveCommand', {
                 x: Math.round(this.player.x),
                 y: Math.round(this.player.y),
@@ -348,6 +365,29 @@ class Game extends Phaser.Scene {
             case 'rogue':
                 this.shotArrow();
         }
+    }
+
+    dodge() {
+        if (this.isDodging) {
+            return;
+        }
+        if (this.isAttacking) {
+            return;
+        }
+        if (this.time.now - this.lastDodgeTime < this.dodgeInterval) {
+            return;
+        }
+
+        this.lastDodgeTime = this.time.now;
+        this.isDodging = true;
+
+        this.time.delayedCall(400, () => {this.isDodging = false;}, [], this);
+
+        this.sendGameCommand('DodgeCommand', {
+            x: Math.round(this.player.x),
+            y: Math.round(this.player.y),
+            direction: this.direction,
+        });
     }
 
     fireballAttack() {
@@ -562,6 +602,7 @@ class Game extends Phaser.Scene {
     addMobileButtons () {
         if (this.joystick) this.joystick.destroy(true, true);
         if (this.buttonFire) this.buttonFire.destroy(true, true);
+        if (this.buttonDodge) this.buttonDodge.destroy(true, true);
         if (this.buttonFs) this.buttonFs.destroy(true, true);
 
         const joyStickConfig = {
@@ -582,6 +623,10 @@ class Game extends Phaser.Scene {
         this.buttonFire = this.add.sprite(this.scale.width - 85 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
         this.buttonFire.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
         this.buttonFire.on('pointerdown', () => this.attack());
+
+        this.buttonDodge = this.add.sprite(this.scale.width - 170 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
+        this.buttonDodge.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
+        this.buttonDodge.on('pointerdown', () => this.dodge());
 
         if (this.sys.game.device.fullscreen.available) {
             this.buttonFs = this.add.sprite(this.scale.width - 85 * this.uiScaleX, 40 * this.uiScaleY, 'controls', 'fullscreen1');
