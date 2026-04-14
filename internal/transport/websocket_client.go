@@ -125,18 +125,16 @@ func (c *WebSocketClient) writeLoop() {
 }
 
 func (c *WebSocketClient) SendEvent(event interface{}) {
-	c.mu.Lock()
-	isClosed := c.sendIsClosed
-	c.mu.Unlock()
-
-	if isClosed {
-		return
-	}
 	jsonDataMessage, _ := eventToJSON(event)
-	if c.send == nil {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.sendIsClosed || c.send == nil {
 		return
 	}
-	c.send <- jsonDataMessage
+	select {
+	case c.send <- jsonDataMessage:
+	default:
+	}
 }
 
 func (c *WebSocketClient) SendMessage(message []byte) {
@@ -157,21 +155,13 @@ func (c *WebSocketClient) Close() {
 		c.mu.Unlock()
 		return
 	}
-
 	c.sendIsClosed = true
+	close(c.send)
 	c.mu.Unlock()
 
-	err := c.conn.Close()
-	if err != nil {
+	if err := c.conn.Close(); err != nil {
 		log.Println("Error closing websocket connection:", err)
 	}
-
-	// delayed close to fix sending on closed channel panic
-	go func() {
-		time.Sleep(300 * time.Millisecond)
-		close(c.send)
-		log.Println("WebSocketClient send channel closed")
-	}()
 }
 
 func ServeWebSocketRequest(lobby *lobby.Lobby, w http.ResponseWriter, r *http.Request) {
@@ -184,7 +174,7 @@ func ServeWebSocketRequest(lobby *lobby.Lobby, w http.ResponseWriter, r *http.Re
 	client := &WebSocketClient{
 		lobby: lobby,
 		conn:  conn,
-		send:  make(chan []byte),
+		send:  make(chan []byte, 256),
 		mu:    sync.Mutex{},
 	}
 	client.lobby.RegisterTransportClient(client)
