@@ -22,6 +22,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
     {
         this.x = statData.x;
         this.y = statData.y;
+        this.setOrigin(0.5, 0.5);
         this.setScale(PLAYER_SCALE);
         this.setDepth(DEPTH_PLAYER);
         this.setMask(this.scene.mask);
@@ -136,9 +137,9 @@ class Player extends Phaser.Physics.Arcade.Sprite
             attackAnimsKey = `${this.kind}_attack`;
 
             if (direction === 'left') {
-                this.setAngle(0).setFlipX(true);
+                this.setFlipX(true);
             } else if (direction === 'right') {
-                this.setAngle(0).setFlipX(false);
+                this.setFlipX(false);
             }
         }
 
@@ -156,9 +157,9 @@ class Player extends Phaser.Physics.Arcade.Sprite
         }
 
         if (direction === 'left') {
-            this.setAngle(0).setFlipX(true);
+            this.setFlipX(true);
         } else if (direction === 'right') {
-            this.setAngle(0).setFlipX(false);
+            this.setFlipX(false);
         }
 
         let moveAnimsKey = `${this.kind}_walk_${direction}`;
@@ -184,6 +185,13 @@ class Player extends Phaser.Physics.Arcade.Sprite
     {
         if (this.isCorpse) {
             return;
+        }
+
+        // Handle sprite flipping for idle animation
+        if (direction === 'left') {
+            this.setFlipX(true);
+        } else if (direction === 'right') {
+            this.setFlipX(false);
         }
 
         let idleAnimsKey = `${this.kind}_idle_${direction}`;
