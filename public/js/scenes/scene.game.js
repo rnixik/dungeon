@@ -156,11 +156,20 @@ class Game extends Phaser.Scene {
         this.layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
         this.layerWalls.setCollisionByProperty({ collides: true });
 
+        // Build an overlay layer rendered above the player.
+        // For each south-facing wall face tile (extra_z), copy it and the solid wall
+        // row directly below it into this layer — so the face tile covers the player's
+        // mid-section and the solid wall row covers the player's legs when they stand
+        // next to the lower wall.  Tiles are NOT removed from layerWalls so collision
+        // is unaffected.
         const layerWallsUpper = this.map.createBlankLayer('upper_walls', tiles, 0, 0, this.map.width, this.map.height);
         this.layerWalls.forEachTile((tile) => {
             if (tile.properties.extra_z === true) {
-                layerWallsUpper.putTileAt(tile, tile.x, tile.y);
-                this.layerWalls.removeTileAt(tile.x, tile.y);
+                layerWallsUpper.putTileAt(tile.index, tile.x, tile.y);
+                const tileBelow = this.layerWalls.getTileAt(tile.x, tile.y + 1);
+                if (tileBelow && tileBelow.index > 0) {
+                    layerWallsUpper.putTileAt(tileBelow.index, tile.x, tile.y + 1);
+                }
             }
         });
         layerWallsUpper.setDepth(DEPTH_UPPER_WALLS);
