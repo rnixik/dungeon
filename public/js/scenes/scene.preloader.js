@@ -25,7 +25,7 @@ var sceneConfigPreloader = {
         this.load.spritesheet('bow', 'assets/skeleton_bow.png', { frameWidth: 40, frameHeight: 40 });
         this.load.image('arrow', 'assets/arrow.png');
         this.load.image('mask', 'assets/mask1.png?v=2');
-        this.load.atlas('controls', 'assets/controls.png', 'assets/controls.json');
+        this.load.atlas('ui', 'assets/ui.png', 'assets/ui.json');
         this.load.image('bullet', 'assets/bullet7.png');
         this.load.image('spinner', 'assets/spinner.png');
         this.load.image('lightning', 'assets/lightning.png');

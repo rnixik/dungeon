@@ -56,6 +56,9 @@ class Game extends Phaser.Scene {
     buttonFire;
     buttonDodge;
     buttonFs;
+    _joystickThumb;
+    _attackBtnDown = false;
+    _dodgeBtnDown = false;
 
     key1;
     key2;
@@ -253,7 +256,7 @@ class Game extends Phaser.Scene {
         // UI
         this.addKeysIcons();
         this.updateXpBar();
-        this.input.addPointer(1); // allow 2 simultaneous pointers for mobile
+        this.input.addPointer(2); // allow 3 simultaneous pointers (joystick + 2 buttons)
         this.addMobileButtons();
     }
 
@@ -305,6 +308,9 @@ class Game extends Phaser.Scene {
         } else {
             this.player.playIdleAnimation(this.direction);
         }
+
+        // Mobile button visual states
+        this.updateButtonStates();
 
         // Lighting (spotlights + bullet glow)
         this.updateMaskLight();
@@ -605,36 +611,65 @@ class Game extends Phaser.Scene {
         if (this.buttonDodge) this.buttonDodge.destroy(true, true);
         if (this.buttonFs) this.buttonFs.destroy(true, true);
 
-        const joyStickConfig = {
-            x: 85,
-            y: 600 * this.uiScaleY - 85,
-            radius: 100,
-            base: this.add.circle(0, 0, 80, 0x888888, 0.3).setDepth(DEPTH_UI),
-            thumb: this.add.circle(0, 0, 40, 0xcccccc, 0.3).setDepth(DEPTH_UI),
-            dir: '8dir'
-        };
-
-        this.joystick = this.plugins.get('rexvirtualjoystickplugin').add(this, joyStickConfig);
-        if (this.joystick.base?.setDepth)  this.joystick.base.setDepth(DEPTH_UI);
-        if (this.joystick.thumb?.setDepth) this.joystick.thumb.setDepth(DEPTH_UI);
-
         const btnScale = Math.max(this.uiScaleX, this.uiScaleY);
+        const joyX = 90 * this.uiScaleX;
+        const joyY = this.scale.height - 90 * this.uiScaleY;
 
-        this.buttonFire = this.add.sprite(this.scale.width - 85 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
-        this.buttonFire.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
-        this.buttonFire.on('pointerdown', () => this.attack());
+        const joyBase = this.add.image(0, 0, 'ui', 'joystick_dark_active')
+            .setDepth(DEPTH_UI).setScale(btnScale).setAlpha(0.8).setScrollFactor(0, 0);
+        this._joystickThumb = this.add.image(0, 0, 'ui', 'joystick_center_dot')
+            .setDepth(DEPTH_UI + 1).setScale(btnScale).setAlpha(0.9).setScrollFactor(0, 0);
 
-        this.buttonDodge = this.add.sprite(this.scale.width - 170 * this.uiScaleX, this.scale.height - 85 * this.uiScaleY, 'controls', 'fire2');
-        this.buttonDodge.setAlpha(0.3).setScrollFactor(0, 0).setScale(btnScale).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
-        this.buttonDodge.on('pointerdown', () => this.dodge());
+        this.joystick = this.plugins.get('rexvirtualjoystickplugin').add(this, {
+            x: joyX,
+            y: joyY,
+            radius: 70 * btnScale,
+            base: joyBase,
+            thumb: this._joystickThumb,
+            dir: '8dir'
+        });
 
-        if (this.sys.game.device.fullscreen.available) {
-            this.buttonFs = this.add.sprite(this.scale.width - 85 * this.uiScaleX, 40 * this.uiScaleY, 'controls', 'fullscreen1');
-            this.buttonFs.setAlpha(0.3).setScrollFactor(0, 0).setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
-            this.buttonFs.on('pointerup', () => {
-                if (this.scale.isFullscreen) this.scale.stopFullscreen();
-                else this.scale.startFullscreen();
-            });
+        this.buttonFire = this.add.image(
+            this.scale.width - 85 * this.uiScaleX,
+            this.scale.height - 85 * this.uiScaleY,
+            'ui', 'button_A_red_active'
+        );
+        this.buttonFire.setScrollFactor(0, 0).setScale(btnScale).setAlpha(0.85)
+            .setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
+        this.buttonFire.on('pointerdown', () => { this._attackBtnDown = true; this.attack(); });
+        this.buttonFire.on('pointerup',   () => { this._attackBtnDown = false; });
+        this.buttonFire.on('pointerout',  () => { this._attackBtnDown = false; });
+
+        this.buttonDodge = this.add.image(
+            this.scale.width - 180 * this.uiScaleX,
+            this.scale.height - 85 * this.uiScaleY,
+            'ui', 'button_D_blue_active'
+        );
+        this.buttonDodge.setScrollFactor(0, 0).setScale(btnScale).setAlpha(0.85)
+            .setInteractive({ useHandCursor: true }).setDepth(DEPTH_UI);
+        this.buttonDodge.on('pointerdown', () => { this._dodgeBtnDown = true; this.dodge(); });
+        this.buttonDodge.on('pointerup',   () => { this._dodgeBtnDown = false; });
+        this.buttonDodge.on('pointerout',  () => { this._dodgeBtnDown = false; });
+    }
+
+    updateButtonStates () {
+        if (!this.buttonFire || !this.buttonDodge) return;
+
+        if (this.isAttacking) {
+            this.buttonFire.setFrame('button_A_gray_inactive');
+        } else if (this._attackBtnDown) {
+            this.buttonFire.setFrame('button_A_gold_active');
+        } else {
+            this.buttonFire.setFrame('button_A_red_active');
+        }
+
+        const dodgeOnCooldown = this.time.now - this.lastDodgeTime < this.dodgeInterval;
+        if (dodgeOnCooldown) {
+            this.buttonDodge.setFrame('button_D_gray_inactive');
+        } else if (this._dodgeBtnDown) {
+            this.buttonDodge.setFrame('button_D_steel_active');
+        } else {
+            this.buttonDodge.setFrame('button_D_blue_active');
         }
     }
 
