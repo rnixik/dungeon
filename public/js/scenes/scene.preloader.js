@@ -33,8 +33,7 @@ var sceneConfigPreloader = {
         //this.load.image('archer', 'assets/archer.png');
         //this.load.image('skeleton', 'assets/archer.png');
 
-        this.load.spritesheet('demon', 'assets/demon/IDLE.png', { frameWidth: 79, frameHeight: 69 });
-        this.load.spritesheet('demon_attack', 'assets/demon/ATTACK.png', { frameWidth: 79, frameHeight: 69 });
+        this.load.spritesheet('demon', 'assets/demon_spritesheet.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('firespot', 'assets/firespot.png', { frameWidth: 128, frameHeight: 128 });
         this.load.spritesheet('key', 'assets/key.png', { frameWidth: 16, frameHeight: 35 });
         this.load.spritesheet('spikes', 'assets/MiniRouge/4 - Tiles/Tiles Animated/32x32/Spike2x-Sheet_N.png', { frameWidth: 32, frameHeight: 32 });
@@ -86,14 +85,14 @@ var sceneConfigPreloader = {
         });
         this.anims.create({
             key: 'demon',
-            frames: this.anims.generateFrameNumbers('demon', { start: 0, end: 3 }),
-            frameRate: 5,
+            frames: this.anims.generateFrameNumbers('demon', { start: 7, end: 13 }),
+            frameRate: 7,
             repeat: -1
         });
         this.anims.create({
             key: 'demon_attack',
-            frames: this.anims.generateFrameNumbers('demon_attack', { start: 0, end: 7 }),
-            frameRate: 8,
+            frames: this.anims.generateFrameNumbers('demon', { start: 0, end: 6 }),
+            frameRate: 7,
             repeat: -1
         });
         this.anims.create({

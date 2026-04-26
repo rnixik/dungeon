@@ -14,21 +14,21 @@ const GameEventHandler = {
     },
 
     SwordAttackEvent(data) {
-        const graphics = this.add.graphics();
-        graphics.lineStyle(2, 0xff0000);
-
-        graphics.beginPath();
-        graphics.moveTo(data.x, data.y);
-        graphics.lineTo(data.attackLineX, data.attackLineY);
-        graphics.closePath();
-        graphics.strokePath();
-
-        graphics.strokeRect(data.x - data.radius, data.y - data.radius, data.radius * 2, data.radius * 2);
-        graphics.strokeRect(data.attackLineX - data.radius, data.attackLineY - data.radius, data.radius * 2, data.radius * 2);
-
-        this.time.delayedCall(200, () => {
-            graphics.destroy();
-        });
+        // const graphics = this.add.graphics();
+        // graphics.lineStyle(2, 0xff0000);
+        //
+        // graphics.beginPath();
+        // graphics.moveTo(data.x, data.y);
+        // graphics.lineTo(data.attackLineX, data.attackLineY);
+        // graphics.closePath();
+        // graphics.strokePath();
+        //
+        // graphics.strokeRect(data.x - data.radius, data.y - data.radius, data.radius * 2, data.radius * 2);
+        // graphics.strokeRect(data.attackLineX - data.radius, data.attackLineY - data.radius, data.radius * 2, data.radius * 2);
+        //
+        // this.time.delayedCall(200, () => {
+        //     graphics.destroy();
+        // });
 
         const scale = data.radius / 32; // assuming original sprite size is 32x32
 
