@@ -12,7 +12,7 @@ const DEPTH_UPPER_WALLS = 500;
 const DEPTH_DARKNESS = 9000;
 const DEPTH_UI = 10000;
 
-const PLAYER_SCALE = 1.5;
+const PLAYER_SCALE = 1.6;
 
 // Global darkness opacity (0..1)
 const DARKNESS_ALPHA = 0.9;
