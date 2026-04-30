@@ -174,7 +174,7 @@ const GameEventHandler = {
     },
 
     DemonLightningEvent(data) {
-        new LightingGroup(data.monsterId, data.x, data.y, this);
+        new DemonLightningGroup(data.monsterId, data.x, data.y, data.targetX, data.targetY, this);
     },
 
     DamageEvent(data) {

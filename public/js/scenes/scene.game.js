@@ -41,6 +41,7 @@ const DAMAGE_KIND_FIREBALL = 'fireball';
 const DAMAGE_KIND_ARROW = 'arrow';
 const DAMAGE_KIND_EXPLOSION  = 'explosion';
 const DAMAGE_KIND_SPIKE = 'spike';
+const DAMAGE_KIND_LIGHTNING = 'lightning';
 
 // Phaser shortcuts
 const { Circle, Line, Point, Rectangle } = Phaser.Geom;

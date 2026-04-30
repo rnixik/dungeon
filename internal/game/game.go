@@ -41,6 +41,7 @@ const damageKindExplosion = "explosion"
 const damageKindBullet = "bullet"
 const damageKindFirespot = "firespot"
 const damageKindSpike = "spike"
+const damageKindLightning = "lightning"
 
 const xpPerMonsterKill = 250
 
@@ -1044,6 +1045,8 @@ func (g *Game) getDamageFromKind(kind string) int {
 		return 25
 	case damageKindFirespot:
 		return 20
+	case damageKindLightning:
+		return 30
 	default:
 		return 20
 	}

@@ -397,98 +397,151 @@ class AllProjectilesGroup
     }
 }
 
-class LightingGroup
+class DemonLightningGroup
 {
-    onBulletHitPlayer;
-    gameScene;
-
-    constructor (monsterId, x, y, scene)
+    constructor (monsterId, x, y, targetX, targetY, scene)
     {
-        const lightningLength = 280;
-        const lightningSpeed = 600;
+        const warmupMs = 800; // warning window before first bolt
 
-        const lightningL = scene.physics.add.sprite(x - lightningLength, y, 'lightning')
-            .setOrigin(0, 0.5)
-            .setFlipX(true)
-            .setAlpha(0.7)
-            .setDepth(DEPTH_PROJECTILES)
-            .setMask(scene.mask)
-            .setVelocity(-lightningSpeed, 0);
-        lightningL.monsterId = monsterId;
-        lightningL.isHorizontal = true;
-        scene.physics.add.overlap(lightningL, scene.player, this.bulletHitPlayer, null, this);
-        scene.physics.add.collider(lightningL, scene.layerWalls, this.bulletHitWall, null, this);
+        // Demon glows red for the entire warmup period
+        const demonSprite = scene.monsters && scene.monsters[monsterId];
+        if (demonSprite) {
+            demonSprite.setTint(0xff0000);
+            scene.time.delayedCall(warmupMs, () => {
+                if (demonSprite && !demonSprite.isCorpse) demonSprite.clearTint();
+            });
+        }
 
-        const lightningD = scene.physics.add.sprite(x, y + lightningLength, 'lightning_v')
-            .setOrigin(0.5, 1)
-            .setAlpha(0.7)
-            .setDepth(DEPTH_PROJECTILES)
-            .setMask(scene.mask)
-            .setVelocity(0, lightningSpeed);
-        lightningD.monsterId = monsterId;
-        lightningD.isVertical = true;
-        scene.physics.add.overlap(lightningD, scene.player, this.bulletHitPlayer, null, this);
-        scene.physics.add.collider(lightningD, scene.layerWalls, this.bulletHitWall, null, this);
+        // Glowing warning spot at target — pixel-art concentric squares, pulses during warmup
+        const spot = scene.add.graphics();
+        spot.fillStyle(0x440000, 0.30); spot.fillRect(-22, -22, 44, 44); // outer soft glow
+        spot.fillStyle(0x880000, 1.00); spot.fillRect(-14, -14, 28, 28); // ring 1
+        spot.fillStyle(0xbb1111, 1.00); spot.fillRect(-10, -10, 20, 20); // ring 2
+        spot.fillStyle(0xff3333, 1.00); spot.fillRect( -7,  -7, 14, 14); // ring 3
+        spot.fillStyle(0xff7777, 1.00); spot.fillRect( -4,  -4,  8,  8); // ring 4
+        spot.fillStyle(0xffbbbb, 1.00); spot.fillRect( -2,  -2,  4,  4); // ring 5
+        spot.fillStyle(0xffffff, 1.00); spot.fillRect( -1,  -1,  2,  2); // center
 
-        const lightningR = scene.physics.add.sprite(x + lightningLength, y, 'lightning')
-            .setOrigin(1, 0.5)
-            .setAlpha(0.7)
-            .setDepth(DEPTH_PROJECTILES)
-            .setMask(scene.mask)
-            .setVelocity(lightningSpeed, 0);
-        lightningR.monsterId = monsterId;
-        lightningR.isHorizontal = true;
-        scene.physics.add.overlap(lightningR, scene.player, this.bulletHitPlayer, null, this);
-        scene.physics.add.collider(lightningR, scene.layerWalls, this.bulletHitWall, null, this);
+        const spotCtr = scene.add.container(targetX, targetY, [spot])
+            .setDepth(DEPTH_PROJECTILES - 1)
+            .setAlpha(0)
+            .setMask(scene.mask);
 
-        const lightningU = scene.physics.add.sprite(x, y - lightningLength, 'lightning_v')
-            .setOrigin(0.5, 0)
-            .setFlipY(true)
-            .setAlpha(0.7)
-            .setDepth(DEPTH_PROJECTILES)
-            .setMask(scene.mask)
-            .setVelocity(0, -lightningSpeed);
-        lightningU.monsterId = monsterId;
-        lightningU.isVertical = true;
-        scene.physics.add.overlap(lightningU, scene.player, this.bulletHitPlayer, null, this);
-        scene.physics.add.collider(lightningU, scene.layerWalls, this.bulletHitWall, null, this);
+        // Fade in
+        scene.tweens.add({ targets: spotCtr, alpha: 1, duration: 200, ease: 'Cubic.easeOut' });
 
-        // destroy after some time
-        scene.time.delayedCall(10000, () => {
-            lightningL.destroy();
-            lightningD.destroy();
-            lightningR.destroy();
-            lightningU.destroy();
-        }, [], this);
+        // Pulse
+        const pulseTween = scene.tweens.add({
+            targets: spotCtr, scaleX: 1.35, scaleY: 1.35,
+            duration: 260, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
+        });
 
-        this.gameScene = scene;
-        this.onBulletHitPlayer = scene.onBulletHitPlayer;
+        // Burst and vanish just as the first bolt fires
+        scene.time.delayedCall(warmupMs - 100, () => {
+            pulseTween.stop();
+            scene.tweens.add({
+                targets: spotCtr, scaleX: 2.6, scaleY: 2.6, alpha: 0,
+                duration: 160, ease: 'Cubic.easeOut',
+                onComplete: () => spotCtr.destroy()
+            });
+        });
+
+        let damagedInThisAttack = false;
+
+        for (let i = 0; i < 5; i++) {
+            scene.time.delayedCall(warmupMs + i * 350, () => {
+                const tx = targetX + (Math.random() - 0.5) * 14;
+                const ty = targetY + (Math.random() - 0.5) * 14;
+                this._spawnBolt(x, y, tx, ty, scene);
+
+                scene.cameras.main?.shake(i === 0 ? 90 : 45, i === 0 ? 0.009 : 0.004);
+
+                // Damage: one hit maximum per 5-bolt sequence
+                if (!damagedInThisAttack && !scene.isDead && scene.player) {
+                    const dist = this._distToSegment(
+                        scene.player.x, scene.player.y,
+                        x, y, targetX, targetY
+                    );
+                    if (dist < 25) {
+                        damagedInThisAttack = true;
+                        scene.sendGameCommand('HitPlayerCommand', {
+                            monsterId: monsterId,
+                            targetClientId: scene.myClientId,
+                            kind: DAMAGE_KIND_LIGHTNING,
+                        });
+                    }
+                }
+            });
+        }
     }
 
-    bulletHitWall (bullet, wall)
+    _spawnBolt (x1, y1, x2, y2, scene)
     {
-        let props = {scaleX: 0};
-        if (bullet.isVertical) {
-            props = {scaleY: 0};
+        const points = this._generateLightningPoints(x1, y1, x2, y2);
+        const graphics = scene.add.graphics().setDepth(DEPTH_PROJECTILES).setMask(scene.mask);
+
+        // Layered glow: outer dark → mid → bright core → white-hot centre
+        const layers = [
+            { width: 9,  color: 0x550000, alpha: 0.22 },
+            { width: 5,  color: 0xaa0000, alpha: 0.55 },
+            { width: 2,  color: 0xff3333, alpha: 0.95 },
+            { width: 1,  color: 0xffaaaa, alpha: 1.0  },
+        ];
+        for (const { width, color, alpha } of layers) {
+            graphics.lineStyle(width, color, alpha);
+            graphics.beginPath();
+            graphics.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) graphics.lineTo(points[i].x, points[i].y);
+            graphics.strokePath();
         }
-        this.gameScene.tweens.add({
-            targets: bullet,
-            props: props,
-            duration: 200,
-            ease: 'Linear',
-            onComplete: () => {
-                bullet.destroy();
-            }
+
+        // Branches
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.hypot(dx, dy) || 1;
+        const numBranches = Phaser.Math.Between(1, 2);
+        for (let b = 0; b < numBranches; b++) {
+            const bpi = Phaser.Math.Between(2, points.length - 2);
+            const branchLen = len * (0.1 + Math.random() * 0.15);
+            const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * Math.PI * 0.6;
+            graphics.lineStyle(1, 0xff4444, 0.7);
+            graphics.beginPath();
+            graphics.moveTo(points[bpi].x, points[bpi].y);
+            graphics.lineTo(points[bpi].x + Math.cos(angle) * branchLen, points[bpi].y + Math.sin(angle) * branchLen);
+            graphics.strokePath();
+        }
+
+        scene.tweens.add({
+            targets: graphics,
+            alpha: 0,
+            duration: 220,
+            delay: 40,
+            ease: 'Cubic.easeIn',
+            onComplete: () => graphics.destroy()
         });
     }
 
-    bulletHitPlayer (bullet, player)
+    _generateLightningPoints (x1, y1, x2, y2, segments)
     {
-        if (bullet.alreadyHitPlayer) {
-            return;
+        segments = segments || 10;
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.hypot(dx, dy) || 1;
+        const perpX = -dy / len, perpY = dx / len;
+        const points = [{ x: x1, y: y1 }];
+        for (let i = 1; i < segments; i++) {
+            const t = i / segments;
+            const jitter = (Math.random() - 0.5) * len * 0.22;
+            points.push({ x: x1 + dx * t + perpX * jitter, y: y1 + dy * t + perpY * jitter });
         }
+        points.push({ x: x2, y: y2 });
+        return points;
+    }
 
-        bullet.alreadyHitPlayer = true;
-        this.onBulletHitPlayer.apply(this.gameScene, [bullet, player]);
+    _distToSegment (px, py, x1, y1, x2, y2)
+    {
+        const dx = x2 - x1, dy = y2 - y1;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+        const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+        return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
     }
 }

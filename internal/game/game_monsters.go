@@ -116,12 +116,23 @@ func (g *Game) intellectDemon(mon *Monster) {
 		}
 	}
 
-	if time.Since(mon.lightningStartedAt) >= demonAttackLightningCooldown {
+	var lightningTarget *Player
+	minLightningDist := 1000000
+	for _, p := range closestPlayers {
+		d := getDistance(mon.x, mon.y, p.x, p.y)
+		if d < minLightningDist {
+			minLightningDist = d
+			lightningTarget = p
+		}
+	}
+	if lightningTarget != nil && time.Since(mon.lightningStartedAt) >= demonAttackLightningCooldown {
 		mon.lightningStartedAt = time.Now()
 		g.broadcastEventFunc(DemonLightningEvent{
 			MonsterID: mon.id,
 			X:         mon.x,
 			Y:         mon.y,
+			TargetX:   lightningTarget.x,
+			TargetY:   lightningTarget.y,
 		})
 	}
 
