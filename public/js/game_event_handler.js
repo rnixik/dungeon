@@ -165,7 +165,7 @@ const GameEventHandler = {
     },
 
     FireCircleEvent(data) {
-        const numberOfProjectiles = 8;
+        const numberOfProjectiles = 16;
         for (let i = 0; i < numberOfProjectiles; i++) {
             const angle = i * (Math.PI * 2) / numberOfProjectiles;
             const vector = new Phaser.Math.Vector2(Math.cos(angle), Math.sin(angle));

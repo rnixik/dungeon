@@ -1,6 +1,6 @@
 class Bullet extends Phaser.Physics.Arcade.Sprite
 {
-    fire (clientId, monsterId, x, y, velocityVector, animationKey, rotationOffset, distance)
+    fire (clientId, monsterId, x, y, velocityVector, animationKey, rotationOffset, distance, useRotation, bodyOptions)
     {
         this.clientId = clientId;
         this.monsterId = monsterId;
@@ -8,13 +8,24 @@ class Bullet extends Phaser.Physics.Arcade.Sprite
         this.enableBody();
         this.body.reset(x, y);
 
+        if (bodyOptions) {
+            if (bodyOptions.size) {
+                this.body.setSize(bodyOptions.size.x, bodyOptions.size.y);
+            }
+            if (bodyOptions.offset) {
+                this.body.setOffset(bodyOptions.offset.x, bodyOptions.offset.y);
+            }
+        }
+
         this.setActive(true);
         this.setVisible(true);
 
-        const rotationAngle = Math.atan2(velocityVector.y, velocityVector.x);
-        this.setRotation(rotationAngle + rotationOffset);
-        if (rotationAngle > 90 && rotationAngle < 270) {
-            this.setFlipY(true);
+        if (useRotation) {
+            const rotationAngle = Math.atan2(velocityVector.y, velocityVector.x);
+            this.setRotation(rotationAngle + rotationOffset);
+            if (rotationAngle > 90 && rotationAngle < 270) {
+                this.setFlipY(true);
+            }
         }
 
         this.setVelocity(velocityVector.x, velocityVector.y);
@@ -135,6 +146,8 @@ class Bullets extends Phaser.Physics.Arcade.Group
     gameScene;
     animationKey;
     rotationOffset = 0;
+    useRotation = true;
+    bodyOptions = {};
 
     constructor (key, animationKey, createConfigOverride, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
@@ -153,6 +166,12 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
         if (createConfigOverride && createConfigOverride.rotationOffset) {
             this.rotationOffset = createConfigOverride.rotationOffset;
+        }
+        if (createConfigOverride && createConfigOverride.useRotation !== undefined) {
+            this.useRotation = createConfigOverride.useRotation;
+        }
+        if (createConfigOverride && createConfigOverride.bodyOptions) {
+            this.bodyOptions = createConfigOverride.bodyOptions;
         }
 
         this.sprites = this.createMultiple(config);
@@ -217,7 +236,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
     {
         const bullet = this.getFirstDead(true);
         if (bullet) {
-            bullet.fire(clientId, monsterId, x, y, vector, this.animationKey, this.rotationOffset, distance);
+            bullet.fire(clientId, monsterId, x, y, vector, this.animationKey, this.rotationOffset, distance, this.useRotation, this.bodyOptions);
         }
 
         return bullet;
@@ -276,7 +295,16 @@ class FirespotsGroup extends Bullets
 {
     constructor (scene, layerWalls, onBulletHitPlayer, onBulletHitMonster)
     {
-        super('firespot', 'firespot', {frameQuantity: 16}, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
+        super('firespot', 'firespot', {
+            frameQuantity: 16,
+            setScale: {x: 3, y: 3},
+            rotationOffset: - Math.PI / 2,
+            useRotation: false,
+            bodyOptions: {
+                size: {x: 15, y: 20},
+                offset: {x: 25, y: 35}
+            }
+        }, scene, layerWalls, onBulletHitPlayer, onBulletHitMonster);
     }
 }
 

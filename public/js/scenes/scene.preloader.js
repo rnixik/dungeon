@@ -34,7 +34,7 @@ var sceneConfigPreloader = {
         //this.load.image('skeleton', 'assets/archer.png');
 
         this.load.spritesheet('demon', 'assets/demon_spritesheet.png', { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('firespot', 'assets/firespot.png', { frameWidth: 128, frameHeight: 128 });
+        this.load.spritesheet('firespot', 'assets/fire_pillar.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('key', 'assets/key.png', { frameWidth: 16, frameHeight: 35 });
         this.load.spritesheet('spikes', 'assets/MiniRouge/4 - Tiles/Tiles Animated/32x32/Spike2x-Sheet_N.png', { frameWidth: 32, frameHeight: 32 });
 
@@ -229,7 +229,7 @@ var sceneConfigPreloader = {
         });
         this.anims.create({
             key: 'firespot',
-            frames: this.anims.generateFrameNumbers('firespot', { start: 0, end: 11}),
+            frames: this.anims.generateFrameNumbers('firespot', { start: 0, end: 7}),
             frameRate: 8,
             repeat: -1
         });
