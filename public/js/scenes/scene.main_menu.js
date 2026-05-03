@@ -90,12 +90,19 @@ class MainMenu extends Phaser.Scene
             add: true
         });
 
+        // Scales normalized so all sprites are 80px tall
+        // Knight frame: 38x40, Rogue frame: 30x34, Mage frame: 32x32
+        const knightBaseScale = 2.0;   // 40 * 2.0 = 80px
+        const rogueBaseScale  = 2.35;  // 34 * 2.35 ≈ 80px
+        const mageBaseScale   = 2.5;   // 32 * 2.5  = 80px
+        const hoverMult = 1.1;
+
         // Knight
         const knightSprite = this.add.sprite(centerX - spacing, startY, 'knight');
-        knightSprite.setScale(2.5);
+        knightSprite.setScale(knightBaseScale);
         knightSprite.play('knight_idle');
         knightSprite.setInteractive({useHandCursor: true});
-        
+
         const knightText = this.make.text({
             x: centerX - spacing,
             y: startY + 80,
@@ -110,24 +117,24 @@ class MainMenu extends Phaser.Scene
             },
             add: true
         });
-        
+
         knightSprite.on('pointerdown', () => {
             this.selectCharacter('knight');
             this.highlightSelected(knightSprite, knightText);
         });
         knightSprite.on('pointerover', () => {
-            knightSprite.setScale(2.7);
+            knightSprite.setScale(knightBaseScale * hoverMult);
         });
         knightSprite.on('pointerout', () => {
-            knightSprite.setScale(2.5);
+            knightSprite.setScale(knightBaseScale);
         });
 
         // Rogue (Archer)
         const rogueSprite = this.add.sprite(centerX, startY, 'rogue');
-        rogueSprite.setScale(2.5);
+        rogueSprite.setScale(rogueBaseScale);
         rogueSprite.play('rogue_idle');
         rogueSprite.setInteractive({useHandCursor: true});
-        
+
         const rogueText = this.make.text({
             x: centerX,
             y: startY + 80,
@@ -142,21 +149,21 @@ class MainMenu extends Phaser.Scene
             },
             add: true
         });
-        
+
         rogueSprite.on('pointerdown', () => {
             this.selectCharacter('rogue');
             this.highlightSelected(rogueSprite, rogueText);
         });
         rogueSprite.on('pointerover', () => {
-            rogueSprite.setScale(2.7);
+            rogueSprite.setScale(rogueBaseScale * hoverMult);
         });
         rogueSprite.on('pointerout', () => {
-            rogueSprite.setScale(2.5);
+            rogueSprite.setScale(rogueBaseScale);
         });
 
         // Mage
         const mageSprite = this.add.sprite(centerX + spacing, startY, 'mage');
-        mageSprite.setScale(2.5);
+        mageSprite.setScale(mageBaseScale);
         mageSprite.play('mage_idle');
         mageSprite.setInteractive({useHandCursor: true});
         
@@ -180,10 +187,10 @@ class MainMenu extends Phaser.Scene
             this.highlightSelected(mageSprite, mageText);
         });
         mageSprite.on('pointerover', () => {
-            mageSprite.setScale(2.7);
+            mageSprite.setScale(mageBaseScale * hoverMult);
         });
         mageSprite.on('pointerout', () => {
-            mageSprite.setScale(2.5);
+            mageSprite.setScale(mageBaseScale);
         });
 
         // Store references for highlighting
@@ -192,6 +199,10 @@ class MainMenu extends Phaser.Scene
             { sprite: rogueSprite, text: rogueText },
             { sprite: mageSprite, text: mageText }
         ];
+
+        this.selectionFrame = this.add.graphics();
+        this.selectionFrame.lineStyle(3, 0xffec99, 1);
+        this.selectionFrame.setVisible(false);
 
         // Start button
         const startButton = this.make.text({
@@ -211,6 +222,10 @@ class MainMenu extends Phaser.Scene
         
         startButton.on('pointerdown', () => {
             this.wsConnection.send(JSON.stringify({type: 'room', subType: 'startGame'}));
+            startButton.setText('Starting...');
+            startButton.disableInteractive();
+            this.loadingSpinner.setPosition(centerX, startY + 280);
+            this.loadingSpinner.setVisible(true);
         });
         startButton.on('pointerover', () => {
             startButton.setStyle({ color: '#ffffff' });
@@ -231,15 +246,20 @@ class MainMenu extends Phaser.Scene
 
     highlightSelected(selectedSprite, selectedText)
     {
-        // Reset all sprites
         this.characterSprites.forEach(char => {
             char.sprite.clearTint();
-            char.text.setAlpha(1);
         });
-        
-        // Highlight selected
-        selectedSprite.setTint(0xffff00);
-        selectedText.setAlpha(1);
+
+        const fw = 110;
+        const fh = 110;
+        this.selectionFrame.clear();
+        this.selectionFrame.lineStyle(3, 0xffec99, 1);
+        this.selectionFrame.strokeRoundedRect(
+            selectedSprite.x - fw / 2,
+            selectedSprite.y - fh / 2,
+            fw, fh, 8
+        );
+        this.selectionFrame.setVisible(true);
     }
 
     updateRoomPlayerList(playerList)
