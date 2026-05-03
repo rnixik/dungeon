@@ -48,3 +48,7 @@ type HitMonsterCommand struct {
 	MonsterID      int    `json:"monsterId"`
 	Kind           string `json:"kind"`
 }
+
+type UseItemCommand struct {
+	Kind string `json:"kind"`
+}

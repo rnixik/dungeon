@@ -60,6 +60,7 @@ type Player struct {
 	direction      string
 	isMoving       bool
 	isDodging      bool
+	inventory      []InventoryItem
 }
 
 type Monster struct {
@@ -125,6 +126,10 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 		y:           140,
 		direction:   "right",
 		isMoving:    false,
+		inventory: []InventoryItem{
+			{Kind: "healing_potion", Count: 3},
+			{Kind: "spikes", Count: 3},
+		},
 	}
 }
 
@@ -255,6 +260,14 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 	case "RespawnCommand":
 		g.respawnPlayer(client.ID())
 		break
+	case "UseItemCommand":
+		var c UseItemCommand
+		if err := json.Unmarshal(eventDataJson, &c); err != nil {
+			log.Printf("cannot decode UseItemCommand: %v\n", err)
+			return
+		}
+		g.useItem(client.ID(), c.Kind)
+		break
 	}
 }
 
@@ -318,6 +331,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 		"spikeEvents":       g.spikeEvents,
 		"updateTilesEvents": g.updateTilesEvents,
 		"traps":             trapsData,
+		"inventory":         pl.inventory,
 	}
 }
 
@@ -1071,5 +1085,67 @@ func (g *Game) respawnPlayer(clientID uint64) {
 			X:        p.x,
 			Y:        p.y,
 		})
+	}
+}
+
+func (g *Game) useItem(clientID uint64, kind string) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+
+	p, ok := g.players[clientID]
+	if !ok || p.hp <= 0 {
+		return
+	}
+
+	for i, item := range p.inventory {
+		if item.Kind != kind || item.Count <= 0 {
+			continue
+		}
+
+		p.inventory[i].Count--
+
+		switch kind {
+		case "healing_potion":
+			oldHp := p.hp
+			p.hp += 50
+			if p.hp > p.maxHp {
+				p.hp = p.maxHp
+			}
+			p.client.SendEvent(HealEvent{
+				ClientID: clientID,
+				Amount:   p.hp - oldHp,
+				HP:       p.hp,
+				MaxHP:    p.maxHp,
+			})
+
+		case "spikes":
+			trapID := fmt.Sprintf("item_spike_%d_%d", clientID, time.Now().UnixNano())
+			tileX := (p.x / tileSize) * tileSize
+			tileY := (p.y / tileSize) * tileSize
+			trap := NewTrap(trapID, TrapTypeSpikes, TrapParams{
+				ActivePercent:   30.0,
+				CooldownPercent: 20.0,
+				Damage:          18,
+				X:               tileX,
+				Y:               tileY,
+			}, TrapActivator{
+				Type:   ActivatorTimer,
+				Period: 2.0,
+			})
+			g.traps[trapID] = trap
+			g.broadcastEventFunc(TrapStateChangedEvent{
+				TrapID: trapID,
+				State:  trap.State,
+				X:      tileX,
+				Y:      tileY,
+				Frame:  trap.GetCurrentFrame(),
+			})
+		}
+
+		p.client.SendEvent(InventoryUpdateEvent{
+			ClientID:  clientID,
+			Inventory: p.inventory,
+		})
+		return
 	}
 }

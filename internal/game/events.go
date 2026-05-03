@@ -181,3 +181,20 @@ type PlayerRespawnEvent struct {
 	X        int    `json:"x"`
 	Y        int    `json:"y"`
 }
+
+type InventoryItem struct {
+	Kind  string `json:"kind"`
+	Count int    `json:"count"`
+}
+
+type HealEvent struct {
+	ClientID uint64 `json:"clientId"`
+	Amount   int    `json:"amount"`
+	HP       int    `json:"hp"`
+	MaxHP    int    `json:"maxHp"`
+}
+
+type InventoryUpdateEvent struct {
+	ClientID  uint64          `json:"clientId"`
+	Inventory []InventoryItem `json:"inventory"`
+}

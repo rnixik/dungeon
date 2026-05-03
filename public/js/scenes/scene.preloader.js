@@ -30,6 +30,7 @@ var sceneConfigPreloader = {
         this.load.image('spinner', 'assets/spinner.png');
         this.load.image('lightning', 'assets/lightning.png');
         this.load.image('lightning_v', 'assets/lightning_v.png');
+        this.load.image('potion_hp', 'assets/MiniRouge/1 - Decor/Decor/32x32/Potion HP2x.png');
         //this.load.image('archer', 'assets/archer.png');
         //this.load.image('skeleton', 'assets/archer.png');
 

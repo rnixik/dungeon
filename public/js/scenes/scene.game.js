@@ -124,6 +124,16 @@ class Game extends Phaser.Scene {
     nextLevelXp;
     xpBar;
 
+    inventory = [];
+    currentItemIndex = 0;
+    _itemFrame = null;
+    _itemArrowLeft = null;
+    _itemArrowRight = null;
+    _currentItemSprite = null;
+    _currentItemCountText = null;
+    _itemFrameX = 0;
+    _itemFrameY = 0;
+
     constructor () {
         super({ key: 'Game' });
 
@@ -235,6 +245,7 @@ class Game extends Phaser.Scene {
             this.addKeysIcons();
             this.updateXpBar();
             this.addMobileButtons();
+            this.addItemSelector();
         });
 
         // Debug polyline graphics for raycast mask
@@ -268,6 +279,8 @@ class Game extends Phaser.Scene {
         this.updateXpBar();
         this.input.addPointer(2); // allow 3 simultaneous pointers (joystick + 2 buttons)
         this.addMobileButtons();
+        this.inventory = gameData.inventory || [];
+        this.addItemSelector();
     }
 
     update (time, delta) {
@@ -688,6 +701,124 @@ class Game extends Phaser.Scene {
         if (this.bulletGlowTrail.length > BULLET_TRAIL_CAP) {
             this.bulletGlowTrail.splice(0, this.bulletGlowTrail.length - BULLET_TRAIL_CAP);
         }
+    }
+
+    addItemSelector() {
+        if (this._itemFrame) this._itemFrame.destroy();
+        if (this._itemArrowLeft) this._itemArrowLeft.destroy();
+        if (this._itemArrowRight) this._itemArrowRight.destroy();
+        if (this._currentItemSprite) { this._currentItemSprite.destroy(); this._currentItemSprite = null; }
+        if (this._currentItemCountText) { this._currentItemCountText.destroy(); this._currentItemCountText = null; }
+
+        const btnScale = Math.max(this.uiScaleX, this.uiScaleY);
+        const margin = 10;
+
+        const frameW = 80;
+        const arrowLW = 42;
+        const arrowRW = 40;
+        const frameH = 81;
+
+        const rightEdge = this.scale.width - margin;
+        const centerY = margin + (frameH * btnScale) / 2;
+
+        const arrowRightX = rightEdge - (arrowRW * btnScale) / 2;
+        const frameX = arrowRightX - (arrowRW * btnScale) / 2 - (frameW * btnScale) / 2;
+        const arrowLeftX = frameX - (frameW * btnScale) / 2 - (arrowLW * btnScale) / 2;
+
+        this._itemFrameX = frameX;
+        this._itemFrameY = centerY;
+
+        this._itemFrame = this.add.image(frameX, centerY, 'ui', 'item_frame')
+            .setScrollFactor(0, 0)
+            .setScale(btnScale)
+            .setDepth(DEPTH_UI)
+            .setInteractive({ useHandCursor: true });
+        this._itemFrame.on('pointerdown', () => this.useCurrentItem());
+
+        this._itemArrowLeft = this.add.image(arrowLeftX, centerY, 'ui', 'arrow_left_brown')
+            .setScrollFactor(0, 0)
+            .setScale(btnScale)
+            .setDepth(DEPTH_UI)
+            .setInteractive({ useHandCursor: true });
+        this._itemArrowLeft.on('pointerdown', () => this.selectPrevItem());
+
+        this._itemArrowRight = this.add.image(arrowRightX, centerY, 'ui', 'arrow_right_brown')
+            .setScrollFactor(0, 0)
+            .setScale(btnScale)
+            .setDepth(DEPTH_UI)
+            .setInteractive({ useHandCursor: true });
+        this._itemArrowRight.on('pointerdown', () => this.selectNextItem());
+
+        this._drawCurrentItemIcon();
+    }
+
+    _drawCurrentItemIcon() {
+        if (this._currentItemSprite) { this._currentItemSprite.destroy(); this._currentItemSprite = null; }
+        if (this._currentItemCountText) { this._currentItemCountText.destroy(); this._currentItemCountText = null; }
+
+        if (!this.inventory || this.inventory.length === 0) return;
+
+        const btnScale = Math.max(this.uiScaleX, this.uiScaleY);
+        const item = this.inventory[this.currentItemIndex];
+        if (!item) return;
+
+        const x = this._itemFrameX;
+        const y = this._itemFrameY;
+        const alpha = item.count > 0 ? 1 : 0.4;
+
+        switch (item.kind) {
+            case 'healing_potion':
+                this._currentItemSprite = this.add.sprite(x, y, 'potion_hp')
+                    .setScrollFactor(0, 0)
+                    .setScale(2 * btnScale)
+                    .setDepth(DEPTH_UI + 1)
+                    .setAlpha(alpha);
+                break;
+            case 'spikes':
+                this._currentItemSprite = this.add.sprite(x, y, 'spikes', 0)
+                    .setScrollFactor(0, 0)
+                    .setScale(1.5 * btnScale)
+                    .setDepth(DEPTH_UI + 1)
+                    .setAlpha(alpha);
+                break;
+        }
+
+        const frameW = 80;
+        const frameH = 81;
+        const countX = x + (frameW * btnScale) / 2 - 10;
+        const countY = y + (frameH * btnScale) / 2 - 10;
+        this._currentItemCountText = this.add.text(countX, countY, `${item.count}`, {
+            font: `${Math.max(10, Math.round(14 * btnScale))}px Arial`,
+            fill: item.count > 0 ? '#ffffff' : '#888888',
+            stroke: '#000000',
+            strokeThickness: 2
+        })
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI + 2)
+            .setOrigin(1, 1);
+    }
+
+    updateItemSelector() {
+        this._drawCurrentItemIcon();
+    }
+
+    selectPrevItem() {
+        if (!this.inventory || this.inventory.length === 0) return;
+        this.currentItemIndex = (this.currentItemIndex - 1 + this.inventory.length) % this.inventory.length;
+        this._drawCurrentItemIcon();
+    }
+
+    selectNextItem() {
+        if (!this.inventory || this.inventory.length === 0) return;
+        this.currentItemIndex = (this.currentItemIndex + 1) % this.inventory.length;
+        this._drawCurrentItemIcon();
+    }
+
+    useCurrentItem() {
+        if (!this.inventory || this.inventory.length === 0 || this.isDead) return;
+        const item = this.inventory[this.currentItemIndex];
+        if (!item || item.count <= 0) return;
+        this.sendGameCommand('UseItemCommand', { kind: item.kind });
     }
 }
 

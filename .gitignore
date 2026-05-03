@@ -12,3 +12,5 @@ version
 docker-compose.yml
 
 public/assets/dungeon1_.tmj
+
+public/js/phaser.js

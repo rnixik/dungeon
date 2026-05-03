@@ -365,5 +365,44 @@ const GameEventHandler = {
                 lvlUpText.destroy();
             });
         }
+    },
+
+    HealEvent(data) {
+        if (data.clientId !== this.myClientId) return;
+        this.player.hp = data.hp;
+        if (this.player.hpText) {
+            this.player.hpText.setText(data.hp + '/' + data.maxHp);
+        }
+        if (data.amount > 0) {
+            this.showHealText(this.player.x, this.player.y, data.amount);
+        }
+    },
+
+    InventoryUpdateEvent(data) {
+        if (data.clientId !== this.myClientId) return;
+        this.inventory = data.inventory;
+        this.updateItemSelector();
+    },
+
+    showHealText(x, y, amount) {
+        const healText = this.add.text(x, y - 10, `+${amount}`, {
+            font: '16px Arial',
+            fill: '#00ff00',
+            stroke: '#000000',
+            strokeThickness: 3
+        })
+        .setDepth(DEPTH_UI)
+        .setOrigin(0.5, 0.5);
+
+        this.tweens.add({
+            targets: healText,
+            y: y - 50,
+            alpha: 0,
+            duration: 800,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                healText.destroy();
+            }
+        });
     }
 }
