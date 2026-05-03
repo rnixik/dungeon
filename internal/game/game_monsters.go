@@ -195,15 +195,17 @@ func (g *Game) intellectSkeleton(mon *Monster) {
 		}
 	}
 
-	mon.isMoving = false
 	mon.isAttacking = false
 
 	if closestPlayer == nil {
+		mon.isMoving = false
+		mon.path = nil
 		return
 	}
 
 	if minDistance <= tileSize {
-		// Attack
+		mon.isMoving = false
+		mon.path = nil
 		mon.isAttacking = true
 		if mon.attackStartedAt.IsZero() {
 			mon.attackStartedAt = time.Now()
@@ -211,15 +213,31 @@ func (g *Game) intellectSkeleton(mon *Monster) {
 			mon.attackStartedAt = time.Time{}
 			g.hitPlayerUnsafe(closestPlayer.client.ID(), 30)
 		}
-	} else {
-		// Move towards player
+		return
+	}
+
+	// Pathfind towards player
+	goalTX := closestPlayer.x / tileSize
+	goalTY := closestPlayer.y / tileSize
+	if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
+		monTX := mon.x / tileSize
+		monTY := mon.y / tileSize
+		mon.path = g.gameMap.findPath(monTX, monTY, goalTX, goalTY)
+		mon.pathGoalTX = goalTX
+		mon.pathGoalTY = goalTY
+		if len(mon.path) > 0 {
+			mon.moveToX = mon.path[0].X
+			mon.moveToY = mon.path[0].Y
+		}
+	}
+
+	if len(mon.path) > 0 {
 		mon.isMoving = true
-		mon.moveToX = closestPlayer.x
-		mon.moveToY = closestPlayer.y
-		if minDistance <= tileSize*1.5 {
-			// start attack animation if close enough
+		if minDistance <= tileSize*2 {
 			mon.isAttacking = true
 		}
+	} else {
+		mon.isMoving = false
 	}
 }
 

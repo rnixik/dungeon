@@ -61,6 +61,10 @@ type MapTile struct {
 	Properties []MapProperty `json:"properties"`
 }
 
+type Point struct {
+	X, Y int
+}
+
 type Map struct {
 	Compression         int                    `json:"compressionlevel"`
 	Infinite            bool                   `json:"infinite"`
@@ -75,6 +79,9 @@ type Map struct {
 	Type                string                 `json:"type"`
 	Version             string                 `json:"version"`
 	TilesPropertiesHash map[int]map[string]any `json:"-"`
+	blockedGrid         []bool
+	gridWidth           int
+	gridHeight          int
 }
 
 func LoadMap(filename string) (*Map, error) {
@@ -97,6 +104,7 @@ func LoadMap(filename string) (*Map, error) {
 	}
 
 	m.buildAreaOptimizedCollisionRects()
+	m.buildBlockedGrid()
 
 	return &m, err
 }
@@ -325,6 +333,132 @@ func (m *Map) buildAreaOptimizedCollisionRects() {
 		}
 	}
 }
+
+func (m *Map) buildBlockedGrid() {
+	wallLayer := m.getLayerByName("walls")
+	if wallLayer == nil {
+		return
+	}
+	abyssLayer := m.getLayerByName("abyss")
+
+	m.gridWidth = wallLayer.Width
+	m.gridHeight = wallLayer.Height
+	m.blockedGrid = make([]bool, m.gridWidth*m.gridHeight)
+
+	for y := 0; y < m.gridHeight; y++ {
+		for x := 0; x < m.gridWidth; x++ {
+			idx := x + y*m.gridWidth
+			if idx >= len(wallLayer.Data) {
+				continue
+			}
+			if t := wallLayer.Data[idx]; t != 0 {
+				if props, ok := m.TilesPropertiesHash[t]; ok {
+					if v, ok2 := props["absorbs_light"].(bool); ok2 && v {
+						m.blockedGrid[idx] = true
+						continue
+					}
+				}
+			}
+			if abyssLayer != nil && idx < len(abyssLayer.Data) {
+				if t := abyssLayer.Data[idx]; t != 0 {
+					if props, ok := m.TilesPropertiesHash[t]; ok {
+						if v, ok2 := props["collides"].(bool); ok2 && v {
+							m.blockedGrid[idx] = true
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func (m *Map) isTileBlockedForMonster(tileX, tileY int) bool {
+	if tileX < 0 || tileX >= m.gridWidth || tileY < 0 || tileY >= m.gridHeight {
+		return true
+	}
+	idx := tileX + tileY*m.gridWidth
+	if idx >= len(m.blockedGrid) {
+		return true
+	}
+	return m.blockedGrid[idx]
+}
+
+// findPath runs A* from start tile to goal tile and returns a slice of pixel-center
+// waypoints (not including the start position). Returns nil if no path exists.
+func (m *Map) findPath(startTX, startTY, goalTX, goalTY int) []Point {
+	if startTX == goalTX && startTY == goalTY {
+		return nil
+	}
+
+	type node struct {
+		tx, ty, g, f int
+		parent       *node
+	}
+
+	heuristic := func(tx, ty int) int {
+		dx := tx - goalTX
+		dy := ty - goalTY
+		if dx < 0 {
+			dx = -dx
+		}
+		if dy < 0 {
+			dy = -dy
+		}
+		return dx + dy
+	}
+
+	open := []*node{{tx: startTX, ty: startTY, g: 0, f: heuristic(startTX, startTY)}}
+	closed := make(map[int]bool, 256)
+	key := func(tx, ty int) int { return tx + ty*m.gridWidth }
+
+	for len(open) > 0 {
+		bestIdx := 0
+		for i, n := range open {
+			if n.f < open[bestIdx].f {
+				bestIdx = i
+			}
+		}
+		cur := open[bestIdx]
+		open[bestIdx] = open[len(open)-1]
+		open = open[:len(open)-1]
+
+		k := key(cur.tx, cur.ty)
+		if closed[k] {
+			continue
+		}
+		closed[k] = true
+
+		if cur.tx == goalTX && cur.ty == goalTY {
+			var path []Point
+			for n := cur; n.tx != startTX || n.ty != startTY; n = n.parent {
+				path = append(path, Point{
+					X: n.tx*m.TileWidth + m.TileWidth/2,
+					Y: n.ty*m.TileHeight + m.TileHeight/2,
+				})
+			}
+			for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
+				path[i], path[j] = path[j], path[i]
+			}
+			return path
+		}
+
+		if len(closed) > 4096 {
+			break
+		}
+
+		for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+			nx, ny := cur.tx+d[0], cur.ty+d[1]
+			if m.isTileBlockedForMonster(nx, ny) || closed[key(nx, ny)] {
+				continue
+			}
+			g := cur.g + 1
+			open = append(open, &node{tx: nx, ty: ny, g: g, f: g + heuristic(nx, ny), parent: cur})
+		}
+	}
+
+	return nil
+}
+
 
 func (m *Map) getVisibilityColliders() (rects []Rectangle) {
 	visLayer := m.getLayerByName("collision-rects")

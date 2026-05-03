@@ -77,6 +77,9 @@ type Monster struct {
 	attackStartedAt     time.Time
 	moveToX             int
 	moveToY             int
+	path                []Point
+	pathGoalTX          int
+	pathGoalTY          int
 	firecircleStartedAt time.Time
 	lightningStartedAt  time.Time
 }
@@ -806,38 +809,50 @@ func (g *Game) moveMonstersUnsafe() {
 		moveSpeedPerTick := 2
 
 		if mon.isMoving {
+			newX := mon.x
+			newY := mon.y
+			newDir := mon.direction
+
 			if mon.x < mon.moveToX {
-				mon.x += moveSpeedPerTick
-				mon.direction = "right"
-				if mon.x > mon.moveToX {
-					mon.x = mon.moveToX
-					mon.isMoving = false
+				newX += moveSpeedPerTick
+				newDir = "right"
+				if newX > mon.moveToX {
+					newX = mon.moveToX
 				}
 			} else if mon.x > mon.moveToX {
-				mon.x -= moveSpeedPerTick
-				mon.direction = "left"
-				if mon.x < mon.moveToX {
-					mon.x = mon.moveToX
-					mon.isMoving = false
+				newX -= moveSpeedPerTick
+				newDir = "left"
+				if newX < mon.moveToX {
+					newX = mon.moveToX
 				}
 			}
 
 			if mon.y < mon.moveToY {
-				mon.y += moveSpeedPerTick
-				if mon.y > mon.moveToY {
-					mon.y = mon.moveToY
-					mon.isMoving = false
+				newY += moveSpeedPerTick
+				if newY > mon.moveToY {
+					newY = mon.moveToY
 				}
 			} else if mon.y > mon.moveToY {
-				mon.y -= moveSpeedPerTick
-				if mon.y < mon.moveToY {
-					mon.y = mon.moveToY
-					mon.isMoving = false
+				newY -= moveSpeedPerTick
+				if newY < mon.moveToY {
+					newY = mon.moveToY
 				}
 			}
 
+			mon.x = newX
+			mon.y = newY
+			mon.direction = newDir
+
 			if mon.x == mon.moveToX && mon.y == mon.moveToY {
-				mon.isMoving = false
+				if len(mon.path) > 0 {
+					mon.path = mon.path[1:]
+				}
+				if len(mon.path) > 0 {
+					mon.moveToX = mon.path[0].X
+					mon.moveToY = mon.path[0].Y
+				} else {
+					mon.isMoving = false
+				}
 			}
 		}
 	}

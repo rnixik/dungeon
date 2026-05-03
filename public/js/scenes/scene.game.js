@@ -71,6 +71,7 @@ class Game extends Phaser.Scene {
     map;
     layerFloor;
     layerWalls;
+    layerAbyss;
     layerDecor;
     projectiles;
     
@@ -164,8 +165,10 @@ class Game extends Phaser.Scene {
 
         this.layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0).setDepth(DEPTH_WALLS);
+        this.layerAbyss = this.map.createLayer('abyss', tiles, 0, 0).setDepth(DEPTH_WALLS);
         this.layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
         this.layerWalls.setCollisionByProperty({ collides: true });
+        this.layerAbyss.setCollisionByProperty({ collides: true });
 
         // Build an overlay layer rendered above the player.
         // For each south-facing wall face tile (extra_z), copy it and the solid wall
@@ -191,6 +194,7 @@ class Game extends Phaser.Scene {
         this.nextLevelXp = gameData.playerData.nextLevelXp;
 
         this.physics.add.collider(this.player, this.layerWalls);
+        this.physics.add.collider(this.player, this.layerAbyss);
 
         // Camera
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
