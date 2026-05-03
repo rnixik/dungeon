@@ -148,7 +148,6 @@ func (g *Game) tickTraps(deltaTime float64) {
 		stateChanged, newState := trap.Tick(deltaTime)
 
 		if stateChanged {
-			// Broadcast state change to clients
 			g.broadcastEventFunc(TrapStateChangedEvent{
 				TrapID: trap.ID,
 				State:  newState,
@@ -156,6 +155,19 @@ func (g *Game) tickTraps(deltaTime float64) {
 				Y:      trap.Params.Y,
 				Frame:  trap.GetCurrentFrame(),
 			})
+		}
+
+		if trap.IsActive() {
+			for _, mon := range g.monsters {
+				if mon.hp <= 0 || trap.LastDamagedMonsters[mon.id] {
+					continue
+				}
+				if mon.x >= trap.Params.X && mon.x < trap.Params.X+trapSize &&
+					mon.y >= trap.Params.Y && mon.y < trap.Params.Y+trapSize {
+					trap.LastDamagedMonsters[mon.id] = true
+					g.hitMonsterUnsafe(0, mon.id, trap.Params.Damage)
+				}
+			}
 		}
 	}
 }

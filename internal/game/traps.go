@@ -55,7 +55,8 @@ type Trap struct {
 	Activator          TrapActivator
 	StateTimer         float64 // Time remaining in current state
 	LoopTimer          float64 // For timer activators
-	LastDamagedPlayers map[uint64]bool // Players damaged in current activation cycle
+	LastDamagedPlayers  map[uint64]bool // Players damaged in current activation cycle
+	LastDamagedMonsters map[int]bool    // Monsters damaged in current activation cycle
 }
 
 // NewTrap creates a new trap instance
@@ -80,7 +81,8 @@ func NewTrap(id string, trapType TrapType, params TrapParams, activator TrapActi
 		Activator:  activator,
 		StateTimer: 0,
 		LoopTimer:  phase, // Start with normalized phase offset
-		LastDamagedPlayers: make(map[uint64]bool),
+		LastDamagedPlayers:  make(map[uint64]bool),
+		LastDamagedMonsters: make(map[int]bool),
 	}
 }
 
@@ -128,8 +130,9 @@ func (t *Trap) transitionToNextState() (stateChanged bool, newState TrapState) {
 	case TrapStateCooldown:
 		t.State = TrapStateArmed
 		t.StateTimer = 0
-		// Clear damaged players list when entering armed state (ready for next cycle)
+		// Clear damaged lists when entering armed state (ready for next cycle)
 		t.LastDamagedPlayers = make(map[uint64]bool)
+		t.LastDamagedMonsters = make(map[int]bool)
 	default:
 		return false, t.State
 	}
