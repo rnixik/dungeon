@@ -4464,18 +4464,6 @@
                  "width":0,
                  "x":699,
                  "y":138
-                }, 
-                {
-                 "height":0,
-                 "id":206,
-                 "name":"archer",
-                 "point":true,
-                 "rotation":0,
-                 "type":"",
-                 "visible":true,
-                 "width":0,
-                 "x":48,
-                 "y":486.666666666667
                 }],
          "opacity":1,
          "type":"objectgroup",
