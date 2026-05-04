@@ -3,6 +3,7 @@ const DEBUG = false;
 // Layering (z-index)
 const DEPTH_FLOOR = 0;
 const DEPTH_WALLS = 5;
+const DEPTH_DECOR = 800;
 const DEPTH_DEAD = 10;
 const DEPTH_OBJECTS = 20;
 const DEPTH_PLAYER = 30;
@@ -12,7 +13,7 @@ const DEPTH_UPPER_WALLS = 500;
 const DEPTH_DARKNESS = 9000;
 const DEPTH_UI = 10000;
 
-const PLAYER_SCALE = 1.0;
+const PLAYER_SCALE = 0.8;
 
 // Global darkness opacity (0..1)
 const DARKNESS_ALPHA = 0.9;
@@ -22,7 +23,7 @@ const LIGHT_DIAMETER    = 420;   // px
 const LIGHT_FEATHER     = 100;    // px soft edge
 const LIGHT_MASK_PLAYER = 'mask_player';
 
-// Bullet glow (soft)
+// Bullet glow (soft)DEPTH_DECOR
 const BULLET_DIAMETER     = 170; // px
 const BULLET_FEATHER      = 40;  // px
 const LIGHT_MASK_BULLET   = 'mask_bullet';
@@ -167,7 +168,7 @@ class Game extends Phaser.Scene {
         this.layerFloor = this.map.createLayer('floor', tiles, 0, 0).setDepth(DEPTH_FLOOR);
         this.layerWalls = this.map.createLayer('walls', tiles, 0, 0).setDepth(DEPTH_WALLS);
         this.layerAbyss = this.map.createLayer('abyss', tiles, 0, 0).setDepth(DEPTH_WALLS);
-        this.layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_WALLS);
+        this.layerDecor = this.map.createLayer('decor', tiles, 0, 0).setDepth(DEPTH_DECOR);
         this.layerWalls.setCollisionByProperty({ collides: true });
         this.layerAbyss.setCollisionByProperty({ collides: true });
 

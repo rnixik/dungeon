@@ -46,7 +46,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
-        this.body.setSize(30, 20).setOffset(0, 10);
+        this.body.setSize(64, 34).setOffset(0, 30);
     }
 
     preUpdate(time, delta)
@@ -55,7 +55,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
         if (this.hpText) {
             this.hpText.x = this.x;
-            this.hpText.y = this.y - 20;
+            this.hpText.y = this.y - 30;
         }
     }
 
