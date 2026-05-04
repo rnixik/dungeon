@@ -13,7 +13,7 @@ var sceneConfigPreloader = {
         this.load.image('tiles', 'assets/catacombs.png');
 
         this.load.spritesheet('mage', 'assets/mage_2.png', { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('knight', 'assets/knight_2_idle.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('knight', 'assets/knight_3_idle.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('knight_attack', 'assets/knight_2_attack.png', { frameWidth: 128, frameHeight: 64 });
         this.load.spritesheet('rogue', 'assets/archer_2.png', { frameWidth: 64, frameHeight: 64 });
 
