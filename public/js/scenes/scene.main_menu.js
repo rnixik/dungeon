@@ -92,9 +92,9 @@ class MainMenu extends Phaser.Scene
 
         // Scales normalized so all sprites are 80px tall
         // Knight frame: 38x40, Rogue frame: 30x34, Mage frame: 32x32
-        const knightBaseScale = 2.0;   // 40 * 2.0 = 80px
-        const rogueBaseScale  = 2.35;  // 34 * 2.35 ≈ 80px
-        const mageBaseScale   = 2.5;   // 32 * 2.5  = 80px
+        const knightBaseScale = 1.25;   // 40 * 2.0 = 80px
+        const rogueBaseScale  = 1.25;  // 34 * 2.35 ≈ 80px
+        const mageBaseScale   = 1.25;   // 32 * 2.5  = 80px
         const hoverMult = 1.1;
 
         // Knight

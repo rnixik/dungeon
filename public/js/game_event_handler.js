@@ -2,7 +2,7 @@ const DEBUG_TRAPS = false; // Set to true to show trap debug rectangles
 
 const GameEventHandler = {
     FireballEvent(data) {
-        this.projectiles.castPlayerFireball(data.clientId, data.x, data.y, data.direction, 500, data.distance)
+        this.projectiles.castPlayerFireball(data.clientId, data.x, data.y + 10, data.direction, 500, data.distance)
     },
 
     ShootArrowEvent(data) {

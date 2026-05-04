@@ -12,11 +12,10 @@ var sceneConfigPreloader = {
 
         this.load.image('tiles', 'assets/catacombs.png');
 
-        this.load.spritesheet('mage', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Hero01 Mage Idle2x-Sheet.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('knight', 'assets/MiniRouge/3 - Heroes/Hero 03 Knight/32x32/Hero03 Knight Idle-Sheet2x.png', { frameWidth: 38, frameHeight: 40 });
-        this.load.spritesheet('knight_attack', 'assets/MiniRouge/3 - Heroes/Hero 03 Knight/32x32/Hero03 Knight Atk-Sheet2x.png', { frameWidth: 38, frameHeight: 40 });
-        this.load.spritesheet('rogue', 'assets/MiniRouge/3 - Heroes/Hero 02 Archer/32x32/Hero02 Archer Idle-Sheet2x.png', { frameWidth: 30, frameHeight: 34 });
-        this.load.spritesheet('rogue_attack', 'assets/MiniRouge/3 - Heroes/Hero 02 Archer/32x32/Hero02 Archer Atk-Sheet2x.png', { frameWidth: 30, frameHeight: 34 });
+        this.load.spritesheet('mage', 'assets/mage_2.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('knight', 'assets/knight_2_idle.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('knight_attack', 'assets/knight_2_attack.png', { frameWidth: 128, frameHeight: 64 });
+        this.load.spritesheet('rogue', 'assets/archer_2.png', { frameWidth: 64, frameHeight: 64 });
 
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
@@ -52,32 +51,14 @@ var sceneConfigPreloader = {
 
     create: function() {
         this.anims.create({
-            key: 'mage_walk_left',
-            frames: this.anims.generateFrameNumbers('mage', { start: 0, end: 11 }),
-            frameRate: 15,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'mage_walk_right',
-            frames: this.anims.generateFrameNumbers('mage', { start: 0, end: 11 }),
-            frameRate: 15,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'mage_walk_up',
-            frames: this.anims.generateFrameNumbers('mage', { start: 13, end: 17 }),
-            frameRate: 15,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'mage_walk_down',
-            frames: this.anims.generateFrameNumbers('mage', { start: 24, end: 35 }),
-            frameRate: 15,
-            repeat: -1
-        });
-        this.anims.create({
             key: 'mage_idle',
-            frames: this.anims.generateFrameNumbers('mage', { start: 1, end: 11 }),
+            frames: this.anims.generateFrameNumbers('mage', { start: 0, end: 7 }),
+            frameRate: 5,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'mage_attack',
+            frames: this.anims.generateFrameNumbers('mage', { start: 11, end: 12 }),
             frameRate: 5,
             repeat: -1
         });
@@ -251,26 +232,26 @@ var sceneConfigPreloader = {
         });
         this.anims.create({
             key: 'knight_idle',
-            frames: this.anims.generateFrameNumbers('knight', { start: 0, end: 11 }),
+            frames: this.anims.generateFrameNumbers('knight', { start: 0, end: 6 }),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
             key: 'knight_attack',
-            frames: this.anims.generateFrameNumbers('knight_attack', { start: 0, end: 5 }),
-            frameRate: 6,
+            frames: this.anims.generateFrameNumbers('knight_attack', { start: 0, end: 7 }),
+            frameRate: 8,
             repeat: -1
         });
         this.anims.create({
             key: 'rogue_idle',
-            frames: this.anims.generateFrameNumbers('rogue', { start: 0, end: 11 }),
+            frames: this.anims.generateFrameNumbers('rogue', { start: 0, end: 10 }),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
             key: 'rogue_attack',
-            frames: this.anims.generateFrameNumbers('rogue_attack', { start: 0, end: 9 }),
-            frameRate: 20,
+            frames: this.anims.generateFrameNumbers('rogue', { start: 11, end: 14 }),
+            frameRate: 8,
             repeat: -1
         });
         this.anims.create({

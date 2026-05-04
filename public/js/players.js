@@ -35,7 +35,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
         }
 
         this.initialTint = Number(statData.color)
-        this.setTint(this.initialTint);
+        // this.setTint(this.initialTint);
 
         this.id = statData.clientId;
         this.hp = statData.hp;
