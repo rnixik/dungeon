@@ -198,3 +198,16 @@ type InventoryUpdateEvent struct {
 	ClientID  uint64          `json:"clientId"`
 	Inventory []InventoryItem `json:"inventory"`
 }
+
+type FootprintPoint struct {
+	ClientID uint64 `json:"clientId"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+	Color    string `json:"color"`
+}
+
+type FootprintsEvent struct {
+	Points []FootprintPoint `json:"points"`
+}
+
+type FootprintsExpiredEvent struct{}

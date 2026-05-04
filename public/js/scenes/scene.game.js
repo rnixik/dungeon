@@ -127,6 +127,7 @@ class Game extends Phaser.Scene {
 
     inventory = [];
     currentItemIndex = 0;
+    footprintGraphics = [];
     _itemFrame = null;
     _itemArrowLeft = null;
     _itemArrowRight = null;
@@ -782,6 +783,13 @@ class Game extends Phaser.Scene {
                 this._currentItemSprite = this.add.sprite(x, y, 'spikes', 0)
                     .setScrollFactor(0, 0)
                     .setScale(1.5 * btnScale)
+                    .setDepth(DEPTH_UI + 1)
+                    .setAlpha(alpha);
+                break;
+            case 'scroll_of_footprints':
+                this._currentItemSprite = this.add.image(x, y, 'scroll_of_footprints')
+                    .setScrollFactor(0, 0)
+                    .setScale(2 * btnScale)
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;

@@ -59,8 +59,9 @@ type Player struct {
 	y              int
 	direction      string
 	isMoving       bool
-	isDodging      bool
-	inventory      []InventoryItem
+	isDodging             bool
+	inventory             []InventoryItem
+	footprintsActiveUntil time.Time
 }
 
 type Monster struct {
@@ -132,8 +133,14 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 		inventory: []InventoryItem{
 			{Kind: "healing_potion", Count: 3},
 			{Kind: "spikes", Count: 3},
+			{Kind: "scroll_of_footprints", Count: 1},
 		},
 	}
+}
+
+type positionSnapshot struct {
+	t      time.Time
+	points []FootprintPoint
 }
 
 type Game struct {
@@ -151,6 +158,7 @@ type Game struct {
 	spikeEvents        []SpawnSpikeEvent
 	updateTilesEvents  []UpdateTilesEvent
 	traps              map[string]*Trap
+	positionSnapshots  []positionSnapshot
 }
 
 func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map) *Game {
@@ -445,6 +453,39 @@ func (g *Game) StartMainLoop() {
 				Players:  p,
 				Monsters: m,
 			})
+
+			now := time.Now()
+
+			// Record position snapshot (all alive players including self)
+			snap := positionSnapshot{
+				t:      now,
+				points: make([]FootprintPoint, 0, len(g.players)),
+			}
+			for _, pl := range g.players {
+				if pl.hp > 0 {
+					snap.points = append(snap.points, FootprintPoint{
+						ClientID: pl.client.ID(),
+						X:        pl.x,
+						Y:        pl.y,
+						Color:    pl.color,
+					})
+				}
+			}
+			cutoff := now.Add(-60 * time.Second)
+			for len(g.positionSnapshots) > 0 && g.positionSnapshots[0].t.Before(cutoff) {
+				g.positionSnapshots = g.positionSnapshots[1:]
+			}
+			g.positionSnapshots = append(g.positionSnapshots, snap)
+
+			// Send current footprints to players with active scroll
+			for _, pl := range g.players {
+				if pl.hp <= 0 || now.After(pl.footprintsActiveUntil) {
+					continue
+				}
+				if len(snap.points) > 0 {
+					pl.client.SendEvent(FootprintsEvent{Points: snap.points})
+				}
+			}
 
 			g.mutex.Unlock()
 		}
@@ -1131,6 +1172,28 @@ func (g *Game) useItem(clientID uint64, kind string) {
 				Amount:   p.hp - oldHp,
 				HP:       p.hp,
 				MaxHP:    p.maxHp,
+			})
+
+		case "scroll_of_footprints":
+			p.footprintsActiveUntil = time.Now().Add(30 * time.Second)
+			if len(g.positionSnapshots) > 0 {
+				histPoints := make([]FootprintPoint, 0, len(g.positionSnapshots)*len(g.players))
+				for _, snap := range g.positionSnapshots {
+					histPoints = append(histPoints, snap.points...)
+				}
+				if len(histPoints) > 0 {
+					p.client.SendEvent(FootprintsEvent{Points: histPoints})
+				}
+			}
+			expireClientID := clientID
+			time.AfterFunc(30*time.Second, func() {
+				g.mutex.Lock()
+				defer g.mutex.Unlock()
+				pl, ok := g.players[expireClientID]
+				if !ok || time.Now().Before(pl.footprintsActiveUntil) {
+					return
+				}
+				pl.client.SendEvent(FootprintsExpiredEvent{})
 			})
 
 		case "spikes":

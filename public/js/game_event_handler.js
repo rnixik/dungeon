@@ -384,6 +384,25 @@ const GameEventHandler = {
         this.updateItemSelector();
     },
 
+    FootprintsEvent(data) {
+        for (const point of data.points) {
+            const color = parseInt((point.color || '#ffffff').replace('#', ''), 16);
+            const g = this.add.graphics()
+                .fillStyle(color, 0.7)
+                .fillCircle(point.x, point.y, 5)
+                .setDepth(DEPTH_WALLS + 1)
+                .setMask(this.mask);
+            this.footprintGraphics.push(g);
+        }
+    },
+
+    FootprintsExpiredEvent(_data) {
+        for (const g of this.footprintGraphics) {
+            g.destroy();
+        }
+        this.footprintGraphics = [];
+    },
+
     showHealText(x, y, amount) {
         const healText = this.add.text(x, y - 10, `+${amount}`, {
             font: '16px Arial',
