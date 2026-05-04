@@ -33,6 +33,7 @@ var sceneConfigPreloader = {
         this.load.image('potion_hp', 'assets/MiniRouge/1 - Decor/Decor/32x32/Potion HP2x.png');
         this.load.image('scroll_of_footprints', 'assets/MiniRouge/1 - Decor/Decor/32x32/Scroll2x.png');
         this.load.image('scroll_of_xp', 'assets/MiniRouge/1 - Decor/Decor/32x32/Book Green2x.png');
+        this.load.image('boots_of_haste', 'assets/boots_of_haste.png');
         //this.load.image('archer', 'assets/archer.png');
         //this.load.image('skeleton', 'assets/archer.png');
 

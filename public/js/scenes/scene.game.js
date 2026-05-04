@@ -285,6 +285,7 @@ class Game extends Phaser.Scene {
         this.input.addPointer(2); // allow 3 simultaneous pointers (joystick + 2 buttons)
         this.addMobileButtons();
         this.inventory = gameData.inventory || [];
+        this.player.speedBoostPercent = gameData.speedBoostPercent || 0;
         this.addItemSelector();
     }
 
@@ -795,6 +796,13 @@ class Game extends Phaser.Scene {
                 break;
             case 'scroll_of_xp':
                 this._currentItemSprite = this.add.image(x, y, 'scroll_of_xp')
+                    .setScrollFactor(0, 0)
+                    .setScale(2 * btnScale)
+                    .setDepth(DEPTH_UI + 1)
+                    .setAlpha(alpha);
+                break;
+            case 'boots_of_haste':
+                this._currentItemSprite = this.add.image(x, y, 'boots_of_haste')
                     .setScrollFactor(0, 0)
                     .setScale(2 * btnScale)
                     .setDepth(DEPTH_UI + 1)

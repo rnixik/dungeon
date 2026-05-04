@@ -62,6 +62,7 @@ type Player struct {
 	isDodging             bool
 	inventory             []InventoryItem
 	footprintsActiveUntil time.Time
+	speedBoostPercent     int
 }
 
 type Monster struct {
@@ -135,6 +136,7 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 			{Kind: "spikes", Count: 3},
 			{Kind: "scroll_of_footprints", Count: 1},
 			{Kind: "scroll_of_xp", Count: 1},
+			{Kind: "boots_of_haste", Count: 1},
 		},
 	}
 }
@@ -344,6 +346,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 		"updateTilesEvents": g.updateTilesEvents,
 		"traps":             trapsData,
 		"inventory":         pl.inventory,
+		"speedBoostPercent": pl.speedBoostPercent,
 	}
 }
 
@@ -425,12 +428,13 @@ func (g *Game) StartMainLoop() {
 						Direction: pl.direction,
 						IsMoving:  pl.isMoving,
 					},
-					Class:    pl.class,
-					Nickname: pl.client.Nickname(),
-					Color:    pl.color,
-					Level:    pl.level,
-					MaxHP:    pl.maxHp,
-					HP:       pl.hp,
+					Class:             pl.class,
+					Nickname:          pl.client.Nickname(),
+					Color:             pl.color,
+					Level:             pl.level,
+					MaxHP:             pl.maxHp,
+					HP:                pl.hp,
+					SpeedBoostPercent: pl.speedBoostPercent,
 				})
 			}
 			m := make([]MonsterStats, 0, len(g.monsters))
@@ -1199,6 +1203,15 @@ func (g *Game) useItem(clientID uint64, kind string) {
 				}
 				pl.client.SendEvent(FootprintsExpiredEvent{})
 			})
+
+		case "boots_of_haste":
+			const maxSpeedBoost = 30
+			if p.speedBoostPercent < maxSpeedBoost {
+				p.speedBoostPercent += maxSpeedBoost
+				if p.speedBoostPercent > maxSpeedBoost {
+					p.speedBoostPercent = maxSpeedBoost
+				}
+			}
 
 		case "spikes":
 			trapID := fmt.Sprintf("item_spike_%d_%d", clientID, time.Now().UnixNano())

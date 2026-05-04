@@ -126,14 +126,15 @@ type EndGameEvent struct {
 
 type PlayerStats struct {
 	PlayerPosition
-	Class       string `json:"class"`
-	Nickname    string `json:"nickname"`
-	Color       string `json:"color"`
-	MaxHP       int    `json:"maxHp"`
-	HP          int    `json:"hp"`
-	Level       int    `json:"level"`
-	XP          int    `json:"xp"`
-	NextLevelXP int    `json:"nextLevelXp"`
+	Class             string `json:"class"`
+	Nickname          string `json:"nickname"`
+	Color             string `json:"color"`
+	MaxHP             int    `json:"maxHp"`
+	HP                int    `json:"hp"`
+	Level             int    `json:"level"`
+	XP                int    `json:"xp"`
+	NextLevelXP       int    `json:"nextLevelXp"`
+	SpeedBoostPercent int    `json:"speedBoostPercent"`
 }
 
 type MonsterStats struct {

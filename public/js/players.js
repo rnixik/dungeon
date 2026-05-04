@@ -219,6 +219,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
 class MyPlayer extends Player
 {
+    speedBoostPercent = 0;
+
     updateStatAndPosition(statData)
     {
         if (this.hp !== statData.hp) {
@@ -226,6 +228,9 @@ class MyPlayer extends Player
             if (this.hpText) {
                 this.hpText.setText(statData.hp + '/' + statData.maxHp);
             }
+        }
+        if (statData.speedBoostPercent !== undefined) {
+            this.speedBoostPercent = statData.speedBoostPercent;
         }
     }
 
@@ -258,6 +263,10 @@ class MyPlayer extends Player
                     velocity = 140;
                 }
                 break;
+        }
+
+        if (this.speedBoostPercent > 0 && velocity > 0) {
+            velocity = Math.round(velocity * (1 + this.speedBoostPercent / 100));
         }
 
         return velocity;
