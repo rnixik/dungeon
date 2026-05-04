@@ -134,6 +134,7 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 			{Kind: "healing_potion", Count: 3},
 			{Kind: "spikes", Count: 3},
 			{Kind: "scroll_of_footprints", Count: 1},
+			{Kind: "scroll_of_xp", Count: 1},
 		},
 	}
 }
@@ -1173,6 +1174,9 @@ func (g *Game) useItem(clientID uint64, kind string) {
 				HP:       p.hp,
 				MaxHP:    p.maxHp,
 			})
+
+		case "scroll_of_xp":
+			g.addXPToPlayerUnSafe(clientID, 500)
 
 		case "scroll_of_footprints":
 			p.footprintsActiveUntil = time.Now().Add(30 * time.Second)
