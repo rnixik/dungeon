@@ -265,7 +265,6 @@ class Game extends Phaser.Scene {
 
         // Apply (optional) geometric mask to world layers/actors (not UI)
         this.layerFloor.setMask(this.mask);
-        this.layerDecor.setMask(this.mask);
 
         // --- Build occluder rectangles from wall tiles ---
         const rectsByAreas = getCollisionRectsFromMapData(gameData.mapData);
