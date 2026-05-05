@@ -15,7 +15,7 @@ var sceneConfigPreloader = {
         this.load.spritesheet('mage', 'assets/mage_2.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('knight', 'assets/knight_3_idle.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('knight_attack', 'assets/knight_2_attack.png', { frameWidth: 128, frameHeight: 64 });
-        this.load.spritesheet('rogue', 'assets/archer_2.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('rogue', 'assets/archer_3.png', { frameWidth: 64, frameHeight: 64 });
 
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
