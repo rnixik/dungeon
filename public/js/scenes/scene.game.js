@@ -3,7 +3,7 @@ const DEBUG = false;
 // Layering (z-index)
 const DEPTH_FLOOR = 0;
 const DEPTH_WALLS = 5;
-const DEPTH_DECOR = 800;
+const DEPTH_DECOR = 8;
 const DEPTH_DEAD = 10;
 const DEPTH_OBJECTS = 20;
 const DEPTH_PLAYER = 30;
