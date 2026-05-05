@@ -35,7 +35,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
         }
 
         this.initialTint = Number(statData.color)
-        // this.setTint(this.initialTint);
+        this.setTint(0xffffff);
 
         this.id = statData.clientId;
         this.hp = statData.hp;
@@ -213,7 +213,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
         }
 
         this.setTint(0xff3333);
-        this.scene.time.delayedCall(100, () => this.setTint(this.initialTint), [], this);
+        this.scene.time.delayedCall(150, () => this.setTint(0xffffff), [], this);
     }
 }
 

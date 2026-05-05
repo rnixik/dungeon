@@ -8,20 +8,20 @@ class Monster extends Phaser.Physics.Arcade.Sprite
     scene;
     isCorpse = false;
 
-    constructor (kind, scene, statData, spriteKey, frame)
+    constructor (kind, scene, statData, spriteKey, frame, scale)
     {
         super(scene, statData.x, statData.y, spriteKey, frame);
 
         this.kind = kind;
         this.scene = scene;
-        this.spawn(statData);
+        this.spawn(statData, scale);
     }
 
-    spawn(statData)
+    spawn(statData, scale)
     {
         this.x = statData.x;
         this.y = statData.y;
-        this.setScale(2);
+        this.setScale(scale);
         this.setDepth(DEPTH_MONSTER);
 
         this.id = statData.id;
@@ -113,6 +113,12 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 
     playAttackAnimation(posData)
     {
+        if (posData.direction === 'left') {
+            this.setFlipX(true);
+        } else if (posData.direction === 'right') {
+            this.setFlipX(false);
+        }
+
         let attackAnimsKey = `${this.kind}_attack_${posData.direction}`;
         if (!this.scene.anims.exists(attackAnimsKey)) {
             attackAnimsKey = `${this.kind}_attack`;
@@ -127,6 +133,12 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 
     playMoveAnimation(posData)
     {
+        if (posData.direction === 'left') {
+            this.setFlipX(true);
+        } else if (posData.direction === 'right') {
+            this.setFlipX(false);
+        }
+
         let moveAnimsKey = `${this.kind}_walk_${posData.direction}`;
         if (!this.scene.anims.exists(moveAnimsKey)) {
             moveAnimsKey = `${this.kind}_walk`;
@@ -185,7 +197,7 @@ class Archer extends Monster
 
     constructor (scene, statData)
     {
-        super('archer', scene, statData, 'archer', 0);
+        super('archer', scene, statData, 'archer', 0, 2);
 
         if (this.isCorpse) {
             return;
@@ -228,7 +240,7 @@ class Skeleton extends Monster
 {
     constructor (scene, statData)
     {
-        super('skeleton', scene, statData, 'skeleton', 0);
+        super('skeleton', scene, statData, 'skeleton', 0, 0.8);
     }
 }
 
@@ -236,7 +248,7 @@ class Demon extends Monster
 {
     constructor (scene, statData)
     {
-        super('demon', scene, statData, 'demon', 0);
+        super('demon', scene, statData, 'demon', 0, 2);
         this.anims.play('demon', true);
     }
 }

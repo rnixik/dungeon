@@ -21,7 +21,7 @@ var sceneConfigPreloader = {
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('archer', 'assets/skeleton5.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('skeleton', 'assets/skeleton6.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('skeleton', 'assets/skeleton_3.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('bow', 'assets/skeleton_bow.png', { frameWidth: 40, frameHeight: 40 });
         this.load.image('arrow', 'assets/arrow.png');
         this.load.image('mask', 'assets/mask1.png?v=2');
@@ -136,56 +136,20 @@ var sceneConfigPreloader = {
             repeat: 0
         });
         this.anims.create({
-            key: 'skeleton_idle_down',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 0, end: 3}),
+            key: 'skeleton',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 0, end: 8}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
-            key: 'skeleton_walk_down',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 6, end: 11}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'skeleton_idle_up',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 12, end: 15}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'skeleton_walk_up',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 18, end: 23}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'skeleton_idle_left',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 24, end: 27}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'skeleton_walk_left',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 30, end: 35}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'skeleton_idle_right',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 36, end: 39}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'skeleton_walk_right',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 42, end: 47}),
+            key: 'skeleton_attack',
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 9, end: 15}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
             key: 'skeleton_dead',
-            frames: this.anims.generateFrameNumbers('skeleton', { start: 48, end: 53}),
+            frames: this.anims.generateFrameNumbers('skeleton', { start: 16, end: 27}),
             frameRate: 8,
             repeat: 0
         });
