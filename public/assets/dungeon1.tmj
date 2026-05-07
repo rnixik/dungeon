@@ -4464,6 +4464,18 @@
                  "width":0,
                  "x":699,
                  "y":138
+                }, 
+                {
+                 "height":0,
+                 "id":207,
+                 "name":"golem",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":218,
+                 "y":766
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -4483,7 +4495,7 @@
          "y":0
         }],
  "nextlayerid":10,
- "nextobjectid":207,
+ "nextobjectid":208,
  "orientation":"orthogonal",
  "renderorder":"left-up",
  "tiledversion":"1.11.2",

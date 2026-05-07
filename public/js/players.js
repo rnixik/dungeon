@@ -103,7 +103,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.isCorpse = false;
         this.enableBody(true, x, y, true, true);
         this.setDepth(DEPTH_PLAYER);
-        this.setTint(this.initialTint);
+        this.setTint(0xffffff);
     }
 
     updatePosition(posData)

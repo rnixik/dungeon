@@ -24,6 +24,7 @@ const commonUpdateTickPeriod = time.Second / 3
 const monsterKindArcher = "archer"
 const monsterKindSkeleton = "skeleton"
 const monsterKindDemon = "demon"
+const monsterKindGolem = "golem"
 
 const attackFireballCooldown = time.Second
 const attackShotArrowCooldown = time.Second / 4
@@ -853,6 +854,9 @@ func (g *Game) moveMonstersUnsafe() {
 		}
 
 		moveSpeedPerTick := 2
+		if mon.kind == monsterKindGolem {
+			moveSpeedPerTick = 1
+		}
 
 		if mon.isMoving {
 			newX := mon.x
@@ -921,6 +925,9 @@ func (g *Game) spawnInitialMonsters() {
 		case "skeleton":
 			kind = monsterKindSkeleton
 			hp = 200
+		case "golem":
+			kind = monsterKindGolem
+			hp = 1000
 		default:
 			continue
 		}

@@ -23,7 +23,7 @@ const LIGHT_DIAMETER    = 420;   // px
 const LIGHT_FEATHER     = 100;    // px soft edge
 const LIGHT_MASK_PLAYER = 'mask_player';
 
-// Bullet glow (soft)DEPTH_DECOR
+// Bullet glow (soft)
 const BULLET_DIAMETER     = 170; // px
 const BULLET_FEATHER      = 40;  // px
 const LIGHT_MASK_BULLET   = 'mask_bullet';

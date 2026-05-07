@@ -18,6 +18,8 @@ var sceneConfigPreloader = {
         this.load.spritesheet('knight_move', 'assets/knight_3_move.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('rogue', 'assets/archer_3.png', { frameWidth: 64, frameHeight: 64 });
 
+        this.load.spritesheet('golem', 'assets/golem.png', { frameWidth: 64, frameHeight: 64 });
+
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('archer', 'assets/skeleton5.png', { frameWidth: 32, frameHeight: 32 });
@@ -150,6 +152,30 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'skeleton_dead',
             frames: this.anims.generateFrameNumbers('skeleton', { start: 16, end: 27}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'golem',
+            frames: this.anims.generateFrameNumbers('golem', { start: 5, end: 11}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'golem_walk',
+            frames: this.anims.generateFrameNumbers('golem', { start: 19, end: 25}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'golem_attack',
+            frames: this.anims.generateFrameNumbers('golem', { start: 12, end: 18}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'golem_dead',
+            frames: this.anims.generateFrameNumbers('golem', { start: 0, end: 4}),
             frameRate: 8,
             repeat: 0
         });

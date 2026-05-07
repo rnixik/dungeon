@@ -19,6 +19,12 @@ const demonAttackCooldown = 2 * time.Second
 const demonAttackDelay = 300 * time.Millisecond
 const demonAttackDuration = time.Second
 
+const golemAttackCooldown = 4 * time.Second
+const golemAttackDelay = 500 * time.Millisecond // 5th frame at 8fps (4 × 125ms)
+const golemAttackDuration = 1000 * time.Millisecond
+const golemAttackRadius = 3 * tileSize
+const golemAttackDamage = 100
+
 func (g *Game) startIntellect() {
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
@@ -43,6 +49,8 @@ func (g *Game) startIntellect() {
 					g.intellectSkeleton(mon)
 				case monsterKindDemon:
 					g.intellectDemon(mon)
+				case monsterKindGolem:
+					g.intellectGolem(mon)
 				}
 
 			}
@@ -238,6 +246,86 @@ func (g *Game) intellectSkeleton(mon *Monster) {
 		}
 	} else {
 		mon.isMoving = false
+	}
+}
+
+func (g *Game) intellectGolem(mon *Monster) {
+	var closestPlayer *Player
+	minDistance := 1000000
+	for _, player := range g.players {
+		if player.hp <= 0 {
+			continue
+		}
+		distance := getDistance(mon.x, mon.y, player.x, player.y)
+		if distance < minDistance && distance <= 25*tileSize {
+			minDistance = distance
+			closestPlayer = player
+		}
+	}
+
+	mon.isAttacking = false
+
+	if closestPlayer == nil {
+		mon.isMoving = false
+		mon.path = nil
+		return
+	}
+
+	// Start or continue attack cycle
+	if mon.attackStartedAt.IsZero() {
+		if minDistance <= golemAttackRadius {
+			mon.attackStartedAt = time.Now()
+			mon.isAttacking = true
+			mon.attacked = false
+			mon.isMoving = false
+			mon.path = nil
+		}
+	} else if !mon.attacked && time.Since(mon.attackStartedAt) >= golemAttackDelay {
+		mon.attacked = true
+		mon.isAttacking = true
+		// Hit all players in radius
+		for _, player := range g.players {
+			if player.hp <= 0 {
+				continue
+			}
+			if getDistance(mon.x, mon.y, player.x, player.y) <= golemAttackRadius {
+				g.hitPlayerUnsafe(player.client.ID(), golemAttackDamage)
+			}
+		}
+		g.broadcastEventFunc(GolemSlamEvent{
+			MonsterID: mon.id,
+			X:         mon.x,
+			Y:         mon.y,
+			Radius:    golemAttackRadius,
+		})
+	} else if time.Since(mon.attackStartedAt) < golemAttackDuration {
+		mon.isAttacking = true
+	} else if time.Since(mon.attackStartedAt) >= golemAttackDuration {
+		mon.isAttacking = false
+	}
+
+	if time.Since(mon.attackStartedAt) >= golemAttackCooldown {
+		mon.attackStartedAt = time.Time{}
+		mon.attacked = false
+	}
+
+	// Move toward closest player when not in attack wind-up
+	if !mon.isAttacking {
+		goalTX := closestPlayer.x / tileSize
+		goalTY := closestPlayer.y / tileSize
+		if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
+			monTX := mon.x / tileSize
+			monTY := mon.y / tileSize
+			mon.path = g.gameMap.findPath(monTX, monTY, goalTX, goalTY)
+			mon.pathGoalTX = goalTX
+			mon.pathGoalTY = goalTY
+			if len(mon.path) > 0 {
+				mon.moveToX = mon.path[0].X
+				mon.moveToY = mon.path[0].Y
+			}
+		}
+		mon.isMoving = len(mon.path) > 0
+		mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
 	}
 }
 

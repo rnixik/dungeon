@@ -97,6 +97,13 @@ type DemonLightningEvent struct {
 	TargetY   int `json:"targetY"`
 }
 
+type GolemSlamEvent struct {
+	MonsterID int `json:"monsterId"`
+	X         int `json:"x"`
+	Y         int `json:"y"`
+	Radius    int `json:"radius"`
+}
+
 type PlayerPosition struct {
 	ClientID  uint64 `json:"clientId"`
 	X         int    `json:"x"`

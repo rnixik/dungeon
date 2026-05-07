@@ -177,6 +177,26 @@ const GameEventHandler = {
         new DemonLightningGroup(data.monsterId, data.x, data.y, data.targetX, data.targetY, this);
     },
 
+    GolemSlamEvent(data) {
+        this.cameras?.main?.shake(250, 0.025);
+        const g = this.add.graphics();
+        g.x = data.x;
+        g.y = data.y + 30;
+        g.lineStyle(4, 0xff8800, 1);
+        g.strokeCircle(0, 0, data.radius);
+        g.setDepth(DEPTH_PROJECTILES);
+        g.setMask(this.mask);
+        this.tweens.add({
+            targets: g,
+            alpha: 0,
+            scaleX: 1.5,
+            scaleY: 1.5,
+            duration: 500,
+            ease: 'Cubic.easeOut',
+            onComplete: () => g.destroy()
+        });
+    },
+
     DamageEvent(data) {
         const pId = data.targetPlayerId;
         const mId = data.targetMonsterId;
