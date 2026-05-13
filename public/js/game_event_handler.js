@@ -177,6 +177,46 @@ const GameEventHandler = {
         new DemonLightningGroup(data.monsterId, data.x, data.y, data.targetX, data.targetY, this);
     },
 
+    SpiderWebEvent(data) {
+        this.spawnWebArea(data.x, data.y);
+    },
+
+    spawnWebArea(x, y) {
+        const halfSize = 24; // 1.5 tiles (3x3 tiles total = 48px)
+        const size = halfSize * 2;
+        const duration = 5000;
+
+        const g = this.add.graphics();
+        g.fillStyle(0x888888, 0.45);
+        g.fillRect(x - halfSize, y - halfSize, size, size);
+        g.lineStyle(1, 0xcccccc, 0.8);
+        // Cross lines
+        g.lineBetween(x - halfSize, y, x + halfSize, y);
+        g.lineBetween(x, y - halfSize, x, y + halfSize);
+        // Diagonal lines
+        g.lineBetween(x - halfSize, y - halfSize, x + halfSize, y + halfSize);
+        g.lineBetween(x + halfSize, y - halfSize, x - halfSize, y + halfSize);
+        // Concentric rings
+        g.strokeRect(x - halfSize / 2, y - halfSize / 2, halfSize, halfSize);
+        g.setDepth(DEPTH_PROJECTILES - 1);
+        g.setMask(this.mask);
+
+        this.activeWebs = this.activeWebs || [];
+        const webEntry = { x, y, halfSize, expiresAt: Date.now() + duration, graphics: g };
+        this.activeWebs.push(webEntry);
+
+        this.tweens.add({
+            targets: g,
+            alpha: 0,
+            duration: duration,
+            ease: 'Linear',
+            onComplete: () => {
+                g.destroy();
+                this.activeWebs = this.activeWebs.filter(w => w !== webEntry);
+            }
+        });
+    },
+
     GolemSlamEvent(data) {
         this.cameras?.main?.shake(250, 0.025);
         const g = this.add.graphics();

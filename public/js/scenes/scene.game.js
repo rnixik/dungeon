@@ -295,6 +295,21 @@ class Game extends Phaser.Scene {
         // Movement
         const joy = this.joystick?.createCursorKeys?.() || {left:{isDown:false},right:{isDown:false},up:{isDown:false},down:{isDown:false}};
 
+        // Web slow: check if player overlaps any active web area
+        const now = Date.now();
+        let inWeb = false;
+        if (this.activeWebs) {
+            for (const web of this.activeWebs) {
+                if (web.expiresAt > now &&
+                    Math.abs(this.player.x - web.x) <= web.halfSize &&
+                    Math.abs(this.player.y - web.y) <= web.halfSize) {
+                    inWeb = true;
+                    break;
+                }
+            }
+        }
+        this.player.webSlowMultiplier = inWeb ? 0.3 : 1;
+
         this.player.body.setVelocity(0);
         if (this.isDodging) {
             const velocity = 300;

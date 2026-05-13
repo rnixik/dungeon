@@ -25,6 +25,7 @@ const monsterKindArcher = "archer"
 const monsterKindSkeleton = "skeleton"
 const monsterKindDemon = "demon"
 const monsterKindGolem = "golem"
+const monsterKindSpider = "spider"
 
 const attackFireballCooldown = time.Second
 const attackShotArrowCooldown = time.Second / 4
@@ -85,6 +86,7 @@ type Monster struct {
 	pathGoalTY          int
 	firecircleStartedAt time.Time
 	lightningStartedAt  time.Time
+	webStartedAt        time.Time
 }
 
 type Object struct {
@@ -928,6 +930,9 @@ func (g *Game) spawnInitialMonsters() {
 		case "golem":
 			kind = monsterKindGolem
 			hp = 1000
+		case "spider":
+			kind = monsterKindSpider
+			hp = 150
 		default:
 			continue
 		}

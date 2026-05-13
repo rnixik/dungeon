@@ -220,6 +220,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
 class MyPlayer extends Player
 {
     speedBoostPercent = 0;
+    webSlowMultiplier = 1;
 
     updateStatAndPosition(statData)
     {
@@ -267,6 +268,10 @@ class MyPlayer extends Player
 
         if (this.speedBoostPercent > 0 && velocity > 0) {
             velocity = Math.round(velocity * (1 + this.speedBoostPercent / 100));
+        }
+
+        if (this.webSlowMultiplier < 1 && velocity > 0) {
+            velocity = Math.round(velocity * this.webSlowMultiplier);
         }
 
         return velocity;

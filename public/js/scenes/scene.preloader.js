@@ -19,6 +19,7 @@ var sceneConfigPreloader = {
         this.load.spritesheet('rogue', 'assets/archer_3.png', { frameWidth: 64, frameHeight: 64 });
 
         this.load.spritesheet('golem', 'assets/golem.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('spider', 'assets/spider.png', { frameWidth: 64, frameHeight: 64 });
 
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
@@ -176,6 +177,24 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'golem_dead',
             frames: this.anims.generateFrameNumbers('golem', { start: 0, end: 4}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'spider',
+            frames: this.anims.generateFrameNumbers('spider', { start: 13, end: 21}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'spider_attack',
+            frames: this.anims.generateFrameNumbers('spider', { start: 1, end: 6}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'spider_dead',
+            frames: this.anims.generateFrameNumbers('spider', { start: 7, end: 12}),
             frameRate: 8,
             repeat: 0
         });

@@ -104,6 +104,12 @@ type GolemSlamEvent struct {
 	Radius    int `json:"radius"`
 }
 
+type SpiderWebEvent struct {
+	MonsterID int `json:"monsterId"`
+	X         int `json:"x"`
+	Y         int `json:"y"`
+}
+
 type PlayerPosition struct {
 	ClientID  uint64 `json:"clientId"`
 	X         int    `json:"x"`

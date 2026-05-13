@@ -185,6 +185,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             case 'skeleton': return new Skeleton(scene, statData);
             case 'demon': return new Demon(scene, statData);
             case 'golem': return new Golem(scene, statData);
+            case 'spider': return new Spider(scene, statData);
             default:
                 console.error('Unknown monster kind:', statData.kind);
                 return null;
@@ -251,6 +252,42 @@ class Demon extends Monster
     {
         super('demon', scene, statData, 'demon', 0, 2);
         this.anims.play('demon', true);
+    }
+}
+
+class Spider extends Monster
+{
+    _wasAttacking = false;
+
+    constructor (scene, statData)
+    {
+        super('spider', scene, statData, 'spider', 0, 2);
+        this.anims.play('spider', true);
+    }
+
+    playAttackAnimation(posData)
+    {
+        if (posData.direction === 'left') this.setFlipX(true);
+        else if (posData.direction === 'right') this.setFlipX(false);
+
+        if (!this._wasAttacking) {
+            this._wasAttacking = true;
+            this.anims.play('spider_attack', false);
+        }
+    }
+
+    playMoveAnimation(posData)
+    {
+        this._wasAttacking = false;
+        if (posData.direction === 'left') this.setFlipX(true);
+        else if (posData.direction === 'right') this.setFlipX(false);
+        this.anims.play('spider', true);
+    }
+
+    playIdleAnimation(posData)
+    {
+        this._wasAttacking = false;
+        this.anims.play('spider', true);
     }
 }
 

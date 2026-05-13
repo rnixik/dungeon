@@ -25,6 +25,12 @@ const golemAttackDuration = 1000 * time.Millisecond
 const golemAttackRadius = 3 * tileSize
 const golemAttackDamage = 100
 
+const spiderMeleeAttackDuration = 500 * time.Millisecond
+const spiderMeleeAttackDamage = 25
+const spiderWebCooldown = 10 * time.Second
+const spiderWebAttackDuration = 700 * time.Millisecond
+const spiderWebRange = 15 * tileSize
+
 func (g *Game) startIntellect() {
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
@@ -51,6 +57,8 @@ func (g *Game) startIntellect() {
 					g.intellectDemon(mon)
 				case monsterKindGolem:
 					g.intellectGolem(mon)
+				case monsterKindSpider:
+					g.intellectSpider(mon)
 				}
 
 			}
@@ -327,6 +335,81 @@ func (g *Game) intellectGolem(mon *Monster) {
 		mon.isMoving = len(mon.path) > 0
 		mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
 	}
+}
+
+func (g *Game) intellectSpider(mon *Monster) {
+	var closestPlayer *Player
+	minDistance := 1000000
+	for _, player := range g.players {
+		if player.hp <= 0 {
+			continue
+		}
+		distance := getDistance(mon.x, mon.y, player.x, player.y)
+		if distance < minDistance && distance <= 20*tileSize {
+			minDistance = distance
+			closestPlayer = player
+		}
+	}
+
+	mon.isAttacking = false
+
+	if closestPlayer == nil {
+		mon.isMoving = false
+		mon.path = nil
+		return
+	}
+
+	// Initialize web cooldown on first contact so spider waits before first throw
+	if mon.webStartedAt.IsZero() {
+		mon.webStartedAt = time.Now()
+	}
+
+	// Web throw with 10s cooldown
+	if minDistance <= spiderWebRange && time.Since(mon.webStartedAt) >= spiderWebCooldown {
+		mon.webStartedAt = time.Now()
+		g.broadcastEventFunc(SpiderWebEvent{
+			MonsterID: mon.id,
+			X:         closestPlayer.x,
+			Y:         closestPlayer.y,
+		})
+	}
+
+	// Play attack animation briefly after web throw
+	if !mon.webStartedAt.IsZero() && time.Since(mon.webStartedAt) < spiderWebAttackDuration {
+		mon.isAttacking = true
+	}
+
+	// Melee attack when adjacent
+	if minDistance <= tileSize {
+		mon.isMoving = false
+		mon.path = nil
+		mon.isAttacking = true
+		if mon.attackStartedAt.IsZero() {
+			mon.attackStartedAt = time.Now()
+		} else if time.Since(mon.attackStartedAt) >= spiderMeleeAttackDuration {
+			mon.attackStartedAt = time.Time{}
+			g.hitPlayerUnsafe(closestPlayer.client.ID(), spiderMeleeAttackDamage)
+		}
+		return
+	}
+	mon.attackStartedAt = time.Time{}
+
+	// Pathfind toward player
+	goalTX := closestPlayer.x / tileSize
+	goalTY := closestPlayer.y / tileSize
+	if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
+		monTX := mon.x / tileSize
+		monTY := mon.y / tileSize
+		mon.path = g.gameMap.findPath(monTX, monTY, goalTX, goalTY)
+		mon.pathGoalTX = goalTX
+		mon.pathGoalTY = goalTY
+		if len(mon.path) > 0 {
+			mon.moveToX = mon.path[0].X
+			mon.moveToY = mon.path[0].Y
+		}
+	}
+	mon.isMoving = len(mon.path) > 0
+	mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
 }
 
 func (g *Game) isVisible(x1, y1, x2, y2 int) bool {
