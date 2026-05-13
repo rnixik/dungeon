@@ -256,11 +256,13 @@ class Game extends Phaser.Scene {
 
         // Debug polyline graphics for raycast mask
         this.graphics = this.make.graphics({ lineStyle: { color: DEBUG_STROKE_COLOR, width: 0.5 } });
+        this.monsterGraphics = this.make.graphics({});
         if (DEBUG) {
             this.graphics.setAlpha(0.5);
             this.add.existing(this.graphics);
         } else {
             this.mask = new Phaser.Display.Masks.GeometryMask(this, this.graphics);
+            this.monsterMask = new Phaser.Display.Masks.GeometryMask(this, this.monsterGraphics);
         }
 
         // Apply (optional) geometric mask to world layers/actors (not UI)
@@ -585,7 +587,9 @@ class Game extends Phaser.Scene {
                 const edges    = area.edges;
                 const rays     = area.rays;
 
-                draw(this.graphics, calc(this.player, vertices, edges, rays), rays, edges);
+                const vis = calc(this.player, vertices, edges, rays);
+                draw(this.graphics, vis, rays, edges);
+                drawMonsterMask(this.monsterGraphics, vis, this.player.y);
 
                 return;
             }
@@ -879,6 +883,25 @@ function draw (graphics, vertices, rays, edges) {
         graphics.fillStyle(DEBUG_FILL_COLOR);
         for (const vert of vertices) graphics.fillPointShape(vert, 4);
     }
+}
+
+// Monster mask: same polygon but horizontal edges above the player are pushed up
+// so sprites are not clipped at north wall faces. Vertical edges (pillars, corners)
+// are left unchanged, keeping correct occlusion there.
+const MONSTER_MASK_NORTH_OFFSET = 40;
+function drawMonsterMask (graphics, vertices, playerY) {
+    if (!vertices || vertices.length < 3) { graphics.clear(); return; }
+    const n = vertices.length;
+    const shifts = new Array(n).fill(0);
+    for (let i = 0; i < n; i++) {
+        const a = vertices[i], b = vertices[(i + 1) % n];
+        if ((a.y + b.y) * 0.5 < playerY && Math.abs(a.y - b.y) < 8) {
+            shifts[i] = MONSTER_MASK_NORTH_OFFSET;
+            shifts[(i + 1) % n] = MONSTER_MASK_NORTH_OFFSET;
+        }
+    }
+    const expanded = vertices.map((v, i) => shifts[i] ? { x: v.x, y: v.y - shifts[i] } : v);
+    graphics.clear().fillStyle(FILL_COLOR).fillPoints(expanded, true);
 }
 
 function calc (source, vertices, edges, rays) {
