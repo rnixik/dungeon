@@ -225,3 +225,14 @@ type FootprintsEvent struct {
 }
 
 type FootprintsExpiredEvent struct{}
+
+type JellySplitEvent struct {
+	MonsterID int `json:"monsterID"`
+	X         int `json:"x"`
+	Y         int `json:"y"`
+}
+
+type JellyHitSlowEvent struct {
+	Duration    int `json:"duration"`
+	SlowPercent int `json:"slowPercent"`
+}

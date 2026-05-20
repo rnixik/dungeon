@@ -221,6 +221,8 @@ class MyPlayer extends Player
 {
     speedBoostPercent = 0;
     webSlowMultiplier = 1;
+    jellyHitSlowUntil = 0;
+    jellyAuraSlow = false;
 
     updateStatAndPosition(statData)
     {
@@ -270,8 +272,12 @@ class MyPlayer extends Player
             velocity = Math.round(velocity * (1 + this.speedBoostPercent / 100));
         }
 
-        if (this.webSlowMultiplier < 1 && velocity > 0) {
-            velocity = Math.round(velocity * this.webSlowMultiplier);
+        let slowMultiplier = 1;
+        if (this.webSlowMultiplier < slowMultiplier) slowMultiplier = this.webSlowMultiplier;
+        if (this.jellyHitSlowUntil > Date.now()) slowMultiplier = Math.min(slowMultiplier, 0.2);
+        if (this.jellyAuraSlow) slowMultiplier = Math.min(slowMultiplier, 0.8);
+        if (slowMultiplier < 1 && velocity > 0) {
+            velocity = Math.round(velocity * slowMultiplier);
         }
 
         return velocity;

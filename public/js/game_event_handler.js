@@ -463,6 +463,19 @@ const GameEventHandler = {
         this.footprintGraphics = [];
     },
 
+    JellySplitEvent(data) {
+        const jelly = this.monsters[data.monsterID];
+        if (jelly instanceof Jelly) {
+            jelly.triggerSplit(() => {
+                delete this.monsters[data.monsterID];
+            });
+        }
+    },
+
+    JellyHitSlowEvent(data) {
+        this.player.jellyHitSlowUntil = Date.now() + data.duration;
+    },
+
     showHealText(x, y, amount) {
         const healText = this.add.text(x, y - 10, `+${amount}`, {
             font: '16px Arial',

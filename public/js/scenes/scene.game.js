@@ -310,6 +310,22 @@ class Game extends Phaser.Scene {
         }
         this.player.webSlowMultiplier = inWeb ? 0.3 : 1;
 
+        // Jelly aura slow: 20% speed reduction within 3 tiles of any alive jelly
+        const JELLY_AURA_RADIUS = 48;
+        let inJellyAura = false;
+        for (const id in this.monsters) {
+            const m = this.monsters[id];
+            if ((m.kind === 'jelly' || m.kind === 'jelly_small') && !m.isCorpse) {
+                const dx = this.player.x - m.x;
+                const dy = this.player.y - m.y;
+                if (dx * dx + dy * dy <= JELLY_AURA_RADIUS * JELLY_AURA_RADIUS) {
+                    inJellyAura = true;
+                    break;
+                }
+            }
+        }
+        this.player.jellyAuraSlow = inJellyAura;
+
         this.player.body.setVelocity(0);
         if (this.isDodging) {
             const velocity = 300;

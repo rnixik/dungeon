@@ -26,6 +26,9 @@ const monsterKindSkeleton = "skeleton"
 const monsterKindDemon = "demon"
 const monsterKindGolem = "golem"
 const monsterKindSpider = "spider"
+const monsterKindJelly = "jelly"
+const monsterKindJellySmall = "jelly_small"
+const monsterKindJellyMicro = "jelly_micro"
 
 const attackFireballCooldown = time.Second
 const attackShotArrowCooldown = time.Second / 4
@@ -48,19 +51,19 @@ const damageKindLightning = "lightning"
 const xpPerMonsterKill = 250
 
 type Player struct {
-	client         lobby.ClientPlayer
-	class          string
-	lastAttackTime time.Time
-	color          string
-	level          int
-	xp             int
-	nextLevelXP    int
-	maxHp          int
-	hp             int
-	x              int
-	y              int
-	direction      string
-	isMoving       bool
+	client                lobby.ClientPlayer
+	class                 string
+	lastAttackTime        time.Time
+	color                 string
+	level                 int
+	xp                    int
+	nextLevelXP           int
+	maxHp                 int
+	hp                    int
+	x                     int
+	y                     int
+	direction             string
+	isMoving              bool
 	isDodging             bool
 	inventory             []InventoryItem
 	footprintsActiveUntil time.Time
@@ -72,6 +75,8 @@ type Monster struct {
 	kind                string
 	hp                  int
 	maxHP               int
+	damage              int
+	hitsTaken           int
 	x                   int
 	y                   int
 	direction           string
@@ -788,6 +793,7 @@ func (g *Game) hitMonsterUnsafe(originClientID uint64, monsterID int, damage int
 			if m.hp < 0 {
 				m.hp = 0
 			}
+			m.hitsTaken++
 
 			g.broadcastEventFunc(DamageEvent{
 				TargetMonsterID: monsterID,
@@ -796,13 +802,64 @@ func (g *Game) hitMonsterUnsafe(originClientID uint64, monsterID int, damage int
 				Y:               m.y,
 			})
 
-			if m.hp == 0 {
+			if (m.kind == monsterKindJelly || m.kind == monsterKindJellySmall) && m.hitsTaken >= 3 && m.hp > 0 {
+				g.splitJellyUnsafe(m, originClientID)
+			} else if m.hp == 0 {
 				g.addXPToPlayerUnSafe(originClientID, xpPerMonsterKill)
 			}
 
 			break
 		}
 	}
+}
+
+func (g *Game) splitJellyUnsafe(mon *Monster, originClientID uint64) {
+	miniHP := mon.hp / 2
+	if miniHP < 1 {
+		miniHP = 1
+	}
+	miniDamage := mon.damage / 2
+	if miniDamage < 5 {
+		miniDamage = 5
+	}
+
+	mon.hp = 0
+	g.addXPToPlayerUnSafe(originClientID, xpPerMonsterKill)
+
+	g.broadcastEventFunc(JellySplitEvent{
+		MonsterID: mon.id,
+		X:         mon.x,
+		Y:         mon.y,
+	})
+
+	childKind := monsterKindJellySmall
+	if mon.kind == monsterKindJellySmall {
+		childKind = monsterKindJellyMicro
+	}
+
+	// Delay spawning until split animation completes on client (13 frames @ 8fps ≈ 1625ms)
+	spawnX := mon.x
+	spawnY := mon.y
+	time.AfterFunc(1700*time.Millisecond, func() {
+		if g.isGameEnded() {
+			return
+		}
+		g.mutex.Lock()
+		defer g.mutex.Unlock()
+		offsets := []int{-tileSize, tileSize}
+		for _, offsetX := range offsets {
+			g.monsters = append(g.monsters, &Monster{
+				id:        len(g.monsters) + 1,
+				kind:      childKind,
+				hp:        miniHP,
+				maxHP:     miniHP,
+				damage:    miniDamage,
+				x:         spawnX + offsetX,
+				y:         spawnY,
+				direction: "left",
+			})
+		}
+	})
 }
 
 func (g *Game) addXPToPlayerUnSafe(clientID uint64, xp int) {
@@ -856,7 +913,7 @@ func (g *Game) moveMonstersUnsafe() {
 		}
 
 		moveSpeedPerTick := 2
-		if mon.kind == monsterKindGolem {
+		if mon.kind == monsterKindGolem || mon.kind == monsterKindJelly || mon.kind == monsterKindJellySmall || mon.kind == monsterKindJellyMicro {
 			moveSpeedPerTick = 1
 		}
 
@@ -933,10 +990,13 @@ func (g *Game) spawnInitialMonsters() {
 		case "spider":
 			kind = monsterKindSpider
 			hp = 150
+		case "jelly":
+			kind = monsterKindJelly
+			hp = 500
 		default:
 			continue
 		}
-		g.monsters = append(g.monsters, &Monster{
+		mon := &Monster{
 			id:        len(g.monsters) + 1,
 			kind:      kind,
 			hp:        hp,
@@ -945,7 +1005,11 @@ func (g *Game) spawnInitialMonsters() {
 			y:         int(obj.Y),
 			direction: "left",
 			isMoving:  false,
-		})
+		}
+		if kind == monsterKindJelly {
+			mon.damage = 20
+		}
+		g.monsters = append(g.monsters, mon)
 	}
 }
 

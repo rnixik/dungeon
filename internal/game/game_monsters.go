@@ -31,6 +31,10 @@ const spiderWebCooldown = 10 * time.Second
 const spiderWebAttackDuration = 700 * time.Millisecond
 const spiderWebRange = 15 * tileSize
 
+const jellyAttackDuration = 1500 * time.Millisecond
+const jellyAttackDelay = 400 * time.Millisecond
+const jellyHitSlowDuration = 3000 // ms, sent to client
+
 func (g *Game) startIntellect() {
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
@@ -59,6 +63,8 @@ func (g *Game) startIntellect() {
 					g.intellectGolem(mon)
 				case monsterKindSpider:
 					g.intellectSpider(mon)
+				case monsterKindJelly, monsterKindJellySmall, monsterKindJellyMicro:
+					g.intellectJelly(mon)
 				}
 
 			}
@@ -395,6 +401,68 @@ func (g *Game) intellectSpider(mon *Monster) {
 	mon.attackStartedAt = time.Time{}
 
 	// Pathfind toward player
+	goalTX := closestPlayer.x / tileSize
+	goalTY := closestPlayer.y / tileSize
+	if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
+		monTX := mon.x / tileSize
+		monTY := mon.y / tileSize
+		mon.path = g.gameMap.findPath(monTX, monTY, goalTX, goalTY)
+		mon.pathGoalTX = goalTX
+		mon.pathGoalTY = goalTY
+		if len(mon.path) > 0 {
+			mon.moveToX = mon.path[0].X
+			mon.moveToY = mon.path[0].Y
+		}
+	}
+	mon.isMoving = len(mon.path) > 0
+	mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
+}
+
+func (g *Game) intellectJelly(mon *Monster) {
+	var closestPlayer *Player
+	minDistance := 1000000
+	for _, player := range g.players {
+		if player.hp <= 0 {
+			continue
+		}
+		distance := getDistance(mon.x, mon.y, player.x, player.y)
+		if distance < minDistance && distance <= 20*tileSize {
+			minDistance = distance
+			closestPlayer = player
+		}
+	}
+
+	mon.isAttacking = false
+
+	if closestPlayer == nil {
+		mon.isMoving = false
+		mon.path = nil
+		return
+	}
+
+	if minDistance <= tileSize {
+		mon.isMoving = false
+		mon.path = nil
+		mon.isAttacking = true
+		if mon.attackStartedAt.IsZero() {
+			mon.attackStartedAt = time.Now()
+			mon.attacked = false
+		} else if !mon.attacked && time.Since(mon.attackStartedAt) >= jellyAttackDelay {
+			mon.attacked = true
+			g.hitPlayerUnsafe(closestPlayer.client.ID(), mon.damage)
+			closestPlayer.client.SendEvent(JellyHitSlowEvent{
+				Duration:    jellyHitSlowDuration,
+				SlowPercent: 80,
+			})
+		} else if time.Since(mon.attackStartedAt) >= jellyAttackDuration {
+			mon.attackStartedAt = time.Time{}
+			mon.attacked = false
+		}
+		return
+	}
+	mon.attackStartedAt = time.Time{}
+	mon.attacked = false
+
 	goalTX := closestPlayer.x / tileSize
 	goalTY := closestPlayer.y / tileSize
 	if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {

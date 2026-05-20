@@ -20,6 +20,7 @@ var sceneConfigPreloader = {
 
         this.load.spritesheet('golem', 'assets/golem.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('spider', 'assets/spider.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('jelly', 'assets/jelly.png', { frameWidth: 64, frameHeight: 64 });
 
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
@@ -195,6 +196,30 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'spider_dead',
             frames: this.anims.generateFrameNumbers('spider', { start: 7, end: 12}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'jelly',
+            frames: this.anims.generateFrameNumbers('jelly', { start: 26, end: 32}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'jelly_attack',
+            frames: this.anims.generateFrameNumbers('jelly', { start: 19, end: 25}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'jelly_dead',
+            frames: this.anims.generateFrameNumbers('jelly', { start: 15, end: 18}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'split',
+            frames: this.anims.generateFrameNumbers('jelly', { start: 1, end: 14}),
             frameRate: 8,
             repeat: 0
         });

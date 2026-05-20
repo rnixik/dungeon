@@ -186,6 +186,9 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             case 'demon': return new Demon(scene, statData);
             case 'golem': return new Golem(scene, statData);
             case 'spider': return new Spider(scene, statData);
+            case 'jelly': return new Jelly(scene, statData);
+            case 'jelly_small': return new JellySmall(scene, statData);
+            case 'jelly_micro': return new JellyMicro(scene, statData);
             default:
                 console.error('Unknown monster kind:', statData.kind);
                 return null;
@@ -322,5 +325,96 @@ class Golem extends Monster
     {
         this._wasAttacking = false;
         super.playIdleAnimation(posData);
+    }
+}
+
+class Jelly extends Monster
+{
+    _wasAttacking = false;
+    _isSplitting = false;
+
+    constructor (scene, statData, kind = 'jelly', scale = 1)
+    {
+        super(kind, scene, statData, 'jelly', 26, scale);
+        if (!this.isCorpse) {
+            this.anims.play('jelly', true);
+        }
+    }
+
+    triggerSplit(onComplete)
+    {
+        this._isSplitting = true;
+        this._splitOnComplete = onComplete;
+    }
+
+    convertToCorpse()
+    {
+        if (this.hpText) {
+            this.hpText.destroy();
+            this.hpText = null;
+        }
+        this.setDepth(DEPTH_DEAD);
+        this.disableBody();
+
+        if (this._isSplitting) {
+            this.anims.play('split', false);
+            this.once('animationcomplete', () => {
+                this.destroy();
+                if (this._splitOnComplete) this._splitOnComplete();
+            });
+        } else {
+            this.anims.play('jelly_dead', false);
+        }
+    }
+
+    playAttackAnimation(posData)
+    {
+        if (posData.direction === 'left') this.setFlipX(true);
+        else if (posData.direction === 'right') this.setFlipX(false);
+        if (!this._wasAttacking) {
+            this._wasAttacking = true;
+            this.anims.play('jelly_attack', false);
+        }
+    }
+
+    playMoveAnimation(posData)
+    {
+        this._wasAttacking = false;
+        if (posData.direction === 'left') this.setFlipX(true);
+        else if (posData.direction === 'right') this.setFlipX(false);
+        this.anims.play('jelly', true);
+    }
+
+    playIdleAnimation()
+    {
+        this._wasAttacking = false;
+        this.anims.play('jelly', true);
+    }
+}
+
+class JellySmall extends Jelly
+{
+    constructor (scene, statData)
+    {
+        super(scene, statData, 'jelly_small', 0.5);
+    }
+}
+
+class JellyMicro extends Jelly
+{
+    constructor (scene, statData)
+    {
+        super(scene, statData, 'jelly_micro', 0.3);
+    }
+
+    convertToCorpse()
+    {
+        if (this.hpText) {
+            this.hpText.destroy();
+            this.hpText = null;
+        }
+        this.setDepth(DEPTH_DEAD);
+        this.disableBody();
+        this.anims.play('jelly_dead', false);
     }
 }
