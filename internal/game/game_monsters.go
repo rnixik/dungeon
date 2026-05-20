@@ -35,6 +35,42 @@ const jellyAttackDuration = 1500 * time.Millisecond
 const jellyAttackDelay = 400 * time.Millisecond
 const jellyHitSlowDuration = 3000 // ms, sent to client
 
+// moveTowardPlayer updates pathfinding state and moves mon toward player.
+func (g *Game) moveTowardPlayer(mon *Monster, player *Player) {
+	goalTX := player.x / tileSize
+	goalTY := player.y / tileSize
+	if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
+		mon.path = g.gameMap.findPath(mon.x/tileSize, mon.y/tileSize, goalTX, goalTY)
+		mon.pathGoalTX = goalTX
+		mon.pathGoalTY = goalTY
+		if len(mon.path) > 0 {
+			mon.moveToX = mon.path[0].X
+			mon.moveToY = mon.path[0].Y
+		}
+	}
+	mon.isMoving = len(mon.path) > 0
+	mon.direction = getDirection(mon.x, mon.y, player.x, player.y)
+}
+
+// tickAttack advances the attack FSM: fires once at delay, holds animation until duration, resets at cooldown.
+func tickAttack(mon *Monster, delay, duration, cooldown time.Duration, onFire func()) {
+	elapsed := time.Since(mon.attackStartedAt)
+	if elapsed >= cooldown {
+		mon.attackStartedAt = time.Time{}
+		mon.attacked = false
+		return
+	}
+	if elapsed < duration {
+		mon.isAttacking = true
+	} else {
+		mon.isAttacking = false
+	}
+	if !mon.attacked && elapsed >= delay {
+		mon.attacked = true
+		onFire()
+	}
+}
+
 func (g *Game) startIntellect() {
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
@@ -82,7 +118,6 @@ func (g *Game) intellectArcher(mon *Monster) {
 		if player.hp <= 0 {
 			continue
 		}
-
 		distance := getDistance(mon.x, mon.y, player.x, player.y)
 		if distance < minDistance &&
 			distance <= 30*tileSize &&
@@ -96,25 +131,21 @@ func (g *Game) intellectArcher(mon *Monster) {
 		return
 	}
 
-	// Attack
 	if mon.attackStartedAt.IsZero() {
 		mon.attackStartedAt = time.Now()
 		mon.isAttacking = true
 		mon.attacked = false
 		mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
-	} else if time.Since(mon.attackStartedAt) >= archerAttackCooldown {
-		mon.attackStartedAt = time.Time{}
-	} else if time.Since(mon.attackStartedAt) >= archerAttackDuration {
-		mon.isAttacking = false
-	} else if time.Since(mon.attackStartedAt) >= archerAttackDelay && !mon.attacked {
-		mon.attacked = true
-		g.broadcastEventFunc(ArrowEvent{
-			ClientID:  0,
-			MonsterID: mon.id,
-			X1:        mon.x,
-			Y1:        mon.y,
-			X2:        closestPlayer.x,
-			Y2:        closestPlayer.y,
+	} else {
+		tickAttack(mon, archerAttackDelay, archerAttackDuration, archerAttackCooldown, func() {
+			g.broadcastEventFunc(ArrowEvent{
+				ClientID:  0,
+				MonsterID: mon.id,
+				X1:        mon.x,
+				Y1:        mon.y,
+				X2:        closestPlayer.x,
+				Y2:        closestPlayer.y,
+			})
 		})
 	}
 }
@@ -168,35 +199,25 @@ func (g *Game) intellectDemon(mon *Monster) {
 		})
 	}
 
-	// Attack
 	if mon.attackStartedAt.IsZero() {
 		if len(closestPlayers) == 0 {
 			return
 		}
-
-		if len(closestPlayers) > 0 {
-			mon.attackStartedAt = time.Now()
-			mon.isAttacking = true
-		}
-	} else if !mon.attacked && time.Since(mon.attackStartedAt) >= demonAttackDelay {
-		for _, closestPlayer := range closestPlayers {
-			g.broadcastEventFunc(DemonFireballEvent{
-				ClientID:  0,
-				MonsterID: mon.id,
-				X1:        mon.x,
-				Y1:        mon.y,
-				X2:        closestPlayer.x,
-				Y2:        closestPlayer.y,
-			})
-		}
-		if len(closestPlayers) > 0 {
-			mon.attacked = true
-		}
-	} else if time.Since(mon.attackStartedAt) >= demonAttackCooldown {
-		mon.attackStartedAt = time.Time{}
-		mon.attacked = false
-	} else if time.Since(mon.attackStartedAt) > demonAttackDuration {
-		mon.isAttacking = false
+		mon.attackStartedAt = time.Now()
+		mon.isAttacking = true
+	} else {
+		tickAttack(mon, demonAttackDelay, demonAttackDuration, demonAttackCooldown, func() {
+			for _, p := range closestPlayers {
+				g.broadcastEventFunc(DemonFireballEvent{
+					ClientID:  0,
+					MonsterID: mon.id,
+					X1:        mon.x,
+					Y1:        mon.y,
+					X2:        p.x,
+					Y2:        p.y,
+				})
+			}
+		})
 	}
 }
 
@@ -238,28 +259,9 @@ func (g *Game) intellectSkeleton(mon *Monster) {
 		return
 	}
 
-	// Pathfind towards player
-	goalTX := closestPlayer.x / tileSize
-	goalTY := closestPlayer.y / tileSize
-	if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
-		monTX := mon.x / tileSize
-		monTY := mon.y / tileSize
-		mon.path = g.gameMap.findPath(monTX, monTY, goalTX, goalTY)
-		mon.pathGoalTX = goalTX
-		mon.pathGoalTY = goalTY
-		if len(mon.path) > 0 {
-			mon.moveToX = mon.path[0].X
-			mon.moveToY = mon.path[0].Y
-		}
-	}
-
-	if len(mon.path) > 0 {
-		mon.isMoving = true
-		if minDistance <= tileSize*2 {
-			mon.isAttacking = true
-		}
-	} else {
-		mon.isMoving = false
+	g.moveTowardPlayer(mon, closestPlayer)
+	if mon.isMoving && minDistance <= tileSize*2 {
+		mon.isAttacking = true
 	}
 }
 
@@ -285,7 +287,6 @@ func (g *Game) intellectGolem(mon *Monster) {
 		return
 	}
 
-	// Start or continue attack cycle
 	if mon.attackStartedAt.IsZero() {
 		if minDistance <= golemAttackRadius {
 			mon.attackStartedAt = time.Now()
@@ -294,52 +295,27 @@ func (g *Game) intellectGolem(mon *Monster) {
 			mon.isMoving = false
 			mon.path = nil
 		}
-	} else if !mon.attacked && time.Since(mon.attackStartedAt) >= golemAttackDelay {
-		mon.attacked = true
-		mon.isAttacking = true
-		// Hit all players in radius
-		for _, player := range g.players {
-			if player.hp <= 0 {
-				continue
+	} else {
+		tickAttack(mon, golemAttackDelay, golemAttackDuration, golemAttackCooldown, func() {
+			for _, player := range g.players {
+				if player.hp <= 0 {
+					continue
+				}
+				if getDistance(mon.x, mon.y, player.x, player.y) <= golemAttackRadius {
+					g.hitPlayerUnsafe(player.client.ID(), golemAttackDamage)
+				}
 			}
-			if getDistance(mon.x, mon.y, player.x, player.y) <= golemAttackRadius {
-				g.hitPlayerUnsafe(player.client.ID(), golemAttackDamage)
-			}
-		}
-		g.broadcastEventFunc(GolemSlamEvent{
-			MonsterID: mon.id,
-			X:         mon.x,
-			Y:         mon.y,
-			Radius:    golemAttackRadius,
+			g.broadcastEventFunc(GolemSlamEvent{
+				MonsterID: mon.id,
+				X:         mon.x,
+				Y:         mon.y,
+				Radius:    golemAttackRadius,
+			})
 		})
-	} else if time.Since(mon.attackStartedAt) < golemAttackDuration {
-		mon.isAttacking = true
-	} else if time.Since(mon.attackStartedAt) >= golemAttackDuration {
-		mon.isAttacking = false
 	}
 
-	if time.Since(mon.attackStartedAt) >= golemAttackCooldown {
-		mon.attackStartedAt = time.Time{}
-		mon.attacked = false
-	}
-
-	// Move toward closest player when not in attack wind-up
 	if !mon.isAttacking {
-		goalTX := closestPlayer.x / tileSize
-		goalTY := closestPlayer.y / tileSize
-		if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
-			monTX := mon.x / tileSize
-			monTY := mon.y / tileSize
-			mon.path = g.gameMap.findPath(monTX, monTY, goalTX, goalTY)
-			mon.pathGoalTX = goalTX
-			mon.pathGoalTY = goalTY
-			if len(mon.path) > 0 {
-				mon.moveToX = mon.path[0].X
-				mon.moveToY = mon.path[0].Y
-			}
-		}
-		mon.isMoving = len(mon.path) > 0
-		mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
+		g.moveTowardPlayer(mon, closestPlayer)
 	}
 }
 
@@ -400,22 +376,7 @@ func (g *Game) intellectSpider(mon *Monster) {
 	}
 	mon.attackStartedAt = time.Time{}
 
-	// Pathfind toward player
-	goalTX := closestPlayer.x / tileSize
-	goalTY := closestPlayer.y / tileSize
-	if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
-		monTX := mon.x / tileSize
-		monTY := mon.y / tileSize
-		mon.path = g.gameMap.findPath(monTX, monTY, goalTX, goalTY)
-		mon.pathGoalTX = goalTX
-		mon.pathGoalTY = goalTY
-		if len(mon.path) > 0 {
-			mon.moveToX = mon.path[0].X
-			mon.moveToY = mon.path[0].Y
-		}
-	}
-	mon.isMoving = len(mon.path) > 0
-	mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
+	g.moveTowardPlayer(mon, closestPlayer)
 }
 
 func (g *Game) intellectJelly(mon *Monster) {
@@ -447,37 +408,21 @@ func (g *Game) intellectJelly(mon *Monster) {
 		if mon.attackStartedAt.IsZero() {
 			mon.attackStartedAt = time.Now()
 			mon.attacked = false
-		} else if !mon.attacked && time.Since(mon.attackStartedAt) >= jellyAttackDelay {
-			mon.attacked = true
-			g.hitPlayerUnsafe(closestPlayer.client.ID(), mon.damage)
-			closestPlayer.client.SendEvent(JellyHitSlowEvent{
-				Duration:    jellyHitSlowDuration,
-				SlowPercent: 80,
+		} else {
+			tickAttack(mon, jellyAttackDelay, jellyAttackDuration, jellyAttackDuration, func() {
+				g.hitPlayerUnsafe(closestPlayer.client.ID(), mon.damage)
+				closestPlayer.client.SendEvent(JellyHitSlowEvent{
+					Duration:    jellyHitSlowDuration,
+					SlowPercent: 80,
+				})
 			})
-		} else if time.Since(mon.attackStartedAt) >= jellyAttackDuration {
-			mon.attackStartedAt = time.Time{}
-			mon.attacked = false
 		}
 		return
 	}
 	mon.attackStartedAt = time.Time{}
 	mon.attacked = false
 
-	goalTX := closestPlayer.x / tileSize
-	goalTY := closestPlayer.y / tileSize
-	if len(mon.path) == 0 || mon.pathGoalTX != goalTX || mon.pathGoalTY != goalTY {
-		monTX := mon.x / tileSize
-		monTY := mon.y / tileSize
-		mon.path = g.gameMap.findPath(monTX, monTY, goalTX, goalTY)
-		mon.pathGoalTX = goalTX
-		mon.pathGoalTY = goalTY
-		if len(mon.path) > 0 {
-			mon.moveToX = mon.path[0].X
-			mon.moveToY = mon.path[0].Y
-		}
-	}
-	mon.isMoving = len(mon.path) > 0
-	mon.direction = getDirection(mon.x, mon.y, closestPlayer.x, closestPlayer.y)
+	g.moveTowardPlayer(mon, closestPlayer)
 }
 
 func (g *Game) isVisible(x1, y1, x2, y2 int) bool {
