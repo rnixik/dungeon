@@ -45,17 +45,24 @@ class Monster extends Phaser.Physics.Arcade.Sprite
     {
         super.preUpdate(time, delta);
 
+        if (!this.isCorpse) {
+            this.setDepth(DEPTH_PLAYER + this.y * 0.01);
+        }
+
         if (this.hpText) {
             this.hpText.x = this.x;
             this.hpText.y = this.y - 20;
+            this.hpText.setDepth(this.depth + 1);
         }
         if (this._shieldGraphics) {
             this._shieldGraphics.x = this.x;
             this._shieldGraphics.y = this.y;
+            this._shieldGraphics.setDepth(this.depth + 0.5);
         }
         if (this._speedBoostGraphics) {
             this._speedBoostGraphics.x = this.x;
             this._speedBoostGraphics.y = this.y;
+            this._speedBoostGraphics.setDepth(this.depth + 0.5);
         }
     }
 
@@ -281,6 +288,7 @@ class Archer extends Monster
         if (this.bowSprite) {
             this.bowSprite.x = this.x;
             this.bowSprite.y = this.y + 15;
+            this.bowSprite.setDepth(this.depth + 0.1);
         }
     }
 

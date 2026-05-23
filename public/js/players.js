@@ -53,9 +53,14 @@ class Player extends Phaser.Physics.Arcade.Sprite
     {
         super.preUpdate(time, delta);
 
+        if (!this.isCorpse) {
+            this.setDepth(DEPTH_PLAYER + this.y * 0.01);
+        }
+
         if (this.hpText) {
             this.hpText.x = this.x;
             this.hpText.y = this.y - 30;
+            this.hpText.setDepth(this.depth + 1);
         }
     }
 
