@@ -26,7 +26,7 @@ var sceneConfigPreloader = {
 
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
-        this.load.spritesheet('archer', 'assets/skeleton5.png', { frameWidth: 32, frameHeight: 32 });
+        this.load.spritesheet('skeleton_archer', 'assets/skeleton_archer.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('skeleton', 'assets/skeleton_3.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('bow', 'assets/skeleton_bow.png', { frameWidth: 40, frameHeight: 40 });
         this.load.image('arrow', 'assets/arrow.png');
@@ -94,59 +94,24 @@ var sceneConfigPreloader = {
             repeat: -1
         });
         this.anims.create({
-            key: 'archer_idle_down',
-            frames: this.anims.generateFrameNumbers('archer', { start: 0, end: 3}),
-            frameRate: 8,
+            key: 'archer',
+            frames: this.anims.generateFrameNumbers('skeleton_archer', { start: 7, end: 13}),
+            frameRate: 4,
             repeat: -1
         });
         this.anims.create({
-            key: 'archer_walk_down',
-            frames: this.anims.generateFrameNumbers('archer', { start: 6, end: 11}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'archer_idle_up',
-            frames: this.anims.generateFrameNumbers('archer', { start: 12, end: 15}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'archer_walk_up',
-            frames: this.anims.generateFrameNumbers('archer', { start: 18, end: 23}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'archer_idle_left',
-            frames: this.anims.generateFrameNumbers('archer', { start: 24, end: 27}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'archer_walk_left',
-            frames: this.anims.generateFrameNumbers('archer', { start: 30, end: 35}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'archer_idle_right',
-            frames: this.anims.generateFrameNumbers('archer', { start: 36, end: 39}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'archer_walk_right',
-            frames: this.anims.generateFrameNumbers('archer', { start: 42, end: 47}),
+            key: 'archer_attack',
+            frames: this.anims.generateFrameNumbers('skeleton_archer', { start: 14, end: 20}),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
             key: 'archer_dead',
-            frames: this.anims.generateFrameNumbers('archer', { start: 48, end: 53}),
+            frames: this.anims.generateFrameNumbers('skeleton_archer', { start: 1, end: 6}),
             frameRate: 8,
             repeat: 0
         });
+
         this.anims.create({
             key: 'skeleton',
             frames: this.anims.generateFrameNumbers('skeleton', { start: 0, end: 8}),
@@ -248,30 +213,6 @@ var sceneConfigPreloader = {
             frames: this.anims.generateFrameNumbers('demon_mage', { start: 0, end: 6}),
             frameRate: 8,
             repeat: 0
-        });
-        this.anims.create({
-            key: 'bow_up',
-            frames: this.anims.generateFrameNumbers('bow', { start: 0, end: 5}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'bow_down',
-            frames: this.anims.generateFrameNumbers('bow', { start: 6, end: 11}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'bow_right',
-            frames: this.anims.generateFrameNumbers('bow', { start: 12, end: 17}),
-            frameRate: 8,
-            repeat: -1
-        });
-        this.anims.create({
-            key: 'bow_left',
-            frames: this.anims.generateFrameNumbers('bow', { start: 18, end: 23}),
-            frameRate: 8,
-            repeat: -1
         });
         this.anims.create({
             key: 'firespot',

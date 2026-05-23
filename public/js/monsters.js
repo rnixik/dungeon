@@ -264,47 +264,9 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 
 class Archer extends Monster
 {
-    bowSprite;
-
     constructor (scene, statData)
     {
-        super('archer', scene, statData, 'archer', 0, 2);
-
-        if (this.isCorpse) {
-            return;
-        }
-
-        this.bowSprite = this.scene.add.sprite(statData.x , statData.y + 10, 'bow', 6)
-            .setScale(1.5)
-            .setDepth(DEPTH_MONSTER + 0.1) // above body
-            .setOrigin(0.5, 0.5)
-            .setMask(this.scene.monsterMask);
-    }
-
-    preUpdate(time, delta)
-    {
-        super.preUpdate(time, delta);
-
-        if (this.bowSprite) {
-            this.bowSprite.x = this.x;
-            this.bowSprite.y = this.y + 15;
-            this.bowSprite.setDepth(this.depth + 0.1);
-        }
-    }
-
-    playAttackAnimation(posData)
-    {
-        // super.playAttackAnimation(posData);
-        this.bowSprite.anims.play(`bow_${posData.direction}`, true);
-    }
-
-    convertToCorpse()
-    {
-        super.convertToCorpse();
-        if (this.bowSprite) {
-            this.bowSprite.destroy();
-            this.bowSprite = null;
-        }
+        super('archer', scene, statData, 'archer', 0, 0.8);
     }
 }
 
