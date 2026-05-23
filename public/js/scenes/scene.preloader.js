@@ -12,11 +12,12 @@ var sceneConfigPreloader = {
 
         this.load.image('tiles', 'assets/catacombs.png');
 
-        this.load.spritesheet('mage', 'assets/mage_2.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('mage', 'assets/mage_3.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('knight', 'assets/knight_3_idle.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('knight_attack', 'assets/knight_2_attack.png', { frameWidth: 128, frameHeight: 64 });
         this.load.spritesheet('knight_move', 'assets/knight_3_move.png', { frameWidth: 64, frameHeight: 64 });
-        this.load.spritesheet('rogue', 'assets/archer_3.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('knight_dead', 'assets/knight_3_dead.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('rogue', 'assets/archer_4.png', { frameWidth: 64, frameHeight: 64 });
 
         this.load.spritesheet('golem', 'assets/golem.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('spider', 'assets/spider.png', { frameWidth: 64, frameHeight: 64 });
@@ -58,15 +59,21 @@ var sceneConfigPreloader = {
     create: function() {
         this.anims.create({
             key: 'mage_idle',
-            frames: this.anims.generateFrameNumbers('mage', { start: 0, end: 7 }),
+            frames: this.anims.generateFrameNumbers('mage', { start: 7, end: 14 }),
             frameRate: 5,
             repeat: -1
         });
         this.anims.create({
             key: 'mage_attack',
-            frames: this.anims.generateFrameNumbers('mage', { start: 11, end: 12 }),
+            frames: this.anims.generateFrameNumbers('mage', { start: 15, end: 18 }),
             frameRate: 5,
             repeat: -1
+        });
+        this.anims.create({
+            key: 'mage_dead',
+            frames: this.anims.generateFrameNumbers('mage', { start: 1, end: 6 }),
+            frameRate: 5,
+            repeat: 0
         });
         this.anims.create({
             key: 'fireball-loop',
@@ -303,16 +310,28 @@ var sceneConfigPreloader = {
             repeat: -1
         });
         this.anims.create({
+            key: 'knight_dead',
+            frames: this.anims.generateFrameNumbers('knight_dead', { start: 0, end: 5 }),
+            frameRate: 7,
+            repeat: 0
+        });
+        this.anims.create({
             key: 'rogue_idle',
-            frames: this.anims.generateFrameNumbers('rogue', { start: 0, end: 10 }),
+            frames: this.anims.generateFrameNumbers('rogue', { start: 7, end: 15 }),
             frameRate: 8,
             repeat: -1
         });
         this.anims.create({
             key: 'rogue_attack',
-            frames: this.anims.generateFrameNumbers('rogue', { start: 11, end: 14 }),
+            frames: this.anims.generateFrameNumbers('rogue', { start: 16, end: 20 }),
             frameRate: 8,
             repeat: -1
+        });
+        this.anims.create({
+            key: 'rogue_dead',
+            frames: this.anims.generateFrameNumbers('rogue', { start: 1, end: 6 }),
+            frameRate: 7,
+            repeat: 0
         });
         this.anims.create({
             key: 'explosion',
