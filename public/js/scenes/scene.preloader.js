@@ -233,7 +233,7 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'demon_mage_attack',
             frames: this.anims.generateFrameNumbers('demon_mage', { start: 7, end: 15}),
-            frameRate: 8,
+            frameRate: 4,
             repeat: 0
         });
         this.anims.create({

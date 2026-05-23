@@ -35,10 +35,12 @@ const jellyAttackDuration = 1500 * time.Millisecond
 const jellyAttackDelay = 400 * time.Millisecond
 const jellyHitSlowDuration = 3000 // ms, sent to client
 
-const demonMageSpellDelay         = 800 * time.Millisecond
-const demonMageSpellDuration      = 1000 * time.Millisecond
-const demonMageSpellCooldown      = 30 * time.Second
+const demonMageSpellDelay         = 1600 * time.Millisecond
+const demonMageSpellDuration      = 2000 * time.Millisecond
 const demonMageRange              = 10 * tileSize
+const demonMageShieldCooldown     = 60 * time.Second
+const demonMageSpeedBoostCooldown = 60 * time.Second
+const demonMageSpellCrossCooldown = 30 * time.Second // min gap between any two casts
 const demonMageShieldDuration     = 60 * time.Second
 const demonMageSpeedBoostDuration = 20 * time.Second
 
@@ -435,20 +437,23 @@ func (g *Game) intellectJelly(mon *Monster) {
 }
 
 func (g *Game) intellectDemonMage(mon *Monster) {
-	// If mid-cast, continue ticking the animation
+	// If mid-cast, continue ticking the animation; reset attackStartedAt just after animation ends
 	if !mon.attackStartedAt.IsZero() {
-		tickAttack(mon, demonMageSpellDelay, demonMageSpellDuration, demonMageSpellCooldown, func() {
+		tickAttack(mon, demonMageSpellDelay, demonMageSpellDuration, demonMageSpellDuration+time.Millisecond, func() {
+			now := time.Now()
 			for _, other := range g.monsters {
 				if other.id == mon.spellTargetID && other.hp > 0 {
 					if mon.spellIsShield {
-						other.shieldUntil = time.Now().Add(demonMageShieldDuration)
+						other.shieldUntil = now.Add(demonMageShieldDuration)
+						mon.shieldLastCastAt = now
 						g.broadcastEventFunc(DemonMageShieldEvent{
 							CasterID: mon.id,
 							TargetID: other.id,
 							Duration: int(demonMageShieldDuration.Milliseconds()),
 						})
 					} else {
-						other.speedBoostUntil = time.Now().Add(demonMageSpeedBoostDuration)
+						other.speedBoostUntil = now.Add(demonMageSpeedBoostDuration)
+						mon.speedBoostLastCastAt = now
 						g.broadcastEventFunc(DemonMageSpeedBoostEvent{
 							CasterID: mon.id,
 							TargetID: other.id,
@@ -462,11 +467,23 @@ func (g *Game) intellectDemonMage(mon *Monster) {
 		return
 	}
 
-	// Find the best target and spell to cast
+	now := time.Now()
+
+	// Enforce 30s cross-cooldown: minimum gap between any two casts
+	lastAny := mon.shieldLastCastAt
+	if mon.speedBoostLastCastAt.After(lastAny) {
+		lastAny = mon.speedBoostLastCastAt
+	}
+	if !lastAny.IsZero() && now.Sub(lastAny) < demonMageSpellCrossCooldown {
+		return
+	}
+
+	canShield := mon.shieldLastCastAt.IsZero() || now.Sub(mon.shieldLastCastAt) >= demonMageShieldCooldown
+	canSpeedBoost := mon.speedBoostLastCastAt.IsZero() || now.Sub(mon.speedBoostLastCastAt) >= demonMageSpeedBoostCooldown
+
 	var shieldTarget *Monster
 	var speedTarget *Monster
 	minShieldDist, minSpeedDist := 1000000, 1000000
-	now := time.Now()
 
 	for _, other := range g.monsters {
 		if other.id == mon.id || other.hp <= 0 {
@@ -476,11 +493,11 @@ func (g *Game) intellectDemonMage(mon *Monster) {
 		if dist > demonMageRange {
 			continue
 		}
-		if now.Before(other.shieldUntil) == false && dist < minShieldDist {
+		if canShield && now.Before(other.shieldUntil) == false && dist < minShieldDist {
 			minShieldDist = dist
 			shieldTarget = other
 		}
-		if now.Before(other.speedBoostUntil) == false && dist < minSpeedDist {
+		if canSpeedBoost && now.Before(other.speedBoostUntil) == false && dist < minSpeedDist {
 			minSpeedDist = dist
 			speedTarget = other
 		}

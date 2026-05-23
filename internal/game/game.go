@@ -29,6 +29,7 @@ const monsterKindSpider = "spider"
 const monsterKindJelly = "jelly"
 const monsterKindJellySmall = "jelly_small"
 const monsterKindJellyMicro = "jelly_micro"
+const monsterKindDemonMage = "demon_mage"
 
 const attackFireballCooldown = time.Second
 const attackShotArrowCooldown = time.Second / 4
@@ -92,6 +93,12 @@ type Monster struct {
 	firecircleStartedAt time.Time
 	lightningStartedAt  time.Time
 	webStartedAt        time.Time
+	shieldUntil          time.Time
+	speedBoostUntil      time.Time
+	spellTargetID        int
+	spellIsShield        bool
+	shieldLastCastAt     time.Time
+	speedBoostLastCastAt time.Time
 }
 
 type Object struct {
@@ -789,6 +796,12 @@ func (g *Game) hitMonster(originClientID uint64, monsterID int, damage int) {
 func (g *Game) hitMonsterUnsafe(originClientID uint64, monsterID int, damage int) {
 	for _, m := range g.monsters {
 		if m.id == monsterID && m.hp > 0 {
+			if !m.shieldUntil.IsZero() && time.Now().Before(m.shieldUntil) {
+				damage = damage / 10 // 90% reduction
+				if damage < 1 {
+					damage = 1
+				}
+			}
 			m.hp -= damage
 			if m.hp < 0 {
 				m.hp = 0
@@ -916,6 +929,9 @@ func (g *Game) moveMonstersUnsafe() {
 		if mon.kind == monsterKindGolem || mon.kind == monsterKindJelly || mon.kind == monsterKindJellySmall || mon.kind == monsterKindJellyMicro {
 			moveSpeedPerTick = 1
 		}
+		if !mon.speedBoostUntil.IsZero() && time.Now().Before(mon.speedBoostUntil) {
+			moveSpeedPerTick = (moveSpeedPerTick*3 + 1) / 2 // 50% boost
+		}
 
 		if mon.isMoving {
 			newX := mon.x
@@ -993,6 +1009,9 @@ func (g *Game) spawnInitialMonsters() {
 		case "jelly":
 			kind = monsterKindJelly
 			hp = 500
+		case "demon_mage":
+			kind = monsterKindDemonMage
+			hp = 300
 		default:
 			continue
 		}

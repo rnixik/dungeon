@@ -186,6 +186,7 @@ const GameEventHandler = {
         if (m) {
             m.showShield(data.duration);
         }
+        this.showSpellBeam(data.casterId, data.targetId, 0x4499ff);
     },
 
     DemonMageSpeedBoostEvent(data) {
@@ -193,6 +194,27 @@ const GameEventHandler = {
         if (m) {
             m.showSpeedBoost(data.duration);
         }
+        this.showSpellBeam(data.casterId, data.targetId, 0xffcc00);
+    },
+
+    showSpellBeam(casterMonId, targetMonId, color) {
+        const caster = this.monsters[casterMonId];
+        const target = this.monsters[targetMonId];
+        if (!caster || !target) return;
+
+        const g = this.add.graphics();
+        g.lineStyle(2, color, 1);
+        g.lineBetween(caster.x, caster.y, target.x, target.y);
+        g.setDepth(DEPTH_PROJECTILES);
+        g.setMask(this.mask);
+
+        this.tweens.add({
+            targets: g,
+            alpha: 0,
+            duration: 500,
+            ease: 'Linear',
+            onComplete: () => g.destroy()
+        });
     },
 
     spawnWebArea(x, y) {
