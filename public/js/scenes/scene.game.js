@@ -805,7 +805,9 @@ class Game extends Phaser.Scene {
 
         const x = this._itemFrameX;
         const y = this._itemFrameY;
-        const alpha = item.count > 0 ? 1 : 0.4;
+        const remainingMs = item.cooldownEndTime ? Math.max(0, item.cooldownEndTime - Date.now()) : 0;
+        const isOnCooldown = remainingMs > 0;
+        const alpha = (item.count > 0 && !isOnCooldown) ? 1 : 0.4;
 
         switch (item.kind) {
             case 'healing_potion':
@@ -850,15 +852,37 @@ class Game extends Phaser.Scene {
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
+            case 'cloak_of_invisibility':
+                this._currentItemSprite = this.add.image(x, y, 'cloak_of_invisibility')
+                    .setScrollFactor(0, 0)
+                    .setScale(2 * btnScale)
+                    .setDepth(DEPTH_UI + 1)
+                    .setAlpha(alpha);
+                break;
         }
 
         const frameW = 80;
         const frameH = 81;
         const countX = x + (frameW * btnScale) / 2 - 10;
         const countY = y + (frameH * btnScale) / 2 - 10;
-        this._currentItemCountText = this.add.text(countX, countY, `${item.count}`, {
+
+        let countLabel;
+        if (item.kind === 'cloak_of_invisibility') {
+            if (isOnCooldown) {
+                const secs = Math.ceil(remainingMs / 1000);
+                const m = Math.floor(secs / 60);
+                const s = secs % 60;
+                countLabel = m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `${s}s`;
+            } else {
+                countLabel = 'RDY';
+            }
+        } else {
+            countLabel = `${item.count}`;
+        }
+
+        this._currentItemCountText = this.add.text(countX, countY, countLabel, {
             font: `${Math.max(10, Math.round(14 * btnScale))}px Arial`,
-            fill: item.count > 0 ? '#ffffff' : '#888888',
+            fill: (item.count > 0 && !isOnCooldown) ? '#ffffff' : '#888888',
             stroke: '#000000',
             strokeThickness: 2
         })
@@ -869,18 +893,44 @@ class Game extends Phaser.Scene {
 
     updateItemSelector() {
         this._drawCurrentItemIcon();
+        this._restartCooldownTicker();
+    }
+
+    _restartCooldownTicker() {
+        if (this._cooldownTickEvent) {
+            this._cooldownTickEvent.remove(false);
+            this._cooldownTickEvent = null;
+        }
+        const item = this.inventory && this.inventory[this.currentItemIndex];
+        if (!item || !item.cooldownEndTime) return;
+        const remaining = item.cooldownEndTime - Date.now();
+        if (remaining <= 0) return;
+        this._cooldownTickEvent = this.time.addEvent({
+            delay: 1000,
+            repeat: Math.ceil(remaining / 1000),
+            callback: () => {
+                this._drawCurrentItemIcon();
+                const cur = this.inventory && this.inventory[this.currentItemIndex];
+                if (!cur || !cur.cooldownEndTime || Date.now() >= cur.cooldownEndTime) {
+                    this._cooldownTickEvent.remove(false);
+                    this._cooldownTickEvent = null;
+                }
+            }
+        });
     }
 
     selectPrevItem() {
         if (!this.inventory || this.inventory.length === 0) return;
         this.currentItemIndex = (this.currentItemIndex - 1 + this.inventory.length) % this.inventory.length;
         this._drawCurrentItemIcon();
+        this._restartCooldownTicker();
     }
 
     selectNextItem() {
         if (!this.inventory || this.inventory.length === 0) return;
         this.currentItemIndex = (this.currentItemIndex + 1) % this.inventory.length;
         this._drawCurrentItemIcon();
+        this._restartCooldownTicker();
     }
 
     useCurrentItem() {

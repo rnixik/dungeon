@@ -52,6 +52,7 @@ func (g *Game) tickChest(obj *Object) {
 		distance := getDistance(obj.X, obj.Y, player.x, player.y)
 		if distance <= tileSize*3 && g.isVisible(obj.X, obj.Y, player.x, player.y) {
 			obj.State = "open"
+			g.revealPlayerUnsafe(player)
 			g.broadcastEventFunc(ChestOpenEvent{ObjectID: obj.ID})
 			if g.keysCollected["3"] != true {
 				g.keysCollected["3"] = true

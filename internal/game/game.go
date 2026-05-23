@@ -69,7 +69,13 @@ type Player struct {
 	inventory              []InventoryItem
 	footprintsActiveUntil  time.Time
 	protectionActiveUntil  time.Time
+	invisibleUntil         time.Time
+	cloakLastUsed          time.Time
 	speedBoostPercent      int
+}
+
+func (p *Player) isInvisible() bool {
+	return !p.invisibleUntil.IsZero() && time.Now().Before(p.invisibleUntil)
 }
 
 type Monster struct {
@@ -154,6 +160,7 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 			{Kind: "scroll_of_xp", Count: 1},
 			{Kind: "boots_of_haste", Count: 1},
 			{Kind: "scroll_of_protection", Count: 1},
+			{Kind: "cloak_of_invisibility", Count: 1},
 		},
 	}
 }
@@ -453,6 +460,7 @@ func (g *Game) StartMainLoop() {
 					HP:                pl.hp,
 					SpeedBoostPercent: pl.speedBoostPercent,
 				HasShield:         !pl.protectionActiveUntil.IsZero() && time.Now().Before(pl.protectionActiveUntil),
+				IsInvisible:       pl.isInvisible(),
 				})
 			}
 			m := make([]MonsterStats, 0, len(g.monsters))
@@ -555,6 +563,7 @@ func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
 		if p.hp <= 0 {
 			isDead = true
 		}
+		g.revealPlayerUnsafe(p)
 	}
 	g.mutex.Unlock()
 
@@ -595,6 +604,7 @@ func (g *Game) shootArrow(clientID uint64, x int, y int, direction string) {
 			if p.hp <= 0 {
 				isDead = true
 			}
+			g.revealPlayerUnsafe(p)
 		}
 		g.mutex.Unlock()
 
@@ -643,6 +653,7 @@ func (g *Game) attackWithSword(clientID uint64) {
 		if p.hp <= 0 {
 			isDead = true
 		}
+		g.revealPlayerUnsafe(p)
 	}
 	g.mutex.Unlock()
 
@@ -1250,12 +1261,44 @@ func (g *Game) respawnPlayer(clientID uint64) {
 	}
 }
 
+func (g *Game) sendInventoryUpdateUnsafe(p *Player) {
+	const cloakCooldown = 3 * time.Minute
+	items := make([]InventoryItem, len(p.inventory))
+	copy(items, p.inventory)
+	for i, item := range items {
+		if item.Kind == "cloak_of_invisibility" && !p.cloakLastUsed.IsZero() {
+			remaining := time.Until(p.cloakLastUsed.Add(cloakCooldown))
+			if remaining > 0 {
+				items[i].CooldownMs = int(remaining.Milliseconds())
+			}
+		}
+	}
+	p.client.SendEvent(InventoryUpdateEvent{
+		ClientID:  p.client.ID(),
+		Inventory: items,
+	})
+}
+
+func (g *Game) revealPlayerUnsafe(p *Player) {
+	if !p.isInvisible() {
+		return
+	}
+	p.invisibleUntil = time.Time{}
+	p.client.SendEvent(CloakExpiredEvent{})
+	g.sendInventoryUpdateUnsafe(p)
+}
+
 func (g *Game) useItem(clientID uint64, kind string) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 
 	p, ok := g.players[clientID]
 	if !ok || p.hp <= 0 {
+		return
+	}
+
+	if kind == "cloak_of_invisibility" {
+		g.useCloakOfInvisibilityUnsafe(p, clientID)
 		return
 	}
 
@@ -1353,10 +1396,58 @@ func (g *Game) useItem(clientID uint64, kind string) {
 			})
 		}
 
-		p.client.SendEvent(InventoryUpdateEvent{
-			ClientID:  clientID,
-			Inventory: p.inventory,
-		})
+		g.sendInventoryUpdateUnsafe(p)
 		return
 	}
+}
+
+func (g *Game) useCloakOfInvisibilityUnsafe(p *Player, clientID uint64) {
+	const cloakDuration = 30 * time.Second
+	const cloakCooldown = 3 * time.Minute
+
+	hasCloakItem := false
+	for _, item := range p.inventory {
+		if item.Kind == "cloak_of_invisibility" {
+			hasCloakItem = true
+			break
+		}
+	}
+	if !hasCloakItem {
+		return
+	}
+
+	if !p.cloakLastUsed.IsZero() && time.Now().Before(p.cloakLastUsed.Add(cloakCooldown)) {
+		return
+	}
+
+	p.invisibleUntil = time.Now().Add(cloakDuration)
+	p.cloakLastUsed = time.Now()
+
+	p.client.SendEvent(CloakActiveEvent{
+		Duration:   int(cloakDuration.Milliseconds()),
+		CooldownMs: int(cloakCooldown.Milliseconds()),
+	})
+	g.sendInventoryUpdateUnsafe(p)
+
+	time.AfterFunc(cloakDuration, func() {
+		g.mutex.Lock()
+		defer g.mutex.Unlock()
+		pl, ok := g.players[clientID]
+		if !ok || time.Now().Before(pl.invisibleUntil) {
+			return
+		}
+		pl.invisibleUntil = time.Time{}
+		pl.client.SendEvent(CloakExpiredEvent{})
+		g.sendInventoryUpdateUnsafe(pl)
+	})
+
+	time.AfterFunc(cloakCooldown, func() {
+		g.mutex.Lock()
+		defer g.mutex.Unlock()
+		pl, ok := g.players[clientID]
+		if !ok {
+			return
+		}
+		g.sendInventoryUpdateUnsafe(pl)
+	})
 }

@@ -149,6 +149,7 @@ type PlayerStats struct {
 	NextLevelXP       int    `json:"nextLevelXp"`
 	SpeedBoostPercent int    `json:"speedBoostPercent"`
 	HasShield         bool   `json:"hasShield"`
+	IsInvisible       bool   `json:"isInvisible"`
 }
 
 type MonsterStats struct {
@@ -198,8 +199,9 @@ type PlayerRespawnEvent struct {
 }
 
 type InventoryItem struct {
-	Kind  string `json:"kind"`
-	Count int    `json:"count"`
+	Kind       string `json:"kind"`
+	Count      int    `json:"count"`
+	CooldownMs int    `json:"cooldownMs,omitempty"`
 }
 
 type HealEvent struct {
@@ -255,3 +257,10 @@ type ProtectionActiveEvent struct {
 }
 
 type ProtectionExpiredEvent struct{}
+
+type CloakActiveEvent struct {
+	Duration   int `json:"duration"`   // milliseconds
+	CooldownMs int `json:"cooldownMs"` // total cooldown in milliseconds
+}
+
+type CloakExpiredEvent struct{}

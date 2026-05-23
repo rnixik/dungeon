@@ -283,6 +283,14 @@ class Player extends Phaser.Physics.Arcade.Sprite
         }
     }
 
+    setDisplayAlpha(alpha)
+    {
+        this.setAlpha(alpha);
+        if (this.hpText) this.hpText.setAlpha(alpha);
+        if (this._protectionGraphics) this._protectionGraphics.setAlpha(alpha);
+        if (this._speedBoostGraphics) this._speedBoostGraphics.setAlpha(alpha);
+    }
+
     takeDamage(damage)
     {
         if (this.isCorpse) {

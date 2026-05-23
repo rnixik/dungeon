@@ -83,6 +83,7 @@ const GameEventHandler = {
             const id = p.clientId;
             if (id === this.myClientId) {
                 this.player.updateStatAndPosition(p);
+                this.player.setDisplayAlpha(p.isInvisible ? 0.3 : 1);
                 continue;
             }
 
@@ -92,6 +93,7 @@ const GameEventHandler = {
             }
 
             this.players[id].updateStatAndPosition(p);
+            this.players[id].setDisplayAlpha(p.isInvisible ? 0 : 1);
         }
 
         for (const m of data.monsters) {
@@ -476,7 +478,13 @@ const GameEventHandler = {
 
     InventoryUpdateEvent(data) {
         if (data.clientId !== this.myClientId) return;
-        this.inventory = data.inventory;
+        const now = Date.now();
+        this.inventory = data.inventory.map(item => {
+            if (item.cooldownMs > 0) {
+                return Object.assign({}, item, { cooldownEndTime: now + item.cooldownMs });
+            }
+            return item;
+        });
         this.updateItemSelector();
     },
 
@@ -505,6 +513,14 @@ const GameEventHandler = {
 
     ProtectionExpiredEvent(_data) {
         this._showStatusText('Shield expired', '#888888');
+    },
+
+    CloakActiveEvent(_data) {
+        this._showStatusText('Invisible!', '#aaffee');
+    },
+
+    CloakExpiredEvent(_data) {
+        this._showStatusText('Visible again', '#888888');
     },
 
     JellySplitEvent(data) {

@@ -126,7 +126,7 @@ func (g *Game) intellectArcher(mon *Monster) {
 	minDistance := 1000000
 
 	for _, player := range g.players {
-		if player.hp <= 0 {
+		if player.hp <= 0 || player.isInvisible() {
 			continue
 		}
 		distance := getDistance(mon.x, mon.y, player.x, player.y)
@@ -166,7 +166,7 @@ func (g *Game) intellectDemon(mon *Monster) {
 	hasOneOnDirectLines := false
 
 	for _, player := range g.players {
-		if player.hp <= 0 {
+		if player.hp <= 0 || player.isInvisible() {
 			continue
 		}
 
@@ -236,7 +236,7 @@ func (g *Game) intellectSkeleton(mon *Monster) {
 	var closestPlayer *Player
 	minDistance := 1000000
 	for _, player := range g.players {
-		if player.hp <= 0 {
+		if player.hp <= 0 || player.isInvisible() {
 			continue
 		}
 
@@ -280,7 +280,7 @@ func (g *Game) intellectGolem(mon *Monster) {
 	var closestPlayer *Player
 	minDistance := 1000000
 	for _, player := range g.players {
-		if player.hp <= 0 {
+		if player.hp <= 0 || player.isInvisible() {
 			continue
 		}
 		distance := getDistance(mon.x, mon.y, player.x, player.y)
@@ -334,7 +334,7 @@ func (g *Game) intellectSpider(mon *Monster) {
 	var closestPlayer *Player
 	minDistance := 1000000
 	for _, player := range g.players {
-		if player.hp <= 0 {
+		if player.hp <= 0 || player.isInvisible() {
 			continue
 		}
 		distance := getDistance(mon.x, mon.y, player.x, player.y)
@@ -394,7 +394,7 @@ func (g *Game) intellectJelly(mon *Monster) {
 	var closestPlayer *Player
 	minDistance := 1000000
 	for _, player := range g.players {
-		if player.hp <= 0 {
+		if player.hp <= 0 || player.isInvisible() {
 			continue
 		}
 		distance := getDistance(mon.x, mon.y, player.x, player.y)
