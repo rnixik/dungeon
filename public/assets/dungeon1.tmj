@@ -4512,6 +4512,30 @@
                  "width":0,
                  "x":1400,
                  "y":1300
+                },
+                {
+                 "height":0,
+                 "id":211,
+                 "name":"demon_mage",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":350,
+                 "y":700
+                },
+                {
+                 "height":0,
+                 "id":212,
+                 "name":"demon_mage",
+                 "point":true,
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":0,
+                 "x":1200,
+                 "y":1100
                 }],
          "opacity":1,
          "type":"objectgroup",

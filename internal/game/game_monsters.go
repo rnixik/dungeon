@@ -35,6 +35,13 @@ const jellyAttackDuration = 1500 * time.Millisecond
 const jellyAttackDelay = 400 * time.Millisecond
 const jellyHitSlowDuration = 3000 // ms, sent to client
 
+const demonMageSpellDelay         = 800 * time.Millisecond
+const demonMageSpellDuration      = 1000 * time.Millisecond
+const demonMageSpellCooldown      = 30 * time.Second
+const demonMageRange              = 10 * tileSize
+const demonMageShieldDuration     = 60 * time.Second
+const demonMageSpeedBoostDuration = 20 * time.Second
+
 // moveTowardPlayer updates pathfinding state and moves mon toward player.
 func (g *Game) moveTowardPlayer(mon *Monster, player *Player) {
 	goalTX := player.x / tileSize
@@ -101,6 +108,8 @@ func (g *Game) startIntellect() {
 					g.intellectSpider(mon)
 				case monsterKindJelly, monsterKindJellySmall, monsterKindJellyMicro:
 					g.intellectJelly(mon)
+				case monsterKindDemonMage:
+					g.intellectDemonMage(mon)
 				}
 
 			}
@@ -423,6 +432,77 @@ func (g *Game) intellectJelly(mon *Monster) {
 	mon.attacked = false
 
 	g.moveTowardPlayer(mon, closestPlayer)
+}
+
+func (g *Game) intellectDemonMage(mon *Monster) {
+	// If mid-cast, continue ticking the animation
+	if !mon.attackStartedAt.IsZero() {
+		tickAttack(mon, demonMageSpellDelay, demonMageSpellDuration, demonMageSpellCooldown, func() {
+			for _, other := range g.monsters {
+				if other.id == mon.spellTargetID && other.hp > 0 {
+					if mon.spellIsShield {
+						other.shieldUntil = time.Now().Add(demonMageShieldDuration)
+						g.broadcastEventFunc(DemonMageShieldEvent{
+							CasterID: mon.id,
+							TargetID: other.id,
+							Duration: int(demonMageShieldDuration.Milliseconds()),
+						})
+					} else {
+						other.speedBoostUntil = time.Now().Add(demonMageSpeedBoostDuration)
+						g.broadcastEventFunc(DemonMageSpeedBoostEvent{
+							CasterID: mon.id,
+							TargetID: other.id,
+							Duration: int(demonMageSpeedBoostDuration.Milliseconds()),
+						})
+					}
+					break
+				}
+			}
+		})
+		return
+	}
+
+	// Find the best target and spell to cast
+	var shieldTarget *Monster
+	var speedTarget *Monster
+	minShieldDist, minSpeedDist := 1000000, 1000000
+	now := time.Now()
+
+	for _, other := range g.monsters {
+		if other.id == mon.id || other.hp <= 0 {
+			continue
+		}
+		dist := getDistance(mon.x, mon.y, other.x, other.y)
+		if dist > demonMageRange {
+			continue
+		}
+		if now.Before(other.shieldUntil) == false && dist < minShieldDist {
+			minShieldDist = dist
+			shieldTarget = other
+		}
+		if now.Before(other.speedBoostUntil) == false && dist < minSpeedDist {
+			minSpeedDist = dist
+			speedTarget = other
+		}
+	}
+
+	// Prefer shield; fall back to speed boost
+	target := shieldTarget
+	isShield := true
+	if target == nil {
+		target = speedTarget
+		isShield = false
+	}
+	if target == nil {
+		return
+	}
+
+	mon.attackStartedAt = time.Now()
+	mon.isAttacking = true
+	mon.attacked = false
+	mon.direction = getDirection(mon.x, mon.y, target.x, target.y)
+	mon.spellTargetID = target.id
+	mon.spellIsShield = isShield
 }
 
 func (g *Game) isVisible(x1, y1, x2, y2 int) bool {

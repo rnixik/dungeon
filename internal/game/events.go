@@ -236,3 +236,15 @@ type JellyHitSlowEvent struct {
 	Duration    int `json:"duration"`
 	SlowPercent int `json:"slowPercent"`
 }
+
+type DemonMageShieldEvent struct {
+	CasterID int `json:"casterId"`
+	TargetID int `json:"targetId"`
+	Duration int `json:"duration"` // milliseconds
+}
+
+type DemonMageSpeedBoostEvent struct {
+	CasterID int `json:"casterId"`
+	TargetID int `json:"targetId"`
+	Duration int `json:"duration"` // milliseconds
+}

@@ -181,6 +181,20 @@ const GameEventHandler = {
         this.spawnWebArea(data.x, data.y);
     },
 
+    DemonMageShieldEvent(data) {
+        const m = this.monsters[data.targetId];
+        if (m) {
+            m.showShield(data.duration);
+        }
+    },
+
+    DemonMageSpeedBoostEvent(data) {
+        const m = this.monsters[data.targetId];
+        if (m) {
+            m.showSpeedBoost(data.duration);
+        }
+    },
+
     spawnWebArea(x, y) {
         const halfSize = 24; // 1.5 tiles (3x3 tiles total = 48px)
         const size = halfSize * 2;

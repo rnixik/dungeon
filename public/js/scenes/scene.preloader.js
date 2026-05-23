@@ -21,6 +21,7 @@ var sceneConfigPreloader = {
         this.load.spritesheet('golem', 'assets/golem.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('spider', 'assets/spider.png', { frameWidth: 64, frameHeight: 64 });
         this.load.spritesheet('jelly', 'assets/jelly.png', { frameWidth: 64, frameHeight: 64 });
+        this.load.spritesheet('demon_mage', 'assets/demon_mage.png', { frameWidth: 64, frameHeight: 64 });
 
         //this.load.spritesheet('fireball', 'assets/MiniRouge\\3 - Heroes\\Hero 01 Mage\\32x32\\Fireball Magel-Sheet2x.png', { frameWidth: 32, frameHeight: 32 });
         this.load.spritesheet('fireball', 'assets/electrobolt.png', { frameWidth: 32, frameHeight: 32 });
@@ -220,6 +221,24 @@ var sceneConfigPreloader = {
         this.anims.create({
             key: 'split',
             frames: this.anims.generateFrameNumbers('jelly', { start: 1, end: 14}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'demon_mage',
+            frames: this.anims.generateFrameNumbers('demon_mage', { start: 16, end: 24}),
+            frameRate: 8,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'demon_mage_attack',
+            frames: this.anims.generateFrameNumbers('demon_mage', { start: 7, end: 15}),
+            frameRate: 8,
+            repeat: 0
+        });
+        this.anims.create({
+            key: 'demon_mage_dead',
+            frames: this.anims.generateFrameNumbers('demon_mage', { start: 0, end: 6}),
             frameRate: 8,
             repeat: 0
         });

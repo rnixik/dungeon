@@ -49,6 +49,56 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             this.hpText.x = this.x;
             this.hpText.y = this.y - 20;
         }
+        if (this._shieldGraphics) {
+            this._shieldGraphics.x = this.x;
+            this._shieldGraphics.y = this.y;
+        }
+        if (this._speedBoostGraphics) {
+            this._speedBoostGraphics.x = this.x;
+            this._speedBoostGraphics.y = this.y;
+        }
+    }
+
+    showShield(duration)
+    {
+        if (this._shieldGraphics) {
+            this._shieldGraphics.destroy();
+        }
+        const g = this.scene.add.graphics();
+        g.lineStyle(3, 0x4499ff, 0.85);
+        g.strokeCircle(0, 0, 22);
+        g.lineStyle(1, 0xaaddff, 0.4);
+        g.strokeCircle(0, 0, 26);
+        g.setDepth(DEPTH_MONSTER + 0.5);
+        g.setMask(this.scene.monsterMask);
+        this._shieldGraphics = g;
+        this.scene.time.delayedCall(duration, () => {
+            if (this._shieldGraphics === g) {
+                g.destroy();
+                this._shieldGraphics = null;
+            }
+        });
+    }
+
+    showSpeedBoost(duration)
+    {
+        if (this._speedBoostGraphics) {
+            this._speedBoostGraphics.destroy();
+        }
+        const g = this.scene.add.graphics();
+        g.lineStyle(3, 0xffcc00, 0.85);
+        g.strokeCircle(0, 0, 22);
+        g.lineStyle(1, 0xffee88, 0.4);
+        g.strokeCircle(0, 0, 26);
+        g.setDepth(DEPTH_MONSTER + 0.5);
+        g.setMask(this.scene.monsterMask);
+        this._speedBoostGraphics = g;
+        this.scene.time.delayedCall(duration, () => {
+            if (this._speedBoostGraphics === g) {
+                g.destroy();
+                this._speedBoostGraphics = null;
+            }
+        });
     }
 
     updateStatAndPosition(statData)
@@ -72,6 +122,14 @@ class Monster extends Phaser.Physics.Arcade.Sprite
     {
         if (this.hpText) {
             this.hpText.destroy();
+        }
+        if (this._shieldGraphics) {
+            this._shieldGraphics.destroy();
+            this._shieldGraphics = null;
+        }
+        if (this._speedBoostGraphics) {
+            this._speedBoostGraphics.destroy();
+            this._speedBoostGraphics = null;
         }
 
         this.setDepth(DEPTH_DEAD);
@@ -189,6 +247,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
             case 'jelly': return new Jelly(scene, statData);
             case 'jelly_small': return new JellySmall(scene, statData);
             case 'jelly_micro': return new JellyMicro(scene, statData);
+            case 'demon_mage': return new DemonMage(scene, statData);
             default:
                 console.error('Unknown monster kind:', statData.kind);
                 return null;
@@ -416,5 +475,43 @@ class JellyMicro extends Jelly
         this.setDepth(DEPTH_DEAD);
         this.disableBody();
         this.anims.play('jelly_dead', false);
+    }
+}
+
+class DemonMage extends Monster
+{
+    _wasAttacking = false;
+
+    constructor (scene, statData)
+    {
+        super('demon_mage', scene, statData, 'demon_mage', 16, 2);
+        if (!this.isCorpse) {
+            this.anims.play('demon_mage', true);
+        }
+    }
+
+    playAttackAnimation(posData)
+    {
+        if (posData.direction === 'left') this.setFlipX(true);
+        else if (posData.direction === 'right') this.setFlipX(false);
+
+        if (!this._wasAttacking) {
+            this._wasAttacking = true;
+            this.anims.play('demon_mage_attack', false);
+        }
+    }
+
+    playMoveAnimation(posData)
+    {
+        this._wasAttacking = false;
+        if (posData.direction === 'left') this.setFlipX(true);
+        else if (posData.direction === 'right') this.setFlipX(false);
+        this.anims.play('demon_mage', true);
+    }
+
+    playIdleAnimation(posData)
+    {
+        this._wasAttacking = false;
+        this.anims.play('demon_mage', true);
     }
 }
