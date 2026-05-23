@@ -499,6 +499,14 @@ const GameEventHandler = {
         this.footprintGraphics = [];
     },
 
+    ProtectionActiveEvent(_data) {
+        this._showStatusText('Shield!', '#88aaff');
+    },
+
+    ProtectionExpiredEvent(_data) {
+        this._showStatusText('Shield expired', '#888888');
+    },
+
     JellySplitEvent(data) {
         const jelly = this.monsters[data.monsterID];
         if (jelly instanceof Jelly) {
@@ -510,6 +518,30 @@ const GameEventHandler = {
 
     JellyHitSlowEvent(data) {
         this.player.jellyHitSlowUntil = Date.now() + data.duration;
+    },
+
+    _showStatusText(message, color) {
+        const x = this.player ? this.player.x : 0;
+        const y = this.player ? this.player.y - 20 : 0;
+        const text = this.add.text(x, y, message, {
+            font: '16px Arial',
+            fill: color || '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 3
+        })
+        .setDepth(DEPTH_UI)
+        .setOrigin(0.5, 0.5);
+
+        this.tweens.add({
+            targets: text,
+            y: y - 50,
+            alpha: 0,
+            duration: 1200,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                text.destroy();
+            }
+        });
     },
 
     showHealText(x, y, amount) {

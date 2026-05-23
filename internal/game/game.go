@@ -66,9 +66,10 @@ type Player struct {
 	direction             string
 	isMoving              bool
 	isDodging             bool
-	inventory             []InventoryItem
-	footprintsActiveUntil time.Time
-	speedBoostPercent     int
+	inventory              []InventoryItem
+	footprintsActiveUntil  time.Time
+	protectionActiveUntil  time.Time
+	speedBoostPercent      int
 }
 
 type Monster struct {
@@ -152,6 +153,7 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 			{Kind: "scroll_of_footprints", Count: 1},
 			{Kind: "scroll_of_xp", Count: 1},
 			{Kind: "boots_of_haste", Count: 1},
+			{Kind: "scroll_of_protection", Count: 1},
 		},
 	}
 }
@@ -450,6 +452,7 @@ func (g *Game) StartMainLoop() {
 					MaxHP:             pl.maxHp,
 					HP:                pl.hp,
 					SpeedBoostPercent: pl.speedBoostPercent,
+				HasShield:         !pl.protectionActiveUntil.IsZero() && time.Now().Before(pl.protectionActiveUntil),
 				})
 			}
 			m := make([]MonsterStats, 0, len(g.monsters))
@@ -757,6 +760,9 @@ func (g *Game) hitPlayerWithKindUnsafe(targetClientID uint64, kind string) {
 			damage = damage / 2
 		}
 		if (kind == damageKindBullet) && p.class == ClassRogue {
+			damage = damage / 2
+		}
+		if !p.protectionActiveUntil.IsZero() && time.Now().Before(p.protectionActiveUntil) {
 			damage = damage / 2
 		}
 
@@ -1307,6 +1313,21 @@ func (g *Game) useItem(clientID uint64, kind string) {
 					p.speedBoostPercent = maxSpeedBoost
 				}
 			}
+
+		case "scroll_of_protection":
+			const protectionDuration = 60 * time.Second
+			p.protectionActiveUntil = time.Now().Add(protectionDuration)
+			p.client.SendEvent(ProtectionActiveEvent{Duration: int(protectionDuration.Milliseconds())})
+			expireClientID := clientID
+			time.AfterFunc(protectionDuration, func() {
+				g.mutex.Lock()
+				defer g.mutex.Unlock()
+				pl, ok := g.players[expireClientID]
+				if !ok || time.Now().Before(pl.protectionActiveUntil) {
+					return
+				}
+				pl.client.SendEvent(ProtectionExpiredEvent{})
+			})
 
 		case "spikes":
 			trapID := fmt.Sprintf("item_spike_%d_%d", clientID, time.Now().UnixNano())

@@ -8,6 +8,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
     scene;
     isCorpse = false;
     initialTint = 0xffffff;
+    _protectionGraphics = null;
+    _speedBoostGraphics = null;
 
     constructor (kind, scene, statData)
     {
@@ -62,6 +64,16 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this.hpText.y = this.y - 30;
             this.hpText.setDepth(this.depth + 1);
         }
+        if (this._protectionGraphics) {
+            this._protectionGraphics.x = this.x;
+            this._protectionGraphics.y = this.y;
+            this._protectionGraphics.setDepth(this.depth + 0.5);
+        }
+        if (this._speedBoostGraphics) {
+            this._speedBoostGraphics.x = this.x;
+            this._speedBoostGraphics.y = this.y;
+            this._speedBoostGraphics.setDepth(this.depth + 0.5);
+        }
     }
 
     updateStatAndPosition(statData)
@@ -78,6 +90,18 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this.convertToCorpse();
         }
 
+        if (statData.speedBoostPercent > 0) {
+            this.showSpeedBoost();
+        } else {
+            this.hideSpeedBoost();
+        }
+
+        if (statData.hasShield) {
+            this.showProtection();
+        } else {
+            this.hideProtection();
+        }
+
         this.updatePosition(statData);
     }
 
@@ -87,6 +111,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this.hpText.destroy();
             this.hpText = null;
         }
+        this.hideProtection();
+        this.hideSpeedBoost();
 
         this.setDepth(DEPTH_DEAD);
         this.disableBody();
@@ -211,6 +237,52 @@ class Player extends Phaser.Physics.Arcade.Sprite
         }
     }
 
+    showProtection()
+    {
+        if (this._protectionGraphics) {
+            return;
+        }
+        const g = this.scene.add.graphics();
+        g.lineStyle(3, 0x4499ff, 0.85);
+        g.strokeCircle(0, 0, 27);
+        g.lineStyle(1, 0xaaddff, 0.4);
+        g.strokeCircle(0, 0, 31);
+        g.setDepth(DEPTH_PLAYER + 0.5);
+        g.setMask(this.scene.mask);
+        this._protectionGraphics = g;
+    }
+
+    hideProtection()
+    {
+        if (this._protectionGraphics) {
+            this._protectionGraphics.destroy();
+            this._protectionGraphics = null;
+        }
+    }
+
+    showSpeedBoost()
+    {
+        if (this._speedBoostGraphics) {
+            return;
+        }
+        const g = this.scene.add.graphics();
+        g.lineStyle(3, 0xffcc00, 0.85);
+        g.strokeCircle(0, 0, 17);
+        g.lineStyle(1, 0xffee88, 0.4);
+        g.strokeCircle(0, 0, 21);
+        g.setDepth(DEPTH_PLAYER + 0.5);
+        g.setMask(this.scene.mask);
+        this._speedBoostGraphics = g;
+    }
+
+    hideSpeedBoost()
+    {
+        if (this._speedBoostGraphics) {
+            this._speedBoostGraphics.destroy();
+            this._speedBoostGraphics = null;
+        }
+    }
+
     takeDamage(damage)
     {
         if (this.isCorpse) {
@@ -239,6 +311,18 @@ class MyPlayer extends Player
         }
         if (statData.speedBoostPercent !== undefined) {
             this.speedBoostPercent = statData.speedBoostPercent;
+        }
+
+        if (this.speedBoostPercent > 0) {
+            this.showSpeedBoost();
+        } else {
+            this.hideSpeedBoost();
+        }
+
+        if (statData.hasShield) {
+            this.showProtection();
+        } else {
+            this.hideProtection();
         }
     }
 

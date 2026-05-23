@@ -843,6 +843,13 @@ class Game extends Phaser.Scene {
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
+            case 'scroll_of_protection':
+                this._currentItemSprite = this.add.image(x, y, 'scroll_of_protection')
+                    .setScrollFactor(0, 0)
+                    .setScale(2 * btnScale)
+                    .setDepth(DEPTH_UI + 1)
+                    .setAlpha(alpha);
+                break;
         }
 
         const frameW = 80;

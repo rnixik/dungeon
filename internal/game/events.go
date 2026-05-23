@@ -148,6 +148,7 @@ type PlayerStats struct {
 	XP                int    `json:"xp"`
 	NextLevelXP       int    `json:"nextLevelXp"`
 	SpeedBoostPercent int    `json:"speedBoostPercent"`
+	HasShield         bool   `json:"hasShield"`
 }
 
 type MonsterStats struct {
@@ -248,3 +249,9 @@ type DemonMageSpeedBoostEvent struct {
 	TargetID int `json:"targetId"`
 	Duration int `json:"duration"` // milliseconds
 }
+
+type ProtectionActiveEvent struct {
+	Duration int `json:"duration"` // milliseconds
+}
+
+type ProtectionExpiredEvent struct{}

@@ -94,9 +94,9 @@ class Monster extends Phaser.Physics.Arcade.Sprite
         }
         const g = this.scene.add.graphics();
         g.lineStyle(3, 0xffcc00, 0.85);
-        g.strokeCircle(0, 0, 22);
+        g.strokeCircle(0, 0, 13);
         g.lineStyle(1, 0xffee88, 0.4);
-        g.strokeCircle(0, 0, 26);
+        g.strokeCircle(0, 0, 17);
         g.setDepth(DEPTH_MONSTER + 0.5);
         g.setMask(this.scene.monsterMask);
         this._speedBoostGraphics = g;
