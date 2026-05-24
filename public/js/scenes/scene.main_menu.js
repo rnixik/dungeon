@@ -13,6 +13,7 @@ class MainMenu extends Phaser.Scene
 
     myClientId = null;
     nickname = 'default';
+    avatarUrl = null;
     roomName = 'default';
 
     roomPlayersListText = null;
@@ -38,26 +39,21 @@ class MainMenu extends Phaser.Scene
             add: true
         });
 
-        const savedNickname = localStorage.getItem("nickname");
-        if (savedNickname) {
-            this.nickname = savedNickname;
+        // Try to get data from Telegram Mini App
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        if (tgUser) {
+            this.avatarUrl = tgUser.photo_url || null;
+            const tgName = (tgUser.username || tgUser.first_name || '').trim();
+            if (tgName) {
+                this.nickname = tgName;
+            }
         } else {
-            const defaultNickname = 'Player' + Math.floor(Math.random() * 1000);
-            const inputNickname = prompt("Please enter your nickname", defaultNickname);
-            if (inputNickname !== null && inputNickname.trim() !== '') {
-                this.nickname = inputNickname.trim();
-            } else {
-                this.nickname = defaultNickname;
-            }
-            try {
-                localStorage.setItem("nickname", this.nickname);
-            } catch (e) {
-                console.warn("Local storage not available, cannot save nickname");
-            }
+            this.nickname = 'Player' + Math.floor(Math.random() * 1000);
         }
+        console.log(window.Telegram);
+
         // limit nickname up to 10 chars
         this.nickname = this.nickname.substring(0, 10);
-        console.log("Using nickname: " + this.nickname);
 
         this.loadingSpinner.setVisible(true);
         this.connectToServer();
@@ -237,10 +233,14 @@ class MainMenu extends Phaser.Scene
 
     selectCharacter(characterClass)
     {
+        const props = { class: characterClass };
+        if (this.avatarUrl) {
+            props.avatarUrl = this.avatarUrl;
+        }
         this.wsConnection.send(JSON.stringify({
-            type: 'room', 
-            subType: 'setAdditionalProperties', 
-            data: {"class": characterClass }
+            type: 'room',
+            subType: 'setAdditionalProperties',
+            data: props
         }));
     }
 

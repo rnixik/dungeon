@@ -141,6 +141,7 @@ type PlayerStats struct {
 	PlayerPosition
 	Class             string `json:"class"`
 	Nickname          string `json:"nickname"`
+	AvatarUrl         string `json:"avatarUrl,omitempty"`
 	Color             string `json:"color"`
 	MaxHP             int    `json:"maxHp"`
 	HP                int    `json:"hp"`

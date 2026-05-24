@@ -54,6 +54,7 @@ const xpPerMonsterKill = 250
 type Player struct {
 	client                lobby.ClientPlayer
 	class                 string
+	avatarUrl             string
 	lastAttackTime        time.Time
 	color                 string
 	level                 int
@@ -131,6 +132,11 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 		class = cls
 	}
 
+	avatarUrl := ""
+	if av, ok := props["avatarUrl"].(string); ok && len(av) <= 512 {
+		avatarUrl = av
+	}
+
 	currentMaxHP := 100
 	switch class {
 	case ClassMage:
@@ -144,6 +150,7 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 	return &Player{
 		client:      client,
 		class:       class,
+		avatarUrl:   avatarUrl,
 		color:       colorHex,
 		level:       1,
 		nextLevelXP: 500,
@@ -358,6 +365,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 			},
 			Class:       pl.class,
 			Nickname:    pl.client.Nickname(),
+			AvatarUrl:   pl.avatarUrl,
 			Color:       pl.color,
 			Level:       pl.level,
 			XP:          pl.xp,
@@ -454,6 +462,7 @@ func (g *Game) StartMainLoop() {
 					},
 					Class:             pl.class,
 					Nickname:          pl.client.Nickname(),
+					AvatarUrl:         pl.avatarUrl,
 					Color:             pl.color,
 					Level:             pl.level,
 					MaxHP:             pl.maxHp,

@@ -4,6 +4,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
     kind;
     hp = 100;
     hpText;
+    avatarImage = null;
     isAttacking = false;
     scene;
     isCorpse = false;
@@ -46,6 +47,10 @@ class Player extends Phaser.Physics.Arcade.Sprite
             .setDepth(DEPTH_PLAYER + 1)
             .setMask(this.scene.mask);
 
+        if (statData.avatarUrl) {
+            this._loadAndShowAvatar(statData.avatarUrl);
+        }
+
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
         this.body.setSize(64, 34).setOffset(0, 30);
@@ -63,6 +68,11 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this.hpText.x = this.x;
             this.hpText.y = this.y - 30;
             this.hpText.setDepth(this.depth + 1);
+        }
+        if (this.avatarImage) {
+            this.avatarImage.x = this.x - (this.hpText ? this.hpText.width / 2 + 12 : 12);
+            this.avatarImage.y = this.y - 30;
+            this.avatarImage.setDepth(this.depth + 1);
         }
         if (this._protectionGraphics) {
             this._protectionGraphics.x = this.x;
@@ -90,6 +100,10 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this.convertToCorpse();
         }
 
+        if (statData.avatarUrl && !this.avatarImage && !this.isCorpse) {
+            this._loadAndShowAvatar(statData.avatarUrl);
+        }
+
         if (statData.speedBoostPercent > 0) {
             this.showSpeedBoost();
         } else {
@@ -110,6 +124,10 @@ class Player extends Phaser.Physics.Arcade.Sprite
         if (this.hpText) {
             this.hpText.destroy();
             this.hpText = null;
+        }
+        if (this.avatarImage) {
+            this.avatarImage.destroy();
+            this.avatarImage = null;
         }
         this.hideProtection();
         this.hideSpeedBoost();
@@ -283,10 +301,48 @@ class Player extends Phaser.Physics.Arcade.Sprite
         }
     }
 
+    _loadAndShowAvatar(url)
+    {
+        const key = 'avatar_' + this.id;
+        if (this.scene.textures.exists(key)) {
+            this._createAvatarImage(key);
+            return;
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            if (!this.scene || !this.scene.textures || this.isCorpse) return;
+            const size = 20;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(img, 0, 0, size, size);
+            this.scene.textures.addCanvas(key, canvas);
+            this._createAvatarImage(key);
+        };
+        img.onerror = () => {};
+        img.src = url;
+    }
+
+    _createAvatarImage(key)
+    {
+        if (this.avatarImage) this.avatarImage.destroy();
+        this.avatarImage = this.scene.add.image(this.x, this.y - 30, key)
+            .setOrigin(0.5, 1)
+            .setDepth(DEPTH_PLAYER + 1)
+            .setMask(this.scene.mask);
+    }
+
     setDisplayAlpha(alpha)
     {
         this.setAlpha(alpha);
         if (this.hpText) this.hpText.setAlpha(alpha);
+        if (this.avatarImage) this.avatarImage.setAlpha(alpha);
         if (this._protectionGraphics) this._protectionGraphics.setAlpha(alpha);
         if (this._speedBoostGraphics) this._speedBoostGraphics.setAlpha(alpha);
     }
