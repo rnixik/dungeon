@@ -18,6 +18,29 @@ const ClassMage = "mage"
 const ClassKnight = "knight"
 const ClassRogue = "rogue"
 
+var playerColors = []string{
+	"0xe74c3c", // red
+	"0x3498db", // blue
+	"0x2ecc71", // green
+	"0xf1c40f", // yellow
+	"0x9b59b6", // purple
+	"0xe67e22", // orange
+	"0x1abc9c", // teal
+	"0xff69b4", // pink
+	"0xcd853f", // brown
+	"0x00bcd4", // cyan
+	"0xff5722", // deep orange
+	"0x8bc34a", // light green
+	"0x673ab7", // deep purple
+	"0xff9800", // amber
+	"0x03a9f4", // light blue
+	"0xe91e63", // rose
+	"0xf06292", // light pink
+	"0x26c6da", // teal accent
+	"0xd4e157", // lime
+	"0xa1887f", // warm brown
+}
+
 const positionsUpdateTickPeriod = time.Second / 60
 const commonUpdateTickPeriod = time.Second / 3
 
@@ -121,8 +144,7 @@ type Object struct {
 }
 
 func newPlayer(client lobby.ClientPlayer) *Player {
-	// Assign a random hex color to the player
-	colorHex := fmt.Sprintf("0x%06x", rand.Intn(0xFFFFFF))
+	colorHex := playerColors[rand.Intn(len(playerColors))]
 
 	classes := []string{ClassMage, ClassKnight, ClassRogue}
 	class := classes[rand.Intn(len(classes))]

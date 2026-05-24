@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"sync"
 	"time"
 )
@@ -46,7 +45,7 @@ func avatarProxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	host := parsed.Hostname()
-	if !strings.HasSuffix(host, ".telegram.org") && host != "telegram.org" {
+	if host != "t.me" {
 		if *appEnv != "local" {
 			http.Error(w, "forbidden host", http.StatusForbidden)
 			return

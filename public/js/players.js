@@ -49,6 +49,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
         if (statData.avatarUrl) {
             this._loadAndShowAvatar(statData.avatarUrl);
+        } else {
+            this._generateIdenticon();
         }
 
         this.scene.add.existing(this);
@@ -102,6 +104,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
         if (statData.avatarUrl && !this.avatarImage && !this.isCorpse) {
             this._loadAndShowAvatar(statData.avatarUrl);
+        } else if (!statData.avatarUrl && !this.avatarImage && !this.isCorpse) {
+            this._generateIdenticon();
         }
 
         if (statData.speedBoostPercent > 0) {
@@ -312,21 +316,94 @@ class Player extends Phaser.Physics.Arcade.Sprite
         const img = new Image();
         img.onload = () => {
             if (!this.scene || !this.scene.textures || this.isCorpse) return;
-            const size = 20;
+            const border = 2;
+            const inner = 20;
+            const size = inner + border * 2;
             const canvas = document.createElement('canvas');
             canvas.width = size;
             canvas.height = size;
             const ctx = canvas.getContext('2d');
+            const colorHex = '#' + this.initialTint.toString(16).padStart(6, '0');
+            ctx.fillStyle = colorHex;
             ctx.beginPath();
             ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
             ctx.closePath();
+            ctx.fill();
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, inner / 2, 0, Math.PI * 2);
+            ctx.closePath();
             ctx.clip();
-            ctx.drawImage(img, 0, 0, size, size);
+            ctx.drawImage(img, border, border, inner, inner);
+            ctx.restore();
             this.scene.textures.addCanvas(key, canvas);
             this._createAvatarImage(key);
         };
         img.onerror = () => {};
         img.src = proxyUrl;
+    }
+
+    _generateIdenticon()
+    {
+        const key = 'avatar_' + this.id;
+        if (this.scene.textures.exists(key)) {
+            this._createAvatarImage(key);
+            return;
+        }
+        const border = 2;
+        const inner = 20;
+        const size = inner + border * 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        const colorHex = '#' + this.initialTint.toString(16).padStart(6, '0');
+
+        // Colored border ring (filled outer circle)
+        ctx.fillStyle = colorHex;
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Clip to inner circle
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, inner / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+
+        // Dark background
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, size, size);
+
+        // 5×5 symmetric identicon from clientId seed
+        const cellSize = inner / 5;
+        let seed = Number(this.id);
+        const bits = [];
+        for (let i = 0; i < 15; i++) {
+            seed = ((seed * 1664525 + 1013904223) >>> 0);
+            bits.push((seed >>> 16) & 1);
+        }
+        ctx.fillStyle = colorHex;
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 5; col++) {
+                const mirrorCol = col < 3 ? col : 4 - col;
+                if (bits[row * 3 + mirrorCol]) {
+                    ctx.fillRect(
+                        border + col * cellSize,
+                        border + row * cellSize,
+                        cellSize,
+                        cellSize
+                    );
+                }
+            }
+        }
+        ctx.restore();
+
+        this.scene.textures.addCanvas(key, canvas);
+        this._createAvatarImage(key);
     }
 
     _createAvatarImage(key)

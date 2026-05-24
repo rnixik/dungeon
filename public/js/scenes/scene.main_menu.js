@@ -39,18 +39,16 @@ class MainMenu extends Phaser.Scene
             add: true
         });
 
+        const defaultNickname = 'Player' + Math.floor(Math.random() * 1000);
+
         // Try to get data from Telegram Mini App
         const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
         if (tgUser) {
             this.avatarUrl = tgUser.photo_url || null;
-            const tgName = (tgUser.username || tgUser.first_name || '').trim();
-            if (tgName) {
-                this.nickname = tgName;
-            }
+            this.nickname = (tgUser.username || tgUser.first_name || defaultNickname).trim();
         } else {
-            this.nickname = 'Player' + Math.floor(Math.random() * 1000);
+            this.nickname = defaultNickname;
         }
-        console.log(window.Telegram);
 
         // limit nickname up to 10 chars
         this.nickname = this.nickname.substring(0, 10);
