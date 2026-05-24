@@ -2,9 +2,24 @@ var sceneConfigPreloader = {
     key: 'Preloader',
     preload: function() {
         this.cameras.main.backgroundColor = Phaser.Display.Color.HexStringToColor("#16181a");
-        this.add.sprite(0, 0, 'main').setOrigin(0,0).setScale(2);
 
-        const preloadBar = this.add.sprite(145, this.cameras.main.height - 165, 'preloaderBar').setOrigin(0,0);
+        const cam = this.cameras.main;
+        const isPortrait = cam.height > cam.width;
+
+        if (isPortrait) {
+            this.add.sprite(cam.width / 2, 0, 'main').setOrigin(0.5, 0);
+        } else {
+            this.add.sprite(0, 0, 'main').setOrigin(0, 0);
+        }
+
+        let preloadBar;
+        if (isPortrait) {
+            preloadBar = this.add.sprite(0, cam.height - 120, 'preloaderBar').setOrigin(0, 0);
+            preloadBar.setScale(0.8, 1);
+            preloadBar.x = Math.round((cam.width - preloadBar.displayWidth) / 2);
+        } else {
+            preloadBar = this.add.sprite(145, cam.height - 165, 'preloaderBar').setOrigin(0, 0);
+        }
 
         this.load.on('progress', function (value) {
             preloadBar.setCrop(0, 0, preloadBar.width * value, preloadBar.height);
