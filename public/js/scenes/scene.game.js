@@ -704,8 +704,9 @@ class Game extends Phaser.Scene {
         this.buttonFire.on('pointerup',   () => { this._attackBtnDown = false; });
         this.buttonFire.on('pointerout',  () => { this._attackBtnDown = false; });
 
+        const isPortrait = this.scale.height > this.scale.width;
         this.buttonDodge = this.add.image(
-            this.scale.width - 180 * this.uiScaleX,
+            this.scale.width - 199 * (isPortrait ? (this.uiScaleX + this.uiScaleY) / 2 : this.uiScaleX),
             this.scale.height - 85 * this.uiScaleY,
             'ui', 'button_D_blue_active'
         );
@@ -751,7 +752,7 @@ class Game extends Phaser.Scene {
         if (this._currentItemSprite) { this._currentItemSprite.destroy(); this._currentItemSprite = null; }
         if (this._currentItemCountText) { this._currentItemCountText.destroy(); this._currentItemCountText = null; }
 
-        const btnScale = Math.max(this.uiScaleX, this.uiScaleY);
+        const invScale = Math.max(this.uiScaleX, this.uiScaleY) * 0.7;
         const margin = 10;
 
         const frameW = 80;
@@ -760,32 +761,32 @@ class Game extends Phaser.Scene {
         const frameH = 81;
 
         const rightEdge = this.scale.width - margin;
-        const centerY = margin + (frameH * btnScale) / 2;
+        const centerY = margin + (frameH * invScale) / 2;
 
-        const arrowRightX = rightEdge - (arrowRW * btnScale) / 2;
-        const frameX = arrowRightX - (arrowRW * btnScale) / 2 - (frameW * btnScale) / 2;
-        const arrowLeftX = frameX - (frameW * btnScale) / 2 - (arrowLW * btnScale) / 2;
+        const arrowRightX = rightEdge - (arrowRW * invScale) / 2;
+        const frameX = arrowRightX - (arrowRW * invScale) / 2 - (frameW * invScale) / 2;
+        const arrowLeftX = frameX - (frameW * invScale) / 2 - (arrowLW * invScale) / 2;
 
         this._itemFrameX = frameX;
         this._itemFrameY = centerY;
 
         this._itemFrame = this.add.image(frameX, centerY, 'ui', 'item_frame')
             .setScrollFactor(0, 0)
-            .setScale(btnScale)
+            .setScale(invScale)
             .setDepth(DEPTH_UI)
             .setInteractive({ useHandCursor: true });
         this._itemFrame.on('pointerdown', () => this.useCurrentItem());
 
         this._itemArrowLeft = this.add.image(arrowLeftX, centerY, 'ui', 'arrow_left_brown')
             .setScrollFactor(0, 0)
-            .setScale(btnScale)
+            .setScale(invScale)
             .setDepth(DEPTH_UI)
             .setInteractive({ useHandCursor: true });
         this._itemArrowLeft.on('pointerdown', () => this.selectPrevItem());
 
         this._itemArrowRight = this.add.image(arrowRightX, centerY, 'ui', 'arrow_right_brown')
             .setScrollFactor(0, 0)
-            .setScale(btnScale)
+            .setScale(invScale)
             .setDepth(DEPTH_UI)
             .setInteractive({ useHandCursor: true });
         this._itemArrowRight.on('pointerdown', () => this.selectNextItem());
@@ -799,7 +800,7 @@ class Game extends Phaser.Scene {
 
         if (!this.inventory || this.inventory.length === 0) return;
 
-        const btnScale = Math.max(this.uiScaleX, this.uiScaleY);
+        const invScale = Math.max(this.uiScaleX, this.uiScaleY) * 0.7;
         const item = this.inventory[this.currentItemIndex];
         if (!item) return;
 
@@ -813,49 +814,49 @@ class Game extends Phaser.Scene {
             case 'healing_potion':
                 this._currentItemSprite = this.add.sprite(x, y, 'potion_hp')
                     .setScrollFactor(0, 0)
-                    .setScale(2 * btnScale)
+                    .setScale(2 * invScale)
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
             case 'spikes':
                 this._currentItemSprite = this.add.sprite(x, y, 'spikes', 0)
                     .setScrollFactor(0, 0)
-                    .setScale(1.5 * btnScale)
+                    .setScale(1.5 * invScale)
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
             case 'scroll_of_footprints':
                 this._currentItemSprite = this.add.image(x, y, 'scroll_of_footprints')
                     .setScrollFactor(0, 0)
-                    .setScale(2 * btnScale)
+                    .setScale(2 * invScale)
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
             case 'scroll_of_xp':
                 this._currentItemSprite = this.add.image(x, y, 'scroll_of_xp')
                     .setScrollFactor(0, 0)
-                    .setScale(2 * btnScale)
+                    .setScale(2 * invScale)
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
             case 'boots_of_haste':
                 this._currentItemSprite = this.add.image(x, y, 'boots_of_haste')
                     .setScrollFactor(0, 0)
-                    .setScale(2 * btnScale)
+                    .setScale(2 * invScale)
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
             case 'scroll_of_protection':
                 this._currentItemSprite = this.add.image(x, y, 'scroll_of_protection')
                     .setScrollFactor(0, 0)
-                    .setScale(2 * btnScale)
+                    .setScale(2 * invScale)
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
             case 'cloak_of_invisibility':
                 this._currentItemSprite = this.add.image(x, y, 'cloak_of_invisibility')
                     .setScrollFactor(0, 0)
-                    .setScale(2 * btnScale)
+                    .setScale(2 * invScale)
                     .setDepth(DEPTH_UI + 1)
                     .setAlpha(alpha);
                 break;
@@ -863,8 +864,8 @@ class Game extends Phaser.Scene {
 
         const frameW = 80;
         const frameH = 81;
-        const countX = x + (frameW * btnScale) / 2 - 10;
-        const countY = y + (frameH * btnScale) / 2 - 10;
+        const countX = x + (frameW * invScale) / 2 - 10;
+        const countY = y + (frameH * invScale) / 2 - 10;
 
         let countLabel;
         if (item.kind === 'cloak_of_invisibility') {
@@ -881,7 +882,7 @@ class Game extends Phaser.Scene {
         }
 
         this._currentItemCountText = this.add.text(countX, countY, countLabel, {
-            font: `${Math.max(10, Math.round(14 * btnScale))}px Arial`,
+            font: `${Math.max(10, Math.round(14 * invScale))}px Arial`,
             fill: (item.count > 0 && !isOnCooldown) ? '#ffffff' : '#888888',
             stroke: '#000000',
             strokeThickness: 2
