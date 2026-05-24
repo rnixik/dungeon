@@ -107,6 +107,7 @@ class Game extends Phaser.Scene {
     isAttacking = false;
     lastAttackTime = 0;
     isMoving = false;
+    wasMoving = false;
     isDodging = false;
     lastDodgeTime = 0;
     isDead = false;
@@ -388,7 +389,15 @@ class Game extends Phaser.Scene {
                 isMoving: this.isMoving
             });
             this.lastMoveSentTime = time;
+        } else if (this.wasMoving && !this.isMoving && !this.isDodging) {
+            this.sendGameCommand('PlayerMoveCommand', {
+                x: Math.round(this.player.x),
+                y: Math.round(this.player.y),
+                direction: this.direction,
+                isMoving: false
+            });
         }
+        this.wasMoving = this.isMoving;
     }
 
     onIncomingGameEvent (name, data) {
