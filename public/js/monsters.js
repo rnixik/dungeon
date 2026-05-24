@@ -293,7 +293,7 @@ class Spider extends Monster
 
     constructor (scene, statData)
     {
-        super('spider', scene, statData, 'spider', 0, 2);
+        super('spider', scene, statData, 'spider', 0, 1);
         this.anims.play('spider', true);
     }
 

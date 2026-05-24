@@ -220,9 +220,9 @@ const GameEventHandler = {
     },
 
     spawnWebArea(x, y) {
-        const halfSize = 24; // 1.5 tiles (3x3 tiles total = 48px)
+        const halfSize = 48; // 3 tiles (6x6 tiles total = 96px)
         const size = halfSize * 2;
-        const duration = 5000;
+        const duration = 15000;
 
         const g = this.add.graphics();
         g.fillStyle(0x888888, 0.45);

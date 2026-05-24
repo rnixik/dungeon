@@ -27,6 +27,7 @@ const golemAttackDamage = 100
 
 const spiderMeleeAttackDuration = 500 * time.Millisecond
 const spiderMeleeAttackDamage = 25
+const spiderMeleeRange = 3 * tileSize
 const spiderWebCooldown = 10 * time.Second
 const spiderWebAttackDuration = 700 * time.Millisecond
 const spiderWebRange = 15 * tileSize
@@ -372,8 +373,8 @@ func (g *Game) intellectSpider(mon *Monster) {
 		mon.isAttacking = true
 	}
 
-	// Melee attack when adjacent
-	if minDistance <= tileSize {
+	// Melee attack when in range
+	if minDistance <= spiderMeleeRange {
 		mon.isMoving = false
 		mon.path = nil
 		mon.isAttacking = true
