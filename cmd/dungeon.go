@@ -7,9 +7,14 @@ import (
 	"dungeon/internal/transport"
 	"encoding/json"
 	"flag"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
+	"sync"
+	"time"
 )
 
 var addr = flag.String("addr", "127.0.0.1:9001", "http service address")
@@ -17,6 +22,69 @@ var serveFiles = flag.Bool("serveFiles", true, "use this app to serve static fil
 var appEnv = flag.String("env", "local", "application environment: local, production")
 
 var indexPageContent []byte
+
+type avatarCacheEntry struct {
+	data        []byte
+	contentType string
+}
+
+var avatarCache sync.Map // map[string]*avatarCacheEntry
+
+var avatarHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
+func avatarProxyHandler(w http.ResponseWriter, r *http.Request) {
+	rawURL := r.URL.Query().Get("url")
+	if rawURL == "" {
+		http.Error(w, "missing url", http.StatusBadRequest)
+		return
+	}
+
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Scheme != "https" {
+		http.Error(w, "invalid url", http.StatusBadRequest)
+		return
+	}
+
+	host := parsed.Hostname()
+	if !strings.HasSuffix(host, ".telegram.org") && host != "telegram.org" {
+		if *appEnv != "local" {
+			http.Error(w, "forbidden host", http.StatusForbidden)
+			return
+		}
+	}
+
+	if cached, ok := avatarCache.Load(rawURL); ok {
+		entry := cached.(*avatarCacheEntry)
+		w.Header().Set("Content-Type", entry.contentType)
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		_, _ = w.Write(entry.data)
+		return
+	}
+
+	resp, err := avatarHTTPClient.Get(rawURL)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		http.Error(w, "fetch failed", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(w, "read failed", http.StatusBadGateway)
+		return
+	}
+
+	ct := resp.Header.Get("Content-Type")
+	if ct == "" {
+		ct = "image/jpeg"
+	}
+
+	avatarCache.Store(rawURL, &avatarCacheEntry{data: data, contentType: ct})
+
+	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	_, _ = w.Write(data)
+}
 
 func serveIndexPage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -80,6 +148,7 @@ func main() {
 	lobbyInstance := lobby.NewLobby(newGameFunc, newBotFunc, matchMaker, 1, 20)
 	go lobbyInstance.Run()
 	http.HandleFunc("/", serveIndexPage)
+	http.HandleFunc("/avatar-proxy", avatarProxyHandler)
 	if *serveFiles {
 		http.HandleFunc("/favicon.ico", faviconHandler)
 		http.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("./public/js"))))

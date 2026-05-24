@@ -308,8 +308,8 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this._createAvatarImage(key);
             return;
         }
+        const proxyUrl = '/avatar-proxy?url=' + encodeURIComponent(url);
         const img = new Image();
-        img.crossOrigin = 'anonymous';
         img.onload = () => {
             if (!this.scene || !this.scene.textures || this.isCorpse) return;
             const size = 20;
@@ -326,7 +326,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this._createAvatarImage(key);
         };
         img.onerror = () => {};
-        img.src = url;
+        img.src = proxyUrl;
     }
 
     _createAvatarImage(key)
