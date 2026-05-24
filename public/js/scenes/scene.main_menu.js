@@ -66,7 +66,7 @@ class MainMenu extends Phaser.Scene
     {
         const centerX = this.cameras.main.width / 2;
         const startY = 150;
-        const spacing = 150;
+        const spacing = 128;
 
         // Title
         this.make.text({
