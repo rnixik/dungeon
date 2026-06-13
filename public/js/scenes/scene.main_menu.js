@@ -16,6 +16,12 @@ class MainMenu extends Phaser.Scene
     avatarUrl = null;
     roomName = 'default';
 
+    selectedClass = null;
+    selectedColor = null;
+    // Whether the player has paid to unlock color selection. Intentionally not
+    // persisted anywhere: the paywall must be cleared again for every new game.
+    colorsUnlocked = false;
+
     roomPlayersListText = null;
 
     constructor ()
@@ -198,10 +204,13 @@ class MainMenu extends Phaser.Scene
         this.selectionFrame.lineStyle(3, 0xffec99, 1);
         this.selectionFrame.setVisible(false);
 
+        // Color selection (behind a paywall)
+        this.displayColorSelection(centerX, startY + 150);
+
         // Start button
         const startButton = this.make.text({
             x: centerX,
-            y: startY + 180,
+            y: startY + 290,
             text: "START GAME",
             origin: { x: 0.5, y: 0.5 },
             style: {
@@ -218,7 +227,7 @@ class MainMenu extends Phaser.Scene
             this.wsConnection.send(JSON.stringify({type: 'room', subType: 'startGame'}));
             startButton.setText('Starting...');
             startButton.disableInteractive();
-            this.loadingSpinner.setPosition(centerX, startY + 280);
+            this.loadingSpinner.setPosition(centerX, startY + 360);
             this.loadingSpinner.setVisible(true);
         });
         startButton.on('pointerover', () => {
@@ -231,9 +240,23 @@ class MainMenu extends Phaser.Scene
 
     selectCharacter(characterClass)
     {
-        const props = { class: characterClass };
+        this.selectedClass = characterClass;
+        this.sendPlayerProperties();
+    }
+
+    sendPlayerProperties()
+    {
+        const props = {};
+        if (this.selectedClass) {
+            props.class = this.selectedClass;
+        }
         if (this.avatarUrl) {
             props.avatarUrl = this.avatarUrl;
+        }
+        // Only send a custom color once it has been unlocked and chosen.
+        // Otherwise the server keeps assigning a random one.
+        if (this.colorsUnlocked && this.selectedColor) {
+            props.color = this.selectedColor;
         }
         this.wsConnection.send(JSON.stringify({
             type: 'room',
@@ -258,6 +281,204 @@ class MainMenu extends Phaser.Scene
             fw, fh, 8
         );
         this.selectionFrame.setVisible(true);
+    }
+
+    // Palette must match playerColors in internal/game/game.go. The server
+    // rejects any color that is not in this list.
+    static PLAYER_COLORS = [
+        '0xe74c3c', '0x3498db', '0x2ecc71', '0xf1c40f', '0x9b59b6',
+        '0xe67e22', '0x1abc9c', '0xff69b4', '0xcd853f', '0x00bcd4',
+        '0xff5722', '0x8bc34a', '0x673ab7', '0xff9800', '0x03a9f4',
+        '0xe91e63', '0xf06292', '0x26c6da', '0xd4e157', '0xa1887f',
+    ];
+
+    displayColorSelection(centerX, y)
+    {
+        // Section header
+        this.make.text({
+            x: centerX,
+            y: y,
+            text: "Player Color",
+            origin: { x: 0.5, y: 0.5 },
+            style: {
+                fontFamily: 'Arial',
+                fontSize: '20px',
+                color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 3
+            },
+            add: true
+        });
+
+        // Swatch grid (2 rows of 10)
+        const colors = MainMenu.PLAYER_COLORS;
+        const cols = 10;
+        const swatch = 20;
+        const gap = 6;
+        const cell = swatch + gap;
+        const gridWidth = cols * cell - gap;
+        const startX = centerX - gridWidth / 2 + swatch / 2;
+        const gridY = y + 32;
+
+        this.colorSwatches = [];
+        this.colorSelectionFrame = this.add.graphics();
+        this.colorSelectionFrame.setVisible(false);
+
+        colors.forEach((colorStr, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const sx = startX + col * cell;
+            const sy = gridY + row * cell;
+
+            const rect = this.add.rectangle(sx, sy, swatch, swatch, Number(colorStr));
+            rect.setStrokeStyle(1, 0x000000);
+            rect.setAlpha(0.3); // dimmed while locked
+            this.colorSwatches.push({ rect, colorStr });
+        });
+
+        // Lock overlay button, shown until the color pack is purchased.
+        this.colorLockButton = this.make.text({
+            x: centerX,
+            y: gridY + cell / 2,
+            text: "🔒  Unlock Colors  —  $0.99",
+            origin: { x: 0.5, y: 0.5 },
+            style: {
+                fontFamily: 'Arial',
+                fontSize: '20px',
+                color: '#ffec99',
+                backgroundColor: '#000000aa',
+                padding: { x: 10, y: 6 },
+                stroke: '#000000',
+                strokeThickness: 2
+            },
+            add: true
+        }).setInteractive({ useHandCursor: true });
+
+        this.colorLockButton.on('pointerdown', () => this.showPaymentModal());
+        this.colorLockButton.on('pointerover', () => this.colorLockButton.setStyle({ color: '#ffffff' }));
+        this.colorLockButton.on('pointerout', () => this.colorLockButton.setStyle({ color: '#ffec99' }));
+    }
+
+    unlockColors()
+    {
+        this.colorsUnlocked = true;
+        if (this.colorLockButton) {
+            this.colorLockButton.destroy();
+            this.colorLockButton = null;
+        }
+        this.colorSwatches.forEach(({ rect, colorStr }) => {
+            rect.setAlpha(1);
+            rect.setInteractive({ useHandCursor: true });
+            rect.on('pointerdown', () => this.selectColor(colorStr, rect));
+        });
+    }
+
+    selectColor(colorStr, rect)
+    {
+        this.selectedColor = colorStr;
+
+        const fw = 26;
+        const fh = 26;
+        this.colorSelectionFrame.clear();
+        this.colorSelectionFrame.lineStyle(3, 0xffffff, 1);
+        this.colorSelectionFrame.strokeRoundedRect(
+            rect.x - fw / 2,
+            rect.y - fh / 2,
+            fw, fh, 4
+        );
+        this.colorSelectionFrame.setVisible(true);
+
+        this.sendPlayerProperties();
+    }
+
+    // Mock payment flow. No real transaction happens; this stands in for the
+    // payment integration that will be added later.
+    showPaymentModal()
+    {
+        const centerX = this.cameras.main.width / 2;
+        const centerY = this.cameras.main.height / 2;
+        const modal = [];
+
+        // Click-blocking dim overlay
+        const overlay = this.add.rectangle(
+            centerX, centerY,
+            this.cameras.main.width, this.cameras.main.height,
+            0x000000, 0.6
+        ).setInteractive();
+        modal.push(overlay);
+
+        const panel = this.add.rectangle(centerX, centerY, 360, 220, 0x1e1e2a)
+            .setStrokeStyle(2, 0xffec99);
+        modal.push(panel);
+
+        modal.push(this.make.text({
+            x: centerX, y: centerY - 75,
+            text: "Premium Color Pack",
+            origin: { x: 0.5, y: 0.5 },
+            style: { fontFamily: 'Arial', fontSize: '22px', color: '#ffec99' },
+            add: true
+        }));
+
+        modal.push(this.make.text({
+            x: centerX, y: centerY - 35,
+            text: "Pick your own player color\nfor this game — $0.99",
+            origin: { x: 0.5, y: 0.5 },
+            align: 'center',
+            style: { fontFamily: 'Arial', fontSize: '15px', color: '#ffffff' },
+            add: true
+        }));
+
+        const status = this.make.text({
+            x: centerX, y: centerY + 5,
+            text: "",
+            origin: { x: 0.5, y: 0.5 },
+            style: { fontFamily: 'Arial', fontSize: '14px', color: '#74c0fc' },
+            add: true
+        });
+        modal.push(status);
+
+        const closeModal = () => modal.forEach(o => o.destroy());
+
+        const payButton = this.make.text({
+            x: centerX - 70, y: centerY + 55,
+            text: "Pay $0.99",
+            origin: { x: 0.5, y: 0.5 },
+            style: {
+                fontFamily: 'Arial', fontSize: '18px', color: '#51cf66',
+                backgroundColor: '#000000', padding: { x: 12, y: 6 }
+            },
+            add: true
+        }).setInteractive({ useHandCursor: true });
+        modal.push(payButton);
+
+        const cancelButton = this.make.text({
+            x: centerX + 70, y: centerY + 55,
+            text: "Cancel",
+            origin: { x: 0.5, y: 0.5 },
+            style: {
+                fontFamily: 'Arial', fontSize: '18px', color: '#ff6b6b',
+                backgroundColor: '#000000', padding: { x: 12, y: 6 }
+            },
+            add: true
+        }).setInteractive({ useHandCursor: true });
+        modal.push(cancelButton);
+
+        cancelButton.on('pointerdown', closeModal);
+
+        payButton.on('pointerdown', () => {
+            // Mock the asynchronous payment confirmation.
+            payButton.disableInteractive();
+            cancelButton.disableInteractive();
+            payButton.setText("Processing...").setStyle({ color: '#cccccc' });
+            status.setText("Contacting payment provider (mock)...");
+            this.time.delayedCall(900, () => {
+                status.setText("Payment successful!").setStyle({ color: '#51cf66' });
+                this.time.delayedCall(500, () => {
+                    closeModal();
+                    this.unlockColors();
+                });
+            });
+        });
     }
 
     updateRoomPlayerList(playerList)

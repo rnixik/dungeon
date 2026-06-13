@@ -40,6 +40,18 @@ var playerColors = []string{
 	"0xa1887f", // warm brown
 }
 
+// isValidPlayerColor reports whether the given color is part of the selectable
+// palette. Used to validate a client-chosen color before applying it.
+func isValidPlayerColor(color string) bool {
+	for _, c := range playerColors {
+		if c == color {
+			return true
+		}
+	}
+
+	return false
+}
+
 const positionsUpdateTickPeriod = time.Second / 60
 const commonUpdateTickPeriod = time.Second / 3
 
@@ -150,6 +162,13 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 	props := client.GetAdditionalProperties()
 	if cls, ok := props["class"].(string); ok {
 		class = cls
+	}
+
+	// A player may pick a custom color (unlocked via the paywall on the client).
+	// Only accept it if it belongs to the known palette, otherwise keep the
+	// random one assigned above.
+	if c, ok := props["color"].(string); ok && isValidPlayerColor(c) {
+		colorHex = c
 	}
 
 	avatarUrl := ""
