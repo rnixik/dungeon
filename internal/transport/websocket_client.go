@@ -124,8 +124,19 @@ func (c *WebSocketClient) writeLoop() {
 	}
 }
 
+// init registers the wire serializer with the lobby so broadcasts are encoded
+// once per event rather than once per recipient.
+func init() {
+	lobby.SetEventEncoder(eventToJSON)
+}
+
 func (c *WebSocketClient) SendEvent(event interface{}) {
-	jsonDataMessage, _ := eventToJSON(event)
+	var jsonDataMessage []byte
+	if pre, ok := event.(*lobby.PreEncodedEvent); ok {
+		jsonDataMessage = pre.Data
+	} else {
+		jsonDataMessage, _ = eventToJSON(event)
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.sendIsClosed || c.send == nil {

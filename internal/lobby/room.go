@@ -133,6 +133,14 @@ func (r *Room) broadcastEvent(event interface{}, exceptClient ClientPlayer) {
 	r.membersLock.RLock()
 	defer r.membersLock.RUnlock()
 
+	// Serialize the payload at most once and reuse it for every recipient,
+	// instead of re-marshaling the same event per client in SendEvent.
+	if eventEncoder != nil {
+		if data, err := eventEncoder(event); err == nil {
+			event = &PreEncodedEvent{Event: event, Data: data}
+		}
+	}
+
 	for m := range r.members {
 		if exceptClient == nil || m.client.ID() != exceptClient.ID() {
 			m.client.SendEvent(event)

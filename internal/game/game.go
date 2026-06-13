@@ -450,12 +450,16 @@ func (g *Game) StartMainLoop() {
 				})
 			}
 
-			g.broadcastEventFunc(CreaturesPosUpdateEvent{
-				Players:  p,
-				Monsters: m,
-			})
-
 			g.mutex.Unlock()
+
+			// Broadcast outside the lock (network sends shouldn't block command
+			// handling), and skip entirely when nothing is moving or attacking.
+			if len(p) > 0 || len(m) > 0 {
+				g.broadcastEventFunc(CreaturesPosUpdateEvent{
+					Players:  p,
+					Monsters: m,
+				})
+			}
 		case <-tickerCommon.C:
 			if g.isGameEnded() {
 				return
@@ -501,11 +505,6 @@ func (g *Game) StartMainLoop() {
 				})
 			}
 
-			g.broadcastEventFunc(CreaturesStatsUpdateEvent{
-				Players:  p,
-				Monsters: m,
-			})
-
 			now := time.Now()
 
 			// Record position snapshot (all alive players including self)
@@ -529,17 +528,29 @@ func (g *Game) StartMainLoop() {
 			}
 			g.positionSnapshots = append(g.positionSnapshots, snap)
 
-			// Send current footprints to players with active scroll
-			for _, pl := range g.players {
-				if pl.hp <= 0 || now.After(pl.footprintsActiveUntil) {
-					continue
-				}
-				if len(snap.points) > 0 {
-					pl.client.SendEvent(FootprintsEvent{Points: snap.points})
+			// Collect footprint recipients (players with an active scroll) while
+			// holding the lock; the actual sends happen after unlocking.
+			var footprintClients []lobby.ClientPlayer
+			if len(snap.points) > 0 {
+				for _, pl := range g.players {
+					if pl.hp <= 0 || now.After(pl.footprintsActiveUntil) {
+						continue
+					}
+					footprintClients = append(footprintClients, pl.client)
 				}
 			}
 
 			g.mutex.Unlock()
+
+			// Broadcast/send outside the lock so network sends don't block
+			// command handling.
+			g.broadcastEventFunc(CreaturesStatsUpdateEvent{
+				Players:  p,
+				Monsters: m,
+			})
+			for _, client := range footprintClients {
+				client.SendEvent(FootprintsEvent{Points: snap.points})
+			}
 		}
 	}
 }

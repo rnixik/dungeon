@@ -32,7 +32,7 @@ type BotClientCommandDecodeWrapper struct {
 func NewBotClient(botId uint64, room *lobby.Room, sendGameCommand func(client lobby.ClientPlayer, commandName string, commandData json.RawMessage)) lobby.ClientPlayer {
 	botClient := &BotClient{
 		id:               botId,
-		incomingEvents:   make(chan interface{}),
+		incomingEvents:   make(chan interface{}, 256),
 		outgoingCommands: make(chan *GameBotCommandWithName),
 		sendGameCommand:  sendGameCommand,
 	}
@@ -49,7 +49,16 @@ func (bc *BotClient) SendEvent(event interface{}) {
 	if bc.stopped {
 		return
 	}
-	bc.incomingEvents <- event
+	// Bots consume the original event object, not the wire bytes.
+	if pre, ok := event.(*lobby.PreEncodedEvent); ok {
+		event = pre.Event
+	}
+	// Never block the broadcaster (which holds no lock, but other callers may):
+	// drop the event if the bot is not keeping up, mirroring the transport client.
+	select {
+	case bc.incomingEvents <- event:
+	default:
+	}
 }
 
 func (bc *BotClient) sendCommandToGame(commandType string, commandData interface{}) {

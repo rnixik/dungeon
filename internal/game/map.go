@@ -82,6 +82,7 @@ type Map struct {
 	blockedGrid         []bool
 	gridWidth           int
 	gridHeight          int
+	visibilityColliders []Rectangle
 }
 
 func LoadMap(filename string) (*Map, error) {
@@ -105,6 +106,7 @@ func LoadMap(filename string) (*Map, error) {
 
 	m.buildAreaOptimizedCollisionRects()
 	m.buildBlockedGrid()
+	m.buildVisibilityColliders()
 
 	return &m, err
 }
@@ -459,20 +461,27 @@ func (m *Map) findPath(startTX, startTY, goalTX, goalTY int) []Point {
 	return nil
 }
 
-func (m *Map) getVisibilityColliders() (rects []Rectangle) {
+// buildVisibilityColliders precomputes the static collision rectangles used for
+// line-of-sight checks. The collision-rects layer never changes after map load,
+// so caching the slice avoids rebuilding and reallocating it on every
+// isVisible() call (which runs per monster × per player every AI tick).
+func (m *Map) buildVisibilityColliders() {
 	visLayer := m.getLayerByName("collision-rects")
 	if visLayer == nil {
 		return
 	}
 
+	m.visibilityColliders = make([]Rectangle, 0, len(visLayer.Objects))
 	for _, obj := range visLayer.Objects {
-		rects = append(rects, Rectangle{
+		m.visibilityColliders = append(m.visibilityColliders, Rectangle{
 			X:      int(obj.X),
 			Y:      int(obj.Y),
 			Width:  int(obj.Width),
 			Height: int(obj.Height),
 		})
 	}
+}
 
-	return
+func (m *Map) getVisibilityColliders() []Rectangle {
+	return m.visibilityColliders
 }
