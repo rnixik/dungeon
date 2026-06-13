@@ -127,6 +127,7 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 
     convertToCorpse()
     {
+        this.removeProjectileColliders();
         if (this.hpText) {
             this.hpText.destroy();
         }
@@ -241,6 +242,16 @@ class Monster extends Phaser.Physics.Arcade.Sprite
 
         this.setTint(0xff3333);
         this.scene.time.delayedCall(100, () => this.clearTint(), [], this);
+    }
+
+    removeProjectileColliders()
+    {
+        if (this._projectileColliders) {
+            for (const c of this._projectileColliders) {
+                if (c) this.scene.physics.world.removeCollider(c);
+            }
+            this._projectileColliders = null;
+        }
     }
 
     static SpawnNewMonster(scene, statData)
@@ -382,6 +393,7 @@ class Jelly extends Monster
             this.hpText.destroy();
             this.hpText = null;
         }
+        this.removeProjectileColliders();
         this.setDepth(DEPTH_DEAD);
         this.disableBody();
 
@@ -442,6 +454,7 @@ class JellyMicro extends Jelly
             this.hpText.destroy();
             this.hpText = null;
         }
+        this.removeProjectileColliders();
         this.setDepth(DEPTH_DEAD);
         this.disableBody();
         this.anims.play('jelly_dead', false);

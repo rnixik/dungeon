@@ -423,7 +423,7 @@ const GameEventHandler = {
                 return;
             }
             const f = s.frame.name;
-            console.log('overlap with spikes', f);
+            if (DEBUG_TRAPS) console.log('overlap with spikes', f);
             if (!safeFrames.includes(f) && !this.isDead) {
                 canDamage = false;
                 this.sendGameCommand('HitPlayerCommand', {

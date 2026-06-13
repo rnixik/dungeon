@@ -514,7 +514,7 @@ class Game extends Phaser.Scene {
 
     onBulletHitPlayer(bullet, player, kind)
     {
-        console.log('hit player', bullet.clientId, player.id, kind);
+        if (DEBUG) console.log('hit player', bullet.clientId, player.id, kind);
         if (bullet.monsterId && player.id === this.myClientId) {
             // hit caused by monster's bullet on ourselves
             this.sendGameCommand('HitPlayerCommand', {
@@ -537,7 +537,7 @@ class Game extends Phaser.Scene {
 
     onBulletHitMonster(bullet, monster, kind)
     {
-        console.log('hit monster', bullet.clientId, this.myClientId, bullet.monsterId, monster.id, kind);
+        if (DEBUG) console.log('hit monster', bullet.clientId, this.myClientId, bullet.monsterId, monster.id, kind);
         if (bullet.monsterId) {
             return; // ignore hitting monsters by monster bullets
         }
@@ -550,7 +550,7 @@ class Game extends Phaser.Scene {
             monsterId: monster.id,
             kind: kind,
         });
-        console.log('monster hit command sent');
+        if (DEBUG) console.log('monster hit command sent');
     }
 
     // --- Darkness RenderTexture setup ---
@@ -1008,7 +1008,7 @@ function calc (source, vertices, edges, rays) {
         rays.map((ray, i) => {
             ray.setTo(sx, sy, vertices[i].x, vertices[i].y);
             Extend(ray, 0, 1000);
-            for (const edge of edges) getRayToEdge(ray, edge);
+            for (const edge of edges) getRayToEdge(ray, edge, _rayEdgeScratch);
             return ray.getPointB();
         }),
         source
@@ -1028,6 +1028,10 @@ function getRectVertices (rect) {
         new Point(right2, bottom2), new Point(left2,  bottom2)
     ];
 }
+
+// Shared scratch point reused across every ray/edge intersection test so the
+// per-frame raycast doesn't allocate a Point for each edge of each ray.
+const _rayEdgeScratch = new Point();
 
 function getRayToEdge (ray, edge, out) {
     if (!out) out = new Point();

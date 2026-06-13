@@ -62,12 +62,19 @@ class Fireball extends Bullet
         this.setVisible(false);
         this.disableBody();
 
+        // Colliders registered below are removed when the explosion ends so they
+        // don't accumulate in the physics world for the rest of the match.
+        const explosionColliders = [];
+
         const explosion = this.scene.add.sprite(this.x, this.y, 'explosion')
             .setDepth(DEPTH_PROJECTILES)
             .setScale(1.5)
             .setMask(this.scene.mask);
         explosion.anims.play('explosion', true);
         explosion.on('animationcomplete', () => {
+            for (const c of explosionColliders) {
+                this.scene.physics.world.removeCollider(c);
+            }
             explosion.destroy();
             this.setActive(false);
             this.hasActiveExplosion = false;
@@ -81,7 +88,7 @@ class Fireball extends Bullet
 
         // attack my player
         let canDamagePlayer = true;
-        this.scene.physics.add.overlap(explosion, this.scene.player, (s, p) => {
+        explosionColliders.push(this.scene.physics.add.overlap(explosion, this.scene.player, (s, p) => {
             if (!canDamagePlayer) {
                 return;
             }
@@ -93,7 +100,7 @@ class Fireball extends Bullet
                 kind: DAMAGE_KIND_EXPLOSION
             });
             setTimeout(() => canDamagePlayer = false, 1000);
-        }, null, this);
+        }, null, this));
 
         // attack other players
         const playersArray = [];
@@ -101,7 +108,7 @@ class Fireball extends Bullet
             playersArray.push(this.scene.players[id]);
         }
         let cannotDamage = {};
-        this.scene.physics.add.overlap(explosion, playersArray, (s, p) => {
+        explosionColliders.push(this.scene.physics.add.overlap(explosion, playersArray, (s, p) => {
             if (cannotDamage[p.id]) {
                 return;
             }
@@ -113,7 +120,7 @@ class Fireball extends Bullet
                 kind: DAMAGE_KIND_EXPLOSION
             });
             setTimeout(() => cannotDamage[p.id] = false, 300);
-        }, null, this);
+        }, null, this));
 
         // attack monsters
         const monstersArray = [];
@@ -122,7 +129,7 @@ class Fireball extends Bullet
         }
 
         let cannotDamageMonsters = {};
-        this.scene.physics.add.overlap(explosion, monstersArray, (s, m) => {
+        explosionColliders.push(this.scene.physics.add.overlap(explosion, monstersArray, (s, m) => {
             if (cannotDamageMonsters[m.id]) {
                 return;
             }
@@ -133,7 +140,7 @@ class Fireball extends Bullet
                 kind: 'explosion'
             });
             setTimeout(() => cannotDamage[m.id] = false, 1000);
-        }, null, this);
+        }, null, this));
     }
 }
 
@@ -192,7 +199,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
     addMonster (monster)
     {
-        this.scene.physics.add.overlap(this.sprites, monster, this.bulletHitMonster, null, this);
+        return this.scene.physics.add.overlap(this.sprites, monster, this.bulletHitMonster, null, this);
     }
 
     addObject (object)
@@ -202,7 +209,7 @@ class Bullets extends Phaser.Physics.Arcade.Group
 
     bulletHitWall (bullet, wall)
     {
-        console.log('hit wall', this.kind);
+        if (DEBUG) console.log('hit wall', this.kind);
         this.hideBullet(bullet);
     }
 
@@ -347,8 +354,12 @@ class AllProjectilesGroup
     }
 
     addMonster(monster) {
-        this.fireballs.addMonster(monster);
-        this.arrows.addMonster(monster);
+        // Keep references so they can be removed from the physics world when the
+        // monster dies — otherwise stale colliders accumulate for the whole match.
+        monster._projectileColliders = [
+            this.fireballs.addMonster(monster),
+            this.arrows.addMonster(monster),
+        ];
     }
 
     addObject(object) {
