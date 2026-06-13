@@ -130,6 +130,12 @@ class Game extends Phaser.Scene {
     inventory = [];
     currentItemIndex = 0;
     footprintGraphics = [];
+
+    // player list
+    latestPlayerStats = [];
+    playerListVisible = false;
+    _playerListBtn = null;
+    _playerListPanel = null;
     _itemFrame = null;
     _itemArrowLeft = null;
     _itemArrowRight = null;
@@ -253,6 +259,8 @@ class Game extends Phaser.Scene {
             this.updateXpBar();
             this.addMobileButtons();
             this.addItemSelector();
+            this.addPlayerListButton();
+            this.renderPlayerList();
         });
 
         // Debug polyline graphics for raycast mask
@@ -290,6 +298,7 @@ class Game extends Phaser.Scene {
         this.inventory = gameData.inventory || [];
         this.player.speedBoostPercent = gameData.speedBoostPercent || 0;
         this.addItemSelector();
+        this.addPlayerListButton();
     }
 
     update (time, delta) {
@@ -948,6 +957,87 @@ class Game extends Phaser.Scene {
         const item = this.inventory[this.currentItemIndex];
         if (!item || item.count <= 0) return;
         this.sendGameCommand('UseItemCommand', { kind: item.kind });
+    }
+
+    addPlayerListButton() {
+        if (this._playerListBtn) this._playerListBtn.destroy();
+
+        const fontSize = Math.max(12, Math.round(14 * Math.max(this.uiScaleX, this.uiScaleY)));
+        const count = this.latestPlayerStats.length;
+        this._playerListBtn = this.add.text(this.scale.width / 2, 10 * this.uiScaleY, `Players (${count})`, {
+            font: `${fontSize}px Arial`,
+            fill: '#ffffff',
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            padding: { x: 8, y: 4 }
+        })
+            .setOrigin(0.5, 0)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI)
+            .setInteractive({ useHandCursor: true });
+        this._playerListBtn.on('pointerdown', () => this.togglePlayerList());
+    }
+
+    togglePlayerList() {
+        this.playerListVisible = !this.playerListVisible;
+        this.renderPlayerList();
+    }
+
+    renderPlayerList() {
+        if (this._playerListPanel) { this._playerListPanel.destroy(); this._playerListPanel = null; }
+        if (!this.playerListVisible) return;
+
+        const players = this.latestPlayerStats.slice().sort((a, b) => (b.level - a.level) || (b.hp - a.hp));
+        const scale = Math.max(this.uiScaleX, this.uiScaleY);
+        const fontSize = Math.max(11, Math.round(13 * scale));
+        const rowH = fontSize + 9;
+        const pad = 10 * scale;
+        const swatch = fontSize;
+        const panelW = 270 * scale;
+        const panelH = pad * 2 + Math.max(1, players.length) * rowH;
+
+        const panelX = this.scale.width / 2 - panelW / 2;
+        const panelY = (10 * this.uiScaleY) + (this._playerListBtn ? this._playerListBtn.height : 0) + 6;
+
+        const container = this.add.container(panelX, panelY).setScrollFactor(0, 0).setDepth(DEPTH_UI);
+
+        const bg = this.add.graphics();
+        bg.fillStyle(0x000000, 0.7);
+        bg.fillRect(0, 0, panelW, panelH);
+        bg.lineStyle(1, 0xffffff, 0.3);
+        bg.strokeRect(0, 0, panelW, panelH);
+        container.add(bg);
+
+        if (players.length === 0) {
+            container.add(this.add.text(pad, pad, 'No players', { font: `${fontSize}px Arial`, fill: '#aaaaaa' }));
+        }
+
+        players.forEach((p, i) => {
+            const y = pad + i * rowH;
+            const isMe = p.clientId === this.myClientId;
+            const isDead = p.hp <= 0;
+
+            const colorInt = parseInt((p.color || '#ffffff').replace('#', ''), 16);
+            const sw = this.add.graphics();
+            sw.fillStyle(colorInt, isDead ? 0.3 : 1);
+            sw.fillRect(pad, y + 2, swatch, swatch);
+            sw.lineStyle(1, 0xffffff, 0.4);
+            sw.strokeRect(pad, y + 2, swatch, swatch);
+            container.add(sw);
+
+            const name = (p.nickname || '???') + (isMe ? ' (you)' : '');
+            container.add(this.add.text(pad + swatch + 6, y, name, {
+                font: `${fontSize}px Arial`,
+                fill: isMe ? '#ffe066' : '#ffffff'
+            }));
+
+            const info = isDead ? `Lv.${p.level} ${p.class} · dead` : `Lv.${p.level} ${p.class} · ${p.hp}/${p.maxHp}`;
+            container.add(this.add.text(panelW - pad, y, info, {
+                font: `${fontSize}px Arial`,
+                fill: isDead ? '#ff6666' : '#cccccc'
+            }).setOrigin(1, 0));
+        });
+
+        this._playerListPanel = container;
     }
 }
 

@@ -105,6 +105,15 @@ const GameEventHandler = {
 
             this.monsters[id].updateStatAndPosition(m);
         }
+
+        // Keep the player list in sync with the latest stats snapshot
+        this.latestPlayerStats = data.players;
+        if (this._playerListBtn) {
+            this._playerListBtn.setText(`Players (${data.players.length})`);
+        }
+        if (this.playerListVisible) {
+            this.renderPlayerList();
+        }
     },
 
     CreaturesPosUpdateEvent(data) {
