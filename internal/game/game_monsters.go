@@ -36,13 +36,13 @@ const jellyAttackDuration = 1500 * time.Millisecond
 const jellyAttackDelay = 400 * time.Millisecond
 const jellyHitSlowDuration = 3000 // ms, sent to client
 
-const demonMageSpellDelay         = 1600 * time.Millisecond
-const demonMageSpellDuration      = 2000 * time.Millisecond
-const demonMageRange              = 10 * tileSize
-const demonMageShieldCooldown     = 60 * time.Second
+const demonMageSpellDelay = 1600 * time.Millisecond
+const demonMageSpellDuration = 2000 * time.Millisecond
+const demonMageRange = 10 * tileSize
+const demonMageShieldCooldown = 60 * time.Second
 const demonMageSpeedBoostCooldown = 60 * time.Second
 const demonMageSpellCrossCooldown = 30 * time.Second // min gap between any two casts
-const demonMageShieldDuration     = 60 * time.Second
+const demonMageShieldDuration = 60 * time.Second
 const demonMageSpeedBoostDuration = 20 * time.Second
 
 // moveTowardPlayer updates pathfinding state and moves mon toward player.
@@ -98,23 +98,9 @@ func (g *Game) startIntellect() {
 					continue
 				}
 
-				switch mon.kind {
-				case monsterKindArcher:
-					g.intellectArcher(mon)
-				case monsterKindSkeleton:
-					g.intellectSkeleton(mon)
-				case monsterKindDemon:
-					g.intellectDemon(mon)
-				case monsterKindGolem:
-					g.intellectGolem(mon)
-				case monsterKindSpider:
-					g.intellectSpider(mon)
-				case monsterKindJelly, monsterKindJellySmall, monsterKindJellyMicro:
-					g.intellectJelly(mon)
-				case monsterKindDemonMage:
-					g.intellectDemonMage(mon)
+				if def := monsterDefs[mon.kind]; def != nil && def.Intellect != nil {
+					def.Intellect(g, mon)
 				}
-
 			}
 
 			g.mutex.Unlock()

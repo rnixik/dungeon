@@ -459,7 +459,6 @@ func (m *Map) findPath(startTX, startTY, goalTX, goalTY int) []Point {
 	return nil
 }
 
-
 func (m *Map) getVisibilityColliders() (rects []Rectangle) {
 	visLayer := m.getLayerByName("collision-rects")
 	if visLayer == nil {

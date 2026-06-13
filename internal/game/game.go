@@ -3,7 +3,6 @@ package game
 import (
 	"dungeon/internal/lobby"
 	"encoding/json"
-	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -90,12 +89,12 @@ type Player struct {
 	direction             string
 	isMoving              bool
 	isDodging             bool
-	inventory              []InventoryItem
-	footprintsActiveUntil  time.Time
-	protectionActiveUntil  time.Time
-	invisibleUntil         time.Time
-	cloakLastUsed          time.Time
-	speedBoostPercent      int
+	inventory             []InventoryItem
+	footprintsActiveUntil time.Time
+	protectionActiveUntil time.Time
+	invisibleUntil        time.Time
+	cloakLastUsed         time.Time
+	speedBoostPercent     int
 }
 
 func (p *Player) isInvisible() bool {
@@ -103,27 +102,27 @@ func (p *Player) isInvisible() bool {
 }
 
 type Monster struct {
-	id                  int
-	kind                string
-	hp                  int
-	maxHP               int
-	damage              int
-	hitsTaken           int
-	x                   int
-	y                   int
-	direction           string
-	isMoving            bool
-	isAttacking         bool
-	attacked            bool
-	attackStartedAt     time.Time
-	moveToX             int
-	moveToY             int
-	path                []Point
-	pathGoalTX          int
-	pathGoalTY          int
-	firecircleStartedAt time.Time
-	lightningStartedAt  time.Time
-	webStartedAt        time.Time
+	id                   int
+	kind                 string
+	hp                   int
+	maxHP                int
+	damage               int
+	hitsTaken            int
+	x                    int
+	y                    int
+	direction            string
+	isMoving             bool
+	isAttacking          bool
+	attacked             bool
+	attackStartedAt      time.Time
+	moveToX              int
+	moveToY              int
+	path                 []Point
+	pathGoalTX           int
+	pathGoalTY           int
+	firecircleStartedAt  time.Time
+	lightningStartedAt   time.Time
+	webStartedAt         time.Time
 	shieldUntil          time.Time
 	speedBoostUntil      time.Time
 	spellTargetID        int
@@ -146,8 +145,7 @@ type Object struct {
 func newPlayer(client lobby.ClientPlayer) *Player {
 	colorHex := playerColors[rand.Intn(len(playerColors))]
 
-	classes := []string{ClassMage, ClassKnight, ClassRogue}
-	class := classes[rand.Intn(len(classes))]
+	class := classList[rand.Intn(len(classList))]
 
 	props := client.GetAdditionalProperties()
 	if cls, ok := props["class"].(string); ok {
@@ -159,15 +157,7 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 		avatarUrl = av
 	}
 
-	currentMaxHP := 100
-	switch class {
-	case ClassMage:
-		currentMaxHP = 150
-	case ClassKnight:
-		currentMaxHP = 250
-	case ClassRogue:
-		currentMaxHP = 200
-	}
+	currentMaxHP := classMaxHP(class)
 
 	return &Player{
 		client:      client,
@@ -183,13 +173,13 @@ func newPlayer(client lobby.ClientPlayer) *Player {
 		direction:   "right",
 		isMoving:    false,
 		inventory: []InventoryItem{
-			{Kind: "healing_potion", Count: 3},
-			{Kind: "spikes", Count: 3},
-			{Kind: "scroll_of_footprints", Count: 1},
-			{Kind: "scroll_of_xp", Count: 1},
-			{Kind: "boots_of_haste", Count: 1},
-			{Kind: "scroll_of_protection", Count: 1},
-			{Kind: "cloak_of_invisibility", Count: 1},
+			{Kind: itemHealingPotion, Count: 3},
+			{Kind: itemSpikes, Count: 3},
+			{Kind: itemScrollOfFootprints, Count: 1},
+			{Kind: itemScrollOfXP, Count: 1},
+			{Kind: itemBootsOfHaste, Count: 1},
+			{Kind: itemScrollOfProtection, Count: 1},
+			{Kind: itemCloakOfInvisibility, Count: 1},
 		},
 	}
 }
@@ -321,7 +311,7 @@ func (g *Game) DispatchGameCommand(client lobby.ClientPlayer, commandName string
 
 			return
 		}
-		damage := g.getDamageFromKind(c.Kind)
+		damage := damageForKind(c.Kind)
 		g.hitMonster(c.OriginClientID, c.MonsterID, damage)
 		break
 	case "RespawnCommand":
@@ -490,8 +480,8 @@ func (g *Game) StartMainLoop() {
 					MaxHP:             pl.maxHp,
 					HP:                pl.hp,
 					SpeedBoostPercent: pl.speedBoostPercent,
-				HasShield:         !pl.protectionActiveUntil.IsZero() && time.Now().Before(pl.protectionActiveUntil),
-				IsInvisible:       pl.isInvisible(),
+					HasShield:         !pl.protectionActiveUntil.IsZero() && time.Now().Before(pl.protectionActiveUntil),
+					IsInvisible:       pl.isInvisible(),
 				})
 			}
 			m := make([]MonsterStats, 0, len(g.monsters))
@@ -584,32 +574,37 @@ func (g *Game) dodge(clientID uint64, x int, y int, direction string, isMoving b
 	}
 }
 
-func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
-	isDead := false
-
-	var player *Player
+// beginAttack runs the shared preamble for a player attack: it reveals the
+// attacker (clearing invisibility), aborts if the player is missing or dead,
+// enforces the shared attack cooldown, and claims it. It returns the player to
+// attack with, or nil if the attack should not proceed.
+func (g *Game) beginAttack(clientID uint64, cooldown time.Duration) *Player {
 	g.mutex.Lock()
-	if p, ok := g.players[clientID]; ok {
-		player = p
-		if p.hp <= 0 {
-			isDead = true
-		}
+	p, ok := g.players[clientID]
+	dead := false
+	if ok {
+		dead = p.hp <= 0
 		g.revealPlayerUnsafe(p)
 	}
 	g.mutex.Unlock()
 
+	if !ok || dead {
+		return nil
+	}
+
+	if time.Since(p.lastAttackTime) < cooldown {
+		return nil
+	}
+	p.lastAttackTime = time.Now()
+
+	return p
+}
+
+func (g *Game) castFireball(clientID uint64, x int, y int, direction string) {
+	player := g.beginAttack(clientID, attackFireballCooldown)
 	if player == nil {
 		return
 	}
-
-	if isDead {
-		return
-	}
-
-	if time.Since(player.lastAttackTime) < attackFireballCooldown {
-		return
-	}
-	player.lastAttackTime = time.Now()
 
 	distance := 200 * player.level
 
@@ -626,31 +621,10 @@ func (g *Game) shootArrow(clientID uint64, x int, y int, direction string) {
 	go func() {
 		time.Sleep(time.Millisecond * 200)
 
-		isDead := false
-
-		var player *Player
-		g.mutex.Lock()
-		if p, ok := g.players[clientID]; ok {
-			player = p
-			if p.hp <= 0 {
-				isDead = true
-			}
-			g.revealPlayerUnsafe(p)
-		}
-		g.mutex.Unlock()
-
+		player := g.beginAttack(clientID, attackShotArrowCooldown)
 		if player == nil {
 			return
 		}
-
-		if isDead {
-			return
-		}
-
-		if time.Since(player.lastAttackTime) < attackShotArrowCooldown {
-			return
-		}
-		player.lastAttackTime = time.Now()
 
 		const dispersion = 100.0
 
@@ -675,31 +649,10 @@ func (g *Game) shootArrow(clientID uint64, x int, y int, direction string) {
 }
 
 func (g *Game) attackWithSword(clientID uint64) {
-	isDead := false
-
-	var player *Player
-	g.mutex.Lock()
-	if p, ok := g.players[clientID]; ok {
-		player = p
-		if p.hp <= 0 {
-			isDead = true
-		}
-		g.revealPlayerUnsafe(p)
-	}
-	g.mutex.Unlock()
-
+	player := g.beginAttack(clientID, attackSwordCooldown)
 	if player == nil {
 		return
 	}
-
-	if isDead {
-		return
-	}
-
-	if time.Since(player.lastAttackTime) < attackSwordCooldown {
-		return
-	}
-	player.lastAttackTime = time.Now()
 
 	g.broadcastEventFunc(SwordAttackPrepareEvent{
 		ClientID:  clientID,
@@ -711,6 +664,7 @@ func (g *Game) attackWithSword(clientID uint64) {
 	go func() {
 		time.Sleep(attackSwordDelay)
 
+		isDead := false
 		g.mutex.Lock()
 		if p, ok := g.players[clientID]; ok {
 			player = p
@@ -794,16 +748,8 @@ func (g *Game) hitPlayerWithKindUnsafe(targetClientID uint64, kind string) {
 			return
 		}
 
-		damage := g.getDamageFromKind(kind)
-		if (kind == damageKindFireball || kind == damageKindExplosion || kind == damageKindFirespot) && p.class == ClassMage {
-			damage = damage / 2
-		}
-		if (kind == damageKindSpike || kind == damageKindArrow) && p.class == ClassKnight {
-			damage = damage / 2
-		}
-		if (kind == damageKindBullet) && p.class == ClassRogue {
-			damage = damage / 2
-		}
+		damage := damageForKind(kind)
+		damage = int(float64(damage) * classResistance(p.class, kind))
 		if !p.protectionActiveUntil.IsZero() && time.Now().Before(p.protectionActiveUntil) {
 			damage = damage / 2
 		}
@@ -863,10 +809,10 @@ func (g *Game) hitMonsterUnsafe(originClientID uint64, monsterID int, damage int
 				Y:               m.y,
 			})
 
-			if (m.kind == monsterKindJelly || m.kind == monsterKindJellySmall) && m.hitsTaken >= 3 && m.hp > 0 {
-				g.splitJellyUnsafe(m, originClientID)
-			} else if m.hp == 0 {
-				g.addXPToPlayerUnSafe(originClientID, xpPerMonsterKill)
+			if def := monsterDefs[m.kind]; def != nil && def.OnHit != nil {
+				def.OnHit(g, m, originClientID)
+			} else {
+				g.defaultOnHit(m, originClientID)
 			}
 
 			break
@@ -973,9 +919,9 @@ func (g *Game) moveMonstersUnsafe() {
 			continue
 		}
 
-		moveSpeedPerTick := 2
-		if mon.kind == monsterKindGolem || mon.kind == monsterKindJelly || mon.kind == monsterKindJellySmall || mon.kind == monsterKindJellyMicro {
-			moveSpeedPerTick = 1
+		moveSpeedPerTick := defaultMonsterMoveSpeed
+		if def := monsterDefs[mon.kind]; def != nil {
+			moveSpeedPerTick = def.MoveSpeed
 		}
 		if !mon.speedBoostUntil.IsZero() && time.Now().Before(mon.speedBoostUntil) {
 			moveSpeedPerTick = (moveSpeedPerTick*3 + 1) / 2 // 50% boost
@@ -1039,44 +985,21 @@ func (g *Game) spawnInitialMonsters() {
 	}
 
 	for _, obj := range spawnLayer.Objects {
-		var kind string
-		var hp int
-		switch obj.Name {
-		case "archer":
-			kind = monsterKindArcher
-			hp = 100
-		case "skeleton":
-			kind = monsterKindSkeleton
-			hp = 200
-		case "golem":
-			kind = monsterKindGolem
-			hp = 1000
-		case "spider":
-			kind = monsterKindSpider
-			hp = 150
-		case "jelly":
-			kind = monsterKindJelly
-			hp = 500
-		case "demon_mage":
-			kind = monsterKindDemonMage
-			hp = 300
-		default:
+		def := monsterDefBySpawnName(obj.Name)
+		if def == nil || !def.SpawnOnStart {
 			continue
 		}
-		mon := &Monster{
+		g.monsters = append(g.monsters, &Monster{
 			id:        len(g.monsters) + 1,
-			kind:      kind,
-			hp:        hp,
-			maxHP:     hp,
+			kind:      def.Kind,
+			hp:        def.BaseHP,
+			maxHP:     def.BaseHP,
+			damage:    def.Damage,
 			x:         int(obj.X),
 			y:         int(obj.Y),
 			direction: "left",
 			isMoving:  false,
-		}
-		if kind == monsterKindJelly {
-			mon.damage = 20
-		}
-		g.monsters = append(g.monsters, mon)
+		})
 	}
 }
 
@@ -1211,12 +1134,13 @@ func (g *Game) spawnDemonUnsafe() {
 		return
 	}
 
+	def := monsterDefs[monsterKindDemon]
 	for _, obj := range spawnLayer.Objects {
-		if obj.Name == "demon" {
+		if obj.Name == def.SpawnName {
 			g.monsters = append(g.monsters, &Monster{
 				id:        len(g.monsters) + 1,
-				kind:      monsterKindDemon,
-				hp:        1000,
+				kind:      def.Kind,
+				hp:        def.BaseHP,
 				x:         int(obj.X),
 				y:         int(obj.Y),
 				direction: "left",
@@ -1249,27 +1173,6 @@ func (g *Game) isSwordAttackHit(attackerX, attackerY, attackLineX, attackLineY, 
 		g.isVisible(attackerX, attackerY, targetX, targetY)
 }
 
-func (g *Game) getDamageFromKind(kind string) int {
-	switch kind {
-	case damageKindFireball:
-		return 40
-	case damageKindExplosion:
-		return 20
-	case damageKindArrow:
-		return 30
-	case damageKindSpike:
-		return 25
-	case damageKindBullet:
-		return 25
-	case damageKindFirespot:
-		return 20
-	case damageKindLightning:
-		return 30
-	default:
-		return 20
-	}
-}
-
 func (g *Game) respawnPlayer(clientID uint64) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
@@ -1297,7 +1200,7 @@ func (g *Game) sendInventoryUpdateUnsafe(p *Player) {
 	items := make([]InventoryItem, len(p.inventory))
 	copy(items, p.inventory)
 	for i, item := range items {
-		if item.Kind == "cloak_of_invisibility" && !p.cloakLastUsed.IsZero() {
+		if item.Kind == itemCloakOfInvisibility && !p.cloakLastUsed.IsZero() {
 			remaining := time.Until(p.cloakLastUsed.Add(cloakCooldown))
 			if remaining > 0 {
 				items[i].CooldownMs = int(remaining.Milliseconds())
@@ -1328,107 +1231,31 @@ func (g *Game) useItem(clientID uint64, kind string) {
 		return
 	}
 
-	if kind == "cloak_of_invisibility" {
-		g.useCloakOfInvisibilityUnsafe(p, clientID)
+	def := itemDefs[kind]
+	if def == nil {
 		return
 	}
 
-	for i, item := range p.inventory {
-		if item.Kind != kind || item.Count <= 0 {
-			continue
+	if def.ConsumesOne {
+		idx := -1
+		for i, item := range p.inventory {
+			if item.Kind == kind && item.Count > 0 {
+				idx = i
+				break
+			}
 		}
-
-		p.inventory[i].Count--
-
-		switch kind {
-		case "healing_potion":
-			oldHp := p.hp
-			p.hp += 50
-			if p.hp > p.maxHp {
-				p.hp = p.maxHp
-			}
-			p.client.SendEvent(HealEvent{
-				ClientID: clientID,
-				Amount:   p.hp - oldHp,
-				HP:       p.hp,
-				MaxHP:    p.maxHp,
-			})
-
-		case "scroll_of_xp":
-			g.addXPToPlayerUnSafe(clientID, 500)
-
-		case "scroll_of_footprints":
-			p.footprintsActiveUntil = time.Now().Add(30 * time.Second)
-			if len(g.positionSnapshots) > 0 {
-				histPoints := make([]FootprintPoint, 0, len(g.positionSnapshots)*len(g.players))
-				for _, snap := range g.positionSnapshots {
-					histPoints = append(histPoints, snap.points...)
-				}
-				if len(histPoints) > 0 {
-					p.client.SendEvent(FootprintsEvent{Points: histPoints})
-				}
-			}
-			expireClientID := clientID
-			time.AfterFunc(30*time.Second, func() {
-				g.mutex.Lock()
-				defer g.mutex.Unlock()
-				pl, ok := g.players[expireClientID]
-				if !ok || time.Now().Before(pl.footprintsActiveUntil) {
-					return
-				}
-				pl.client.SendEvent(FootprintsExpiredEvent{})
-			})
-
-		case "boots_of_haste":
-			const maxSpeedBoost = 30
-			if p.speedBoostPercent < maxSpeedBoost {
-				p.speedBoostPercent += maxSpeedBoost
-				if p.speedBoostPercent > maxSpeedBoost {
-					p.speedBoostPercent = maxSpeedBoost
-				}
-			}
-
-		case "scroll_of_protection":
-			const protectionDuration = 60 * time.Second
-			p.protectionActiveUntil = time.Now().Add(protectionDuration)
-			p.client.SendEvent(ProtectionActiveEvent{Duration: int(protectionDuration.Milliseconds())})
-			expireClientID := clientID
-			time.AfterFunc(protectionDuration, func() {
-				g.mutex.Lock()
-				defer g.mutex.Unlock()
-				pl, ok := g.players[expireClientID]
-				if !ok || time.Now().Before(pl.protectionActiveUntil) {
-					return
-				}
-				pl.client.SendEvent(ProtectionExpiredEvent{})
-			})
-
-		case "spikes":
-			trapID := fmt.Sprintf("item_spike_%d_%d", clientID, time.Now().UnixNano())
-			tileX := (p.x / tileSize) * tileSize
-			tileY := (p.y / tileSize) * tileSize
-			trap := NewTrap(trapID, TrapTypeSpikes, TrapParams{
-				ActivePercent:   30.0,
-				CooldownPercent: 20.0,
-				Damage:          18,
-				X:               tileX,
-				Y:               tileY,
-			}, TrapActivator{
-				Type:   ActivatorTimer,
-				Period: 2.0,
-			})
-			g.traps[trapID] = trap
-			g.broadcastEventFunc(TrapStateChangedEvent{
-				TrapID: trapID,
-				State:  trap.State,
-				X:      tileX,
-				Y:      tileY,
-				Frame:  trap.GetCurrentFrame(),
-			})
+		if idx == -1 {
+			return
 		}
+		p.inventory[idx].Count--
+	}
 
+	def.Use(g, p, clientID)
+
+	// Consumable items report their new count here; the cloak (non-consumable)
+	// manages its own inventory updates because of its cooldown timers.
+	if def.ConsumesOne {
 		g.sendInventoryUpdateUnsafe(p)
-		return
 	}
 }
 
@@ -1438,7 +1265,7 @@ func (g *Game) useCloakOfInvisibilityUnsafe(p *Player, clientID uint64) {
 
 	hasCloakItem := false
 	for _, item := range p.inventory {
-		if item.Kind == "cloak_of_invisibility" {
+		if item.Kind == itemCloakOfInvisibility {
 			hasCloakItem = true
 			break
 		}

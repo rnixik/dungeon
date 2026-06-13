@@ -48,13 +48,13 @@ type TrapParams struct {
 
 // Trap represents a single trap instance with FSM
 type Trap struct {
-	ID                 string
-	Type               TrapType
-	State              TrapState
-	Params             TrapParams
-	Activator          TrapActivator
-	StateTimer         float64 // Time remaining in current state
-	LoopTimer          float64 // For timer activators
+	ID                  string
+	Type                TrapType
+	State               TrapState
+	Params              TrapParams
+	Activator           TrapActivator
+	StateTimer          float64         // Time remaining in current state
+	LoopTimer           float64         // For timer activators
 	LastDamagedPlayers  map[uint64]bool // Players damaged in current activation cycle
 	LastDamagedMonsters map[int]bool    // Monsters damaged in current activation cycle
 }
@@ -72,15 +72,15 @@ func NewTrap(id string, trapType TrapType, params TrapParams, activator TrapActi
 			phase += activator.Period
 		}
 	}
-	
+
 	return &Trap{
-		ID:         id,
-		Type:       trapType,
-		State:      TrapStateArmed,
-		Params:     params,
-		Activator:  activator,
-		StateTimer: 0,
-		LoopTimer:  phase, // Start with normalized phase offset
+		ID:                  id,
+		Type:                trapType,
+		State:               TrapStateArmed,
+		Params:              params,
+		Activator:           activator,
+		StateTimer:          0,
+		LoopTimer:           phase, // Start with normalized phase offset
 		LastDamagedPlayers:  make(map[uint64]bool),
 		LastDamagedMonsters: make(map[int]bool),
 	}
@@ -156,13 +156,13 @@ func (t *Trap) GetCurrentFrame() int {
 	switch t.State {
 	case TrapStateDisabled, TrapStateArmed:
 		return 5 // Hidden
-		
+
 	case TrapStateActive:
 		// Active phase: rising animation (7-11) then extended (0)
 		if t.Params.ActivePercent > 0 {
 			activeTime := t.Activator.Period * (t.Params.ActivePercent / 100.0)
 			progress := 1.0 - (t.StateTimer / activeTime)
-			
+
 			// Rising animation plays in first 40% of active time
 			if progress < 0.4 {
 				// Map 0-0.4 progress to frames 7-11
@@ -174,7 +174,7 @@ func (t *Trap) GetCurrentFrame() int {
 			}
 		}
 		return 0 // Fully extended for remaining time
-		
+
 	case TrapStateCooldown:
 		// Retracting animation: frames 1-4
 		if t.Params.CooldownPercent > 0 {
@@ -187,7 +187,7 @@ func (t *Trap) GetCurrentFrame() int {
 			return 1 + frameIndex
 		}
 		return 4
-		
+
 	default:
 		return 5
 	}
