@@ -172,6 +172,28 @@ const GameEventHandler = {
         }
     },
 
+    RespawnDeniedEvent(data) {
+        if (this.respawnButton) {
+            this.respawnButton.destroy();
+            this.respawnButton = null;
+        }
+        if (this.deadText) {
+            this.deadText.destroy();
+            this.deadText = null;
+        }
+        const message = data.reason === 'noSoulPower'
+            ? 'NO SOUL POWER LEFT'
+            : 'ELIMINATED';
+        this.add.text(this.scale.width / 2, this.scale.height / 2 + 40, message, { font: '12px Arial', fill: '#ff0000' })
+            .setOrigin(0.5, 0.5)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI);
+
+        // Out of the fight but still in the game: watch the battlemap as a spectator.
+        this.isDead = false;
+        this.enterSpectatorMode();
+    },
+
     SoulPowerEvent(data) {
         this.soulPower = data.value;
         this.soulPowerVisible = data.visible;

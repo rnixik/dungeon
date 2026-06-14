@@ -119,6 +119,8 @@ class Game extends Phaser.Scene {
     cultistIds = [];
     soulPower = 0;
     soulPowerVisible = false;
+    // Spectator: in the game to watch the battlemap but cannot play.
+    isSpectator = false;
     _soulPowerText = null;
 
     lastMoveSentTime = 0;
@@ -313,6 +315,23 @@ class Game extends Phaser.Scene {
         this.soulPower = gameData.soulPower || 0;
         this.soulPowerVisible = !!gameData.soulPowerVisible;
         this.updateSoulPowerUI();
+
+        // Spectator mode: joined/rejoined (or eliminated) after the boss was
+        // revealed. Can watch the battlemap but cannot play.
+        this.isSpectator = !!gameData.isSpectator;
+        if (this.isSpectator) {
+            this.enterSpectatorMode();
+        }
+    }
+
+    enterSpectatorMode() {
+        this.isSpectator = true;
+        if (!this._spectatorBanner) {
+            this._spectatorBanner = this.add.text(this.scale.width / 2, 20, 'SPECTATING', { font: '14px Arial', fill: '#f3c800' })
+                .setOrigin(0.5, 0)
+                .setScrollFactor(0, 0)
+                .setDepth(DEPTH_UI);
+        }
     }
 
     update (time, delta) {
@@ -404,21 +423,25 @@ class Game extends Phaser.Scene {
         // Raycast dynamic shadows
         this.updateMaskRaycast();
 
-        if ((this.isMoving || this.isDodging) && this.lastMoveSentTime + this.moveCommandInterval < time) {
-            this.sendGameCommand('PlayerMoveCommand', {
-                x: Math.round(this.player.x),
-                y: Math.round(this.player.y),
-                direction: this.direction,
-                isMoving: this.isMoving
-            });
-            this.lastMoveSentTime = time;
-        } else if (this.wasMoving && !this.isMoving && !this.isDodging) {
-            this.sendGameCommand('PlayerMoveCommand', {
-                x: Math.round(this.player.x),
-                y: Math.round(this.player.y),
-                direction: this.direction,
-                isMoving: false
-            });
+        // Spectators may roam locally to look around, but their movement is never
+        // sent to the server (it is ignored there anyway).
+        if (!this.isSpectator) {
+            if ((this.isMoving || this.isDodging) && this.lastMoveSentTime + this.moveCommandInterval < time) {
+                this.sendGameCommand('PlayerMoveCommand', {
+                    x: Math.round(this.player.x),
+                    y: Math.round(this.player.y),
+                    direction: this.direction,
+                    isMoving: this.isMoving
+                });
+                this.lastMoveSentTime = time;
+            } else if (this.wasMoving && !this.isMoving && !this.isDodging) {
+                this.sendGameCommand('PlayerMoveCommand', {
+                    x: Math.round(this.player.x),
+                    y: Math.round(this.player.y),
+                    direction: this.direction,
+                    isMoving: false
+                });
+            }
         }
         this.wasMoving = this.isMoving;
     }
@@ -455,6 +478,9 @@ class Game extends Phaser.Scene {
     }
 
     attack() {
+        if (this.isSpectator) {
+            return;
+        }
         switch (this.player.kind) {
             case 'mage':
                 this.fireballAttack();
@@ -468,6 +494,9 @@ class Game extends Phaser.Scene {
     }
 
     dodge() {
+        if (this.isSpectator) {
+            return;
+        }
         if (this.isDodging) {
             return;
         }
@@ -592,6 +621,13 @@ class Game extends Phaser.Scene {
         this.rt.clear();
         this.rt.fill(0x000000, 1);
 
+        // Spectators watch the whole battlemap: skip the darkness overlay.
+        if (this.isSpectator) {
+            this.rt.setAlpha(0);
+
+            return;
+        }
+
         if (this.isDead) {
             this.rt.setAlpha(1)
 
@@ -636,7 +672,7 @@ class Game extends Phaser.Scene {
 
     // --- Raycast visibility mask (draws into this.graphics used as GeometryMask) ---
     updateMaskRaycast () {
-        if (this.isDead) {
+        if (this.isDead || this.isSpectator) {
             return;
         }
 
@@ -1008,6 +1044,7 @@ class Game extends Phaser.Scene {
     }
 
     useCurrentItem() {
+        if (this.isSpectator) return;
         if (!this.inventory || this.inventory.length === 0 || this.isDead) return;
         const item = this.inventory[this.currentItemIndex];
         if (!item || item.count <= 0) return;

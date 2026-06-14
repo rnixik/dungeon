@@ -117,6 +117,12 @@ type Player struct {
 	speedBoostPercent     int
 	// Curse / cultist state
 	isCultist bool
+	// isSpectator is set once a player can no longer play after the boss is
+	// revealed (a good player who died, a cultist out of Soul Power, or anyone who
+	// joins/rejoins during the boss phase). Spectators keep receiving all events
+	// so they can watch the battlemap, but their gameplay commands are ignored and
+	// they are not broadcast to others as active players.
+	isSpectator bool
 	// goodDeathsBeforeBoss counts this player's deaths that fed Soul Power while
 	// good and before the boss phase. They are uncounted if the player is cursed
 	// into a cultist.
@@ -239,7 +245,9 @@ type Game struct {
 	traps              map[string]*Trap
 	positionSnapshots  []positionSnapshot
 	// soulPower is a running tally: +1 for every good player that dies before the
-	// boss phase, -1 for every cultist that dies.
+	// boss phase, -1 for every cultist that dies before the boss phase. Once the
+	// boss is revealed it is no longer fed by deaths and is instead spent by
+	// cultists to respawn (1 per respawn).
 	soulPower int
 	// debug lets good players see the Soul Power value (used for local/dev
 	// environments). Cultists always see it.
@@ -265,8 +273,8 @@ func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEve
 		debug:              debug,
 		objects:            make(map[uint64]*Object),
 		keysCollected: map[string]bool{
-			"1": true,
-			"2": true,
+			"1": false,
+			"2": false,
 			"3": false,
 		},
 		spikeEvents:       make([]SpawnSpikeEvent, 0),
@@ -381,9 +389,17 @@ func (g *Game) OnClientRemoved(client lobby.ClientPlayer) {
 func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 	log.Printf("client '%s' joined game\n", client.Nickname())
 	g.mutex.Lock()
-	g.players[client.ID()] = newPlayer(client)
+	p := newPlayer(client)
+	if g.demonWasSpawned {
+		// Anyone joining or rejoining after the boss is revealed cannot play; they
+		// join as a spectator who can watch the battlemap.
+		p.isSpectator = true
+		p.hp = 0
+		log.Printf("client '%s' joins as spectator (boss revealed)\n", client.Nickname())
+	}
+	g.players[client.ID()] = p
 	g.mutex.Unlock()
-	client.SendEvent(JoinToStartedGameEvent{GameData: g.getPlayerInitialGameData(g.players[client.ID()])})
+	client.SendEvent(JoinToStartedGameEvent{GameData: g.getPlayerInitialGameData(p)})
 }
 
 func (g *Game) GetCommonInitialGameData() map[string]interface{} {
@@ -434,6 +450,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 		"soulPower":         g.soulPower,
 		"soulPowerVisible":  pl.isCultist || g.debug,
 		"isCultist":         pl.isCultist,
+		"isSpectator":       pl.isSpectator,
 	}
 }
 
@@ -466,7 +483,7 @@ func (g *Game) StartMainLoop() {
 
 			p := make([]PlayerPosition, 0, len(g.players))
 			for _, pl := range g.players {
-				if !pl.isMoving {
+				if pl.isSpectator || !pl.isMoving {
 					continue
 				}
 				p = append(p, PlayerPosition{
@@ -511,6 +528,9 @@ func (g *Game) StartMainLoop() {
 
 			p := make([]PlayerStats, 0, len(g.players))
 			for _, pl := range g.players {
+				if pl.isSpectator {
+					continue
+				}
 				p = append(p, PlayerStats{
 					PlayerPosition: PlayerPosition{
 						ClientID:  pl.client.ID(),
@@ -609,6 +629,9 @@ func (g *Game) movePlayerTo(clientID uint64, x int, y int, direction string, isM
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	if p, ok := g.players[clientID]; ok {
+		if p.isSpectator {
+			return
+		}
 		p.x = x
 		p.y = y
 		p.direction = direction
@@ -620,6 +643,9 @@ func (g *Game) dodge(clientID uint64, x int, y int, direction string, isMoving b
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	if p, ok := g.players[clientID]; ok {
+		if p.isSpectator {
+			return
+		}
 		p.x = x
 		p.y = y
 		p.direction = direction
@@ -842,15 +868,22 @@ func (g *Game) killPlayer(clientID uint64) {
 		return
 	}
 
-	// Soul Power accounting: a cultist death drains it, a good death before the
-	// boss phase feeds it.
-	if p.isCultist {
-		g.soulPower--
+	// Soul Power accounting. Before the boss is revealed a cultist death drains
+	// it and a good death feeds it. After the boss is revealed deaths no longer
+	// move it via this path: cultists instead spend it to respawn (see
+	// respawnPlayer), and good players are eliminated for good.
+	if !g.demonWasSpawned {
+		if p.isCultist {
+			g.soulPower--
+		} else {
+			p.goodDeathsBeforeBoss++
+			g.soulPower++
+		}
 		g.broadcastSoulPowerUnsafe()
-	} else if !g.demonWasSpawned {
-		p.goodDeathsBeforeBoss++
-		g.soulPower++
-		g.broadcastSoulPowerUnsafe()
+	} else if !p.isCultist {
+		// A good player who dies after the boss is revealed cannot play anymore.
+		// They become a spectator who can still watch the battlemap.
+		p.isSpectator = true
 	}
 }
 
@@ -1254,7 +1287,26 @@ func (g *Game) respawnPlayer(clientID uint64) {
 		return
 	}
 
-	// Respawns are free for everyone; Soul Power is driven by deaths, not respawns.
+	// Before the boss is revealed respawns are free for everyone. After it is
+	// revealed good players are eliminated, while cultists may respawn only while
+	// Soul Power remains, spending one point per respawn.
+	if g.demonWasSpawned {
+		if !p.isCultist {
+			// Good players are out of the fight once the boss is revealed.
+			p.isSpectator = true
+			p.client.SendEvent(RespawnDeniedEvent{Reason: respawnDeniedEliminated})
+			return
+		}
+		if g.soulPower <= 0 {
+			// A cultist with no Soul Power left can no longer respawn.
+			p.isSpectator = true
+			p.client.SendEvent(RespawnDeniedEvent{Reason: respawnDeniedNoSoulPower})
+			return
+		}
+		g.soulPower--
+		g.broadcastSoulPowerUnsafe()
+	}
+
 	p.hp = p.maxHp
 	p.x = 120
 	p.y = 140

@@ -199,6 +199,19 @@ type PlayerRespawnEvent struct {
 	Y        int    `json:"y"`
 }
 
+// Reasons a respawn or rejoin can be refused.
+const (
+	respawnDeniedEliminated  = "eliminated"
+	respawnDeniedNoSoulPower = "noSoulPower"
+)
+
+// RespawnDeniedEvent is sent to a dead player whose respawn request is refused
+// because they have become a spectator: good players once the boss is revealed,
+// and cultists who are out of Soul Power. The client switches to spectator mode.
+type RespawnDeniedEvent struct {
+	Reason string `json:"reason"`
+}
+
 type InventoryItem struct {
 	Kind       string `json:"kind"`
 	Count      int    `json:"count"`

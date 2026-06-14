@@ -56,12 +56,17 @@ func (g *Game) tickChest(obj *Object) {
 			g.revealPlayerUnsafe(player)
 			g.broadcastEventFunc(ChestOpenEvent{ObjectID: obj.ID})
 
-			// Opening a chest carries a chance to curse the opener into a cultist,
-			// as long as the cultist cap (a third of the players) is not reached.
-			if !player.isCultist &&
-				g.cultistCountUnsafe() < g.maxCultistsAllowedUnsafe() &&
-				rand.Float64() < cultistCurseChance {
-				g.makePlayerCultistUnsafe(player)
+			// A debug chest (alwaysCurse property) curses the opener with 100%
+			// chance and ignores the cultist cap. A normal chest curses by chance,
+			// only while the cap (a third of the players) is not reached.
+			alwaysCurse, _ := obj.PropertiesMap["alwaysCurse"].(bool)
+			if !player.isCultist {
+				if alwaysCurse {
+					g.makePlayerCultistUnsafe(player)
+				} else if g.cultistCountUnsafe() < g.maxCultistsAllowedUnsafe() &&
+					rand.Float64() < cultistCurseChance {
+					g.makePlayerCultistUnsafe(player)
+				}
 			}
 
 			if g.keysCollected["3"] != true {
