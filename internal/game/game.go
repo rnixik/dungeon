@@ -1052,7 +1052,7 @@ func (g *Game) checkCultistsWinUnsafe() {
 		return
 	}
 	for _, p := range g.players {
-		if !p.isCultist && !p.isSpectator {
+		if !p.isCultist && !p.isSpectator && p.hp > 0 {
 			return // a good player is still in the fight
 		}
 	}
@@ -1458,6 +1458,9 @@ func (g *Game) makePlayerCultistUnsafe(p *Player) {
 	p.client.SendEvent(BecameCultistEvent{})
 	g.broadcastCultistsRosterUnsafe()
 	g.broadcastSoulPowerUnsafe()
+	if g.demonWasSpawned {
+		g.checkCultistsWinUnsafe()
+	}
 }
 
 func (g *Game) useItem(clientID uint64, kind string) {
