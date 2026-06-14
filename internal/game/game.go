@@ -398,6 +398,9 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 		log.Printf("client '%s' joins as spectator (boss revealed)\n", client.Nickname())
 	}
 	g.players[client.ID()] = p
+	if g.demonWasSpawned {
+		g.checkCultistsWinUnsafe()
+	}
 	g.mutex.Unlock()
 	client.SendEvent(JoinToStartedGameEvent{GameData: g.getPlayerInitialGameData(p)})
 }
