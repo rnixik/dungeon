@@ -719,7 +719,16 @@ class Game extends Phaser.Scene {
 
     // --- Raycast visibility mask (draws into this.graphics used as GeometryMask) ---
     updateMaskRaycast () {
-        if (this.isDead || this.isSpectator) {
+        if (this.isDead) {
+            return;
+        }
+
+        if (this.isSpectator) {
+            // Spectators see the whole map: fill geometry masks wall-to-wall.
+            const w = this.map.widthInPixels;
+            const h = this.map.heightInPixels;
+            this.graphics.clear().fillStyle(FILL_COLOR).fillRect(0, 0, w, h);
+            this.monsterGraphics.clear().fillStyle(FILL_COLOR).fillRect(0, 0, w, h);
             return;
         }
 
