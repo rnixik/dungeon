@@ -69,9 +69,14 @@ func (g *Game) tickChest(obj *Object) {
 				}
 			}
 
-			if g.keysCollected["3"] != true {
-				g.keysCollected["3"] = true
-				g.broadcastEventFunc(KeyCollectedEvent{Number: "3"})
+			// Each chest yields the next uncollected key. With more chests than
+			// keys, opening any full set of chests collects every key.
+			for _, number := range []string{"1", "2", "3"} {
+				if !g.keysCollected[number] {
+					g.keysCollected[number] = true
+					g.broadcastEventFunc(KeyCollectedEvent{Number: number})
+					break
+				}
 			}
 
 			allKeysCollected := g.keysCollected["1"] && g.keysCollected["2"] && g.keysCollected["3"]
