@@ -451,6 +451,7 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 		"soulPowerVisible":  pl.isCultist || g.debug,
 		"isCultist":         pl.isCultist,
 		"isSpectator":       pl.isSpectator,
+		"bossRevealed":      g.demonWasSpawned,
 	}
 }
 
@@ -884,6 +885,7 @@ func (g *Game) killPlayer(clientID uint64) {
 		// A good player who dies after the boss is revealed cannot play anymore.
 		// They become a spectator who can still watch the battlemap.
 		p.isSpectator = true
+		g.checkCultistsWinUnsafe()
 	}
 }
 
@@ -919,6 +921,11 @@ func (g *Game) hitMonsterUnsafe(originClientID uint64, monsterID int, damage int
 				def.OnHit(g, m, originClientID)
 			} else {
 				g.defaultOnHit(m, originClientID)
+			}
+
+			// Destroying the demon cleanses the dungeon: the Light wins.
+			if m.kind == monsterKindDemon && m.hp == 0 {
+				g.endGame(originClientID, winningSideLight)
 			}
 
 			break
@@ -1003,13 +1010,53 @@ func (g *Game) addXPToPlayerUnSafe(clientID uint64, xp int) {
 	}
 }
 
-func (g *Game) endGame(winnerPlayerId uint64) {
+func (g *Game) endGame(winnerPlayerId uint64, winningSide string) {
 	g.statusMx.Lock()
+	if g.status == StatusEnded {
+		g.statusMx.Unlock()
+		return
+	}
 	g.status = StatusEnded
 	g.statusMx.Unlock()
 
-	g.broadcastEventFunc(EndGameEvent{WinnerPlayerId: winnerPlayerId})
-	g.room.OnGameEnded()
+	roles := make([]PlayerRole, 0, len(g.players))
+	for _, p := range g.players {
+		roles = append(roles, PlayerRole{
+			ClientID:  p.client.ID(),
+			Nickname:  p.client.Nickname(),
+			Color:     p.color,
+			IsCultist: p.isCultist,
+		})
+	}
+
+	g.broadcastEventFunc(EndGameEvent{
+		WinnerPlayerId: winnerPlayerId,
+		WinningSide:    winningSide,
+		Roles:          roles,
+	})
+	if g.room != nil {
+		g.room.OnGameEnded()
+	}
+}
+
+const (
+	winningSideLight    = "light"
+	winningSideCultists = "cultists"
+)
+
+// checkCultistsWinUnsafe ends the game in the cultists' favour once the boss is
+// revealed and no good player is left fighting. Called from the good-player
+// elimination paths, so it only fires after good players have actually fallen.
+func (g *Game) checkCultistsWinUnsafe() {
+	if !g.demonWasSpawned || g.isGameEnded() {
+		return
+	}
+	for _, p := range g.players {
+		if !p.isCultist && !p.isSpectator {
+			return // a good player is still in the fight
+		}
+	}
+	g.endGame(0, winningSideCultists)
 }
 
 func (g *Game) isGameEnded() bool {
@@ -1257,6 +1304,7 @@ func (g *Game) spawnDemonUnsafe() {
 	}
 
 	g.demonWasSpawned = true
+	g.broadcastEventFunc(BossRevealedEvent{})
 }
 
 func getVectorFromDirection(direction string) (float64, float64) {
@@ -1295,6 +1343,7 @@ func (g *Game) respawnPlayer(clientID uint64) {
 			// Good players are out of the fight once the boss is revealed.
 			p.isSpectator = true
 			p.client.SendEvent(RespawnDeniedEvent{Reason: respawnDeniedEliminated})
+			g.checkCultistsWinUnsafe()
 			return
 		}
 		if g.soulPower <= 0 {

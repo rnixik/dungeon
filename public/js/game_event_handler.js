@@ -206,6 +206,75 @@ const GameEventHandler = {
         // Darkness is removed for cultists inside updateMaskLight (uses isCultist).
     },
 
+    BossRevealedEvent(data) {
+        if (this.isCultist) {
+            this.showAnnouncement(
+                "Your master rises!\n\n" +
+                "The light ones must be stopped.\n" +
+                "Protect your demon at any cost.",
+                '#cc33ff', 9000);
+        } else {
+            this.showAnnouncement(
+                "The demon is unsealed and ready to be destroyed!\n\n" +
+                "But beware — it has found cultists among you.\n" +
+                "Strike it down before the darkness spreads.",
+                '#f3c800', 9000);
+        }
+    },
+
+    EndGameEvent(data) {
+        let text, color;
+        if (data.winningSide === 'cultists') {
+            color = '#cc33ff';
+            text = this.isCultist
+                ? "VICTORY\n\nThe light is extinguished.\nYour master endures, and the dungeon is his."
+                : "DEFEAT\n\nThe darkness has consumed the dungeon.\nThe demon's soul reigns unchallenged.";
+        } else {
+            color = '#f3c800';
+            text = this.isCultist
+                ? "DEFEAT\n\nThe light ones have destroyed your master.\nThe demon's soul is undone."
+                : "VICTORY\n\nThe demon's soul is destroyed.\nThe dungeon is cleansed at last.";
+        }
+        // Persistent end screen: no fade.
+        const cx = this.scale.width / 2;
+        const cy = this.scale.height / 2;
+
+        // Dim the battlemap behind the result.
+        this.add.rectangle(cx, cy, this.scale.width, this.scale.height, 0x000000, 0.6)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI - 1);
+
+        this.add.text(cx, cy - 90, text, {
+                font: '20px Arial',
+                fill: color,
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 4,
+                wordWrap: { width: this.scale.width - 40 }
+            })
+            .setOrigin(0.5, 0.5)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI);
+
+        // Reveal everyone's true allegiance.
+        const roles = data.roles || [];
+        let revealText = 'The truth is revealed:\n';
+        for (const r of roles) {
+            const role = r.isCultist ? 'Cultist' : 'Light';
+            revealText += `\n${r.nickname} — ${role}`;
+        }
+        this.add.text(cx, cy + 40, revealText, {
+                font: '14px Arial',
+                fill: '#ffffff',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 3
+            })
+            .setOrigin(0.5, 0)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI);
+    },
+
     CultistsRosterEvent(data) {
         this.cultistIds = data.clientIds || [];
         // Mark any already-spawned fellow cultists immediately.

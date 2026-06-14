@@ -135,7 +135,25 @@ type CreaturesPosUpdateEvent struct {
 
 type EndGameEvent struct {
 	WinnerPlayerId uint64 `json:"winnerPlayerId"`
+	// WinningSide is the team that won: "light" when the demon is destroyed,
+	// "cultists" when every good player has been eliminated after the boss phase.
+	WinningSide string `json:"winningSide"`
+	// Roles reveals every player's true allegiance on the final screen.
+	Roles []PlayerRole `json:"roles"`
 }
+
+// PlayerRole is one entry in the end-game role reveal.
+type PlayerRole struct {
+	ClientID  uint64 `json:"clientId"`
+	Nickname  string `json:"nickname"`
+	Color     string `json:"color"`
+	IsCultist bool   `json:"isCultist"`
+}
+
+// BossRevealedEvent is broadcast to everyone the moment the demon is unsealed
+// (all keys collected). The client renders a team-specific call to arms based on
+// whether the viewer is a cultist.
+type BossRevealedEvent struct{}
 
 type PlayerStats struct {
 	PlayerPosition

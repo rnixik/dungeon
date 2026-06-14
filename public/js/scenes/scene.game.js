@@ -322,6 +322,38 @@ class Game extends Phaser.Scene {
         if (this.isSpectator) {
             this.enterSpectatorMode();
         }
+
+        // The quest: only shown to those who join while the demon is still sealed.
+        if (!this.isSpectator && !gameData.bossRevealed) {
+            this.showAnnouncement(
+                "The soul of the demon defiles these halls,\n" +
+                "corrupting all it touches.\n\n" +
+                "Gather the three keys to break its seal —\n" +
+                "then destroy it for good and cleanse the dungeon.",
+                '#f3c800', 8000);
+        }
+    }
+
+    // --- Centered story banner that fades out after durationMs ---
+    showAnnouncement(text, color, durationMs) {
+        const txt = this.add.text(this.scale.width / 2, this.scale.height / 2 - 60, text, {
+                font: '16px Arial',
+                fill: color || '#ffffff',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 3,
+                wordWrap: { width: this.scale.width - 40 }
+            })
+            .setOrigin(0.5, 0.5)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI);
+        this.tweens.add({
+            targets: txt,
+            alpha: { from: 1, to: 0 },
+            delay: Math.max(0, (durationMs || 6000) - 1200),
+            duration: 1200,
+            onComplete: () => txt.destroy()
+        });
     }
 
     enterSpectatorMode() {
