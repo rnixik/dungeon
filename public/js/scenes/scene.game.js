@@ -328,7 +328,7 @@ class Game extends Phaser.Scene {
             this.showAnnouncement(
                 "The soul of the demon defiles these halls,\n" +
                 "corrupting all it touches.\n\n" +
-                "Gather the three keys to break its seal —\n" +
+                "Gather the three keys to break its seal,\n" +
                 "then destroy it for good and cleanse the dungeon.",
                 '#f3c800', 8000);
         }

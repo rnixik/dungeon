@@ -216,7 +216,7 @@ const GameEventHandler = {
         } else {
             this.showAnnouncement(
                 "The demon is unsealed and ready to be destroyed!\n\n" +
-                "But beware — it has found cultists among you.\n" +
+                "But beware: it has found cultists among you.\n" +
                 "Strike it down before the darkness spreads.",
                 '#f3c800', 9000);
         }
