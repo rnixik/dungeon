@@ -358,8 +358,16 @@ class Game extends Phaser.Scene {
 
     enterSpectatorMode() {
         this.isSpectator = true;
+
+        // Spectators watch only: drop the gameplay UI (attack/dodge buttons,
+        // inventory, xp bar). These rebuild functions honor isSpectator, so
+        // calling them now removes the existing widgets.
+        this.updateXpBar();
+        this.addItemSelector();
+        this.addMobileButtons();
+
         if (!this._spectatorBanner) {
-            this._spectatorBanner = this.add.text(this.scale.width / 2, 20, 'SPECTATING', { font: '14px Arial', fill: '#f3c800' })
+            this._spectatorBanner = this.add.text(this.scale.width / 2, 80, 'SPECTATING', { font: '14px Arial', fill: '#f3c800' })
                 .setOrigin(0.5, 0)
                 .setScrollFactor(0, 0)
                 .setDepth(DEPTH_UI);
@@ -370,36 +378,43 @@ class Game extends Phaser.Scene {
         // Movement
         const joy = this.joystick?.createCursorKeys?.() || {left:{isDown:false},right:{isDown:false},up:{isDown:false},down:{isDown:false}};
 
-        // Web slow: check if player overlaps any active web area
-        const now = Date.now();
-        let inWeb = false;
-        if (this.activeWebs) {
-            for (const web of this.activeWebs) {
-                if (web.expiresAt > now &&
-                    Math.abs(this.player.x - web.x) <= web.halfSize &&
-                    Math.abs(this.player.y - web.y) <= web.halfSize) {
-                    inWeb = true;
-                    break;
+        // Spectators roam freely: no movement speed effects (web, jelly, etc.) apply.
+        if (this.isSpectator) {
+            this.player.webSlowMultiplier = 1;
+            this.player.jellyAuraSlow = false;
+            this.player.jellyHitSlowUntil = 0;
+        } else {
+            // Web slow: check if player overlaps any active web area
+            const now = Date.now();
+            let inWeb = false;
+            if (this.activeWebs) {
+                for (const web of this.activeWebs) {
+                    if (web.expiresAt > now &&
+                        Math.abs(this.player.x - web.x) <= web.halfSize &&
+                        Math.abs(this.player.y - web.y) <= web.halfSize) {
+                        inWeb = true;
+                        break;
+                    }
                 }
             }
-        }
-        this.player.webSlowMultiplier = inWeb ? 0.3 : 1;
+            this.player.webSlowMultiplier = inWeb ? 0.3 : 1;
 
-        // Jelly aura slow: 20% speed reduction within 3 tiles of any alive jelly
-        const JELLY_AURA_RADIUS = 48;
-        let inJellyAura = false;
-        for (const id in this.monsters) {
-            const m = this.monsters[id];
-            if ((m.kind === 'jelly' || m.kind === 'jelly_small') && !m.isCorpse) {
-                const dx = this.player.x - m.x;
-                const dy = this.player.y - m.y;
-                if (dx * dx + dy * dy <= JELLY_AURA_RADIUS * JELLY_AURA_RADIUS) {
-                    inJellyAura = true;
-                    break;
+            // Jelly aura slow: 20% speed reduction within 3 tiles of any alive jelly
+            const JELLY_AURA_RADIUS = 48;
+            let inJellyAura = false;
+            for (const id in this.monsters) {
+                const m = this.monsters[id];
+                if ((m.kind === 'jelly' || m.kind === 'jelly_small') && !m.isCorpse) {
+                    const dx = this.player.x - m.x;
+                    const dy = this.player.y - m.y;
+                    if (dx * dx + dy * dy <= JELLY_AURA_RADIUS * JELLY_AURA_RADIUS) {
+                        inJellyAura = true;
+                        break;
+                    }
                 }
             }
+            this.player.jellyAuraSlow = inJellyAura;
         }
-        this.player.jellyAuraSlow = inJellyAura;
 
         this.player.body.setVelocity(0);
         if (this.isDodging) {
@@ -793,7 +808,9 @@ class Game extends Phaser.Scene {
     updateXpBar() {
         if (this.xpBar) {
             this.xpBar.destroy(true, true);
+            this.xpBar = null;
         }
+        if (this.isSpectator) return;
 
         const barWidth = 200 * this.uiScaleX;
         const barHeight = 20 * this.uiScaleY;
@@ -833,6 +850,14 @@ class Game extends Phaser.Scene {
             thumb: this._joystickThumb,
             dir: '8dir'
         });
+
+        // Spectators keep the joystick (to roam and look around) but get no
+        // attack/dodge buttons.
+        if (this.isSpectator) {
+            this.buttonFire = null;
+            this.buttonDodge = null;
+            return;
+        }
 
         this.buttonFire = this.add.image(
             this.scale.width - 85 * this.uiScaleX,
@@ -892,6 +917,7 @@ class Game extends Phaser.Scene {
         if (this._itemArrowRight) this._itemArrowRight.destroy();
         if (this._currentItemSprite) { this._currentItemSprite.destroy(); this._currentItemSprite = null; }
         if (this._currentItemCountText) { this._currentItemCountText.destroy(); this._currentItemCountText = null; }
+        if (this.isSpectator) return;
 
         const invScale = Math.max(this.uiScaleX, this.uiScaleY) * 0.7;
         const margin = 10;
@@ -938,6 +964,7 @@ class Game extends Phaser.Scene {
     _drawCurrentItemIcon() {
         if (this._currentItemSprite) { this._currentItemSprite.destroy(); this._currentItemSprite = null; }
         if (this._currentItemCountText) { this._currentItemCountText.destroy(); this._currentItemCountText = null; }
+        if (this.isSpectator) return;
 
         if (!this.inventory || this.inventory.length === 0) return;
 
