@@ -114,6 +114,13 @@ class Game extends Phaser.Scene {
     deadText = null;
     respawnButton = null;
 
+    // Curse / cultist + soul power
+    isCultist = false;
+    cultistIds = [];
+    soulPower = 0;
+    soulPowerVisible = false;
+    _soulPowerText = null;
+
     lastMoveSentTime = 0;
     moveCommandInterval = 1000 / 45; // ms
     dodgeInterval = 2000;
@@ -261,6 +268,7 @@ class Game extends Phaser.Scene {
             this.addItemSelector();
             this.addPlayerListButton();
             this.renderPlayerList();
+            this.updateSoulPowerUI();
         });
 
         // Debug polyline graphics for raycast mask
@@ -299,6 +307,12 @@ class Game extends Phaser.Scene {
         this.player.speedBoostPercent = gameData.speedBoostPercent || 0;
         this.addItemSelector();
         this.addPlayerListButton();
+
+        // Curse / cultist + soul power
+        this.isCultist = !!gameData.isCultist;
+        this.soulPower = gameData.soulPower || 0;
+        this.soulPowerVisible = !!gameData.soulPowerVisible;
+        this.updateSoulPowerUI();
     }
 
     update (time, delta) {
@@ -584,6 +598,15 @@ class Game extends Phaser.Scene {
             return;
         }
 
+        // Cultists see in the dark: skip the darkness overlay entirely.
+        if (this.isCultist) {
+            this.rt.setAlpha(0);
+
+            return;
+        }
+
+        this.rt.setAlpha(DARKNESS_ALPHA);
+
         const eraseAt = (key, x, y, diameter) => {
             const h = diameter / 2;
             this.rt.erase(key, (x - h) - cam.scrollX, (y - h) - cam.scrollY);
@@ -643,6 +666,38 @@ class Game extends Phaser.Scene {
                 return;
             }
         }
+    }
+
+    // --- Soul power HUD ---
+    updateSoulPowerUI() {
+        if (this._soulPowerText) {
+            this._soulPowerText.destroy();
+            this._soulPowerText = null;
+        }
+        if (!this.soulPowerVisible) {
+            return;
+        }
+        this._soulPowerText = this.add.text(this.scale.width - 10, 10, '✦ Soul Power: ' + this.soulPower, {
+            font: '14px Arial',
+            fill: '#ffe066'
+        })
+            .setOrigin(1, 0)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI);
+    }
+
+    // --- Curse reveal text shown to a freshly-cursed cultist ---
+    showCurseText() {
+        const txt = this.add.text(this.scale.width / 2, this.scale.height / 2 - 70,
+            'YOU ARE CURSED!\nYou became a Cultist.\nDrain the Soul Power to win.', {
+                font: '18px Arial',
+                fill: '#cc33ff',
+                align: 'center'
+            })
+            .setOrigin(0.5, 0.5)
+            .setScrollFactor(0, 0)
+            .setDepth(DEPTH_UI);
+        this.time.delayedCall(6000, () => txt.destroy());
     }
 
     addKeysIcons() {

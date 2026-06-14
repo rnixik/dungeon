@@ -265,3 +265,20 @@ type CloakActiveEvent struct {
 }
 
 type CloakExpiredEvent struct{}
+
+// SoulPowerEvent reports the Soul Power tally to a single client. Visible is
+// true for cultists; for good players it is only true when debug is enabled.
+type SoulPowerEvent struct {
+	Value   int  `json:"value"`
+	Visible bool `json:"visible"`
+}
+
+// BecameCultistEvent is sent only to the player who has just been cursed into a
+// cultist so the client can reveal the curse text and switch to cultist vision.
+type BecameCultistEvent struct{}
+
+// CultistsRosterEvent is sent only to cultists so they can recognise each other.
+// Good players never receive it.
+type CultistsRosterEvent struct {
+	ClientIDs []uint64 `json:"clientIds"`
+}

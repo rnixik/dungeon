@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math/rand"
 	"time"
 )
 
@@ -54,6 +55,15 @@ func (g *Game) tickChest(obj *Object) {
 			obj.State = "open"
 			g.revealPlayerUnsafe(player)
 			g.broadcastEventFunc(ChestOpenEvent{ObjectID: obj.ID})
+
+			// Opening a chest carries a chance to curse the opener into a cultist,
+			// as long as the cultist cap (a third of the players) is not reached.
+			if !player.isCultist &&
+				g.cultistCountUnsafe() < g.maxCultistsAllowedUnsafe() &&
+				rand.Float64() < cultistCurseChance {
+				g.makePlayerCultistUnsafe(player)
+			}
+
 			if g.keysCollected["3"] != true {
 				g.keysCollected["3"] = true
 				g.broadcastEventFunc(KeyCollectedEvent{Number: "3"})
@@ -64,6 +74,9 @@ func (g *Game) tickChest(obj *Object) {
 			if allKeysCollected && g.demonWasSpawned == false {
 				g.spawnDemonUnsafe()
 			}
+
+			// Only the opener interacts with the chest this tick.
+			return
 		}
 	}
 }

@@ -85,6 +85,14 @@ const damageKindLightning = "lightning"
 
 const xpPerMonsterKill = 250
 
+// cultistCurseChance is the probability that opening a chest curses the opener
+// into becoming a cultist (the opposite team).
+const cultistCurseChance = 0.3
+
+// cultistMaxFraction caps the number of cultists at one third of the players
+// (one cultist per two good players).
+const cultistMaxFraction = 3
+
 type Player struct {
 	client                lobby.ClientPlayer
 	class                 string
@@ -107,6 +115,12 @@ type Player struct {
 	invisibleUntil        time.Time
 	cloakLastUsed         time.Time
 	speedBoostPercent     int
+	// Curse / cultist state
+	isCultist bool
+	// goodDeathsBeforeBoss counts this player's deaths that fed Soul Power while
+	// good and before the boss phase. They are uncounted if the player is cursed
+	// into a cultist.
+	goodDeathsBeforeBoss int
 }
 
 func (p *Player) isInvisible() bool {
@@ -224,9 +238,15 @@ type Game struct {
 	updateTilesEvents  []UpdateTilesEvent
 	traps              map[string]*Trap
 	positionSnapshots  []positionSnapshot
+	// soulPower is a running tally: +1 for every good player that dies before the
+	// boss phase, -1 for every cultist that dies.
+	soulPower int
+	// debug lets good players see the Soul Power value (used for local/dev
+	// environments). Cultists always see it.
+	debug bool
 }
 
-func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map) *Game {
+func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map, debug bool) *Game {
 	players := make(map[uint64]*Player, len(playersClients))
 	for _, client := range playersClients {
 		players[client.ID()] = newPlayer(client)
@@ -242,6 +262,7 @@ func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEve
 		room:               room,
 		monsters:           []*Monster{},
 		gameMap:            gameMap,
+		debug:              debug,
 		objects:            make(map[uint64]*Object),
 		keysCollected: map[string]bool{
 			"1": true,
@@ -410,6 +431,9 @@ func (g *Game) getPlayerInitialGameData(pl *Player) map[string]interface{} {
 		"traps":             trapsData,
 		"inventory":         pl.inventory,
 		"speedBoostPercent": pl.speedBoostPercent,
+		"soulPower":         g.soulPower,
+		"soulPowerVisible":  pl.isCultist || g.debug,
+		"isCultist":         pl.isCultist,
 	}
 }
 
@@ -801,13 +825,32 @@ func (g *Game) hitPlayerWithKindUnsafe(targetClientID uint64, kind string) {
 }
 
 func (g *Game) killPlayer(clientID uint64) {
-	if p, ok := g.players[clientID]; ok {
-		p.hp = 0
+	p, ok := g.players[clientID]
+	if !ok {
+		return
+	}
 
-		g.broadcastEventFunc(PlayerDeathEvent{
-			ClientID: clientID,
-			Nickname: p.client.Nickname(),
-		})
+	wasAlive := p.hp > 0
+	p.hp = 0
+
+	g.broadcastEventFunc(PlayerDeathEvent{
+		ClientID: clientID,
+		Nickname: p.client.Nickname(),
+	})
+
+	if !wasAlive {
+		return
+	}
+
+	// Soul Power accounting: a cultist death drains it, a good death before the
+	// boss phase feeds it.
+	if p.isCultist {
+		g.soulPower--
+		g.broadcastSoulPowerUnsafe()
+	} else if !g.demonWasSpawned {
+		p.goodDeathsBeforeBoss++
+		g.soulPower++
+		g.broadcastSoulPowerUnsafe()
 	}
 }
 
@@ -1206,23 +1249,23 @@ func (g *Game) isSwordAttackHit(attackerX, attackerY, attackLineX, attackLineY, 
 func (g *Game) respawnPlayer(clientID uint64) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	if p, ok := g.players[clientID]; ok {
-		if p.hp > 0 {
-			return
-		}
-
-		p.hp = p.maxHp
-		p.x = 120
-		p.y = 140
-		p.direction = "right"
-		p.isMoving = false
-
-		g.broadcastEventFunc(PlayerRespawnEvent{
-			ClientID: clientID,
-			X:        p.x,
-			Y:        p.y,
-		})
+	p, ok := g.players[clientID]
+	if !ok || p.hp > 0 {
+		return
 	}
+
+	// Respawns are free for everyone; Soul Power is driven by deaths, not respawns.
+	p.hp = p.maxHp
+	p.x = 120
+	p.y = 140
+	p.direction = "right"
+	p.isMoving = false
+
+	g.broadcastEventFunc(PlayerRespawnEvent{
+		ClientID: clientID,
+		X:        p.x,
+		Y:        p.y,
+	})
 }
 
 func (g *Game) sendInventoryUpdateUnsafe(p *Player) {
@@ -1250,6 +1293,70 @@ func (g *Game) revealPlayerUnsafe(p *Player) {
 	p.invisibleUntil = time.Time{}
 	p.client.SendEvent(CloakExpiredEvent{})
 	g.sendInventoryUpdateUnsafe(p)
+}
+
+// broadcastSoulPowerUnsafe sends the current Soul Power tally to each client.
+// Cultists always see the value; good players only see it when debug is enabled.
+func (g *Game) broadcastSoulPowerUnsafe() {
+	for _, p := range g.players {
+		p.client.SendEvent(SoulPowerEvent{
+			Value:   g.soulPower,
+			Visible: p.isCultist || g.debug,
+		})
+	}
+}
+
+// cultistCountUnsafe returns the number of current cultists.
+func (g *Game) cultistCountUnsafe() int {
+	n := 0
+	for _, p := range g.players {
+		if p.isCultist {
+			n++
+		}
+	}
+
+	return n
+}
+
+// maxCultistsAllowedUnsafe caps cultists at a third of the players (one cultist
+// per two good players).
+func (g *Game) maxCultistsAllowedUnsafe() int {
+	return len(g.players) / cultistMaxFraction
+}
+
+// broadcastCultistsRosterUnsafe sends the list of cultist client IDs to every
+// cultist so they can recognise one another. Good players are never told.
+func (g *Game) broadcastCultistsRosterUnsafe() {
+	ids := make([]uint64, 0)
+	for _, p := range g.players {
+		if p.isCultist {
+			ids = append(ids, p.client.ID())
+		}
+	}
+	for _, p := range g.players {
+		if p.isCultist {
+			p.client.SendEvent(CultistsRosterEvent{ClientIDs: ids})
+		}
+	}
+}
+
+// makePlayerCultistUnsafe curses a player into a cultist. Soul Power is
+// recalculated so this player's earlier good deaths no longer count.
+func (g *Game) makePlayerCultistUnsafe(p *Player) {
+	if p.isCultist {
+		return
+	}
+	p.isCultist = true
+
+	// Uncount the deaths this player fed into Soul Power while good.
+	if p.goodDeathsBeforeBoss > 0 {
+		g.soulPower -= p.goodDeathsBeforeBoss
+		p.goodDeathsBeforeBoss = 0
+	}
+
+	p.client.SendEvent(BecameCultistEvent{})
+	g.broadcastCultistsRosterUnsafe()
+	g.broadcastSoulPowerUnsafe()
 }
 
 func (g *Game) useItem(clientID uint64, kind string) {

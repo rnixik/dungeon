@@ -135,7 +135,7 @@ func main() {
 	}
 
 	newGameFunc := func(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{})) lobby.GameEventsDispatcher {
-		return game.NewGame(playersClients, room, broadcastEventFunc, gameMap)
+		return game.NewGame(playersClients, room, broadcastEventFunc, gameMap, *appEnv == "local")
 	}
 
 	newBotFunc := func(botId uint64, room *lobby.Room, sendGameCommand func(client lobby.ClientPlayer, commandName string, commandData json.RawMessage)) lobby.ClientPlayer {

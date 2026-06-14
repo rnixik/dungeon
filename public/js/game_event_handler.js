@@ -94,6 +94,11 @@ const GameEventHandler = {
 
             this.players[id].updateStatAndPosition(p);
             this.players[id].setDisplayAlpha(p.isInvisible ? 0 : 1);
+
+            // Cultists recognise each other; the good team never sees the mark.
+            if (this.isCultist && this.cultistIds.includes(id)) {
+                this.players[id].showCultistMark();
+            }
         }
 
         for (const m of data.monsters) {
@@ -163,6 +168,28 @@ const GameEventHandler = {
             const p = this.players[data.clientId];
             if (p) {
                 p.respawn(data.x, data.y);
+            }
+        }
+    },
+
+    SoulPowerEvent(data) {
+        this.soulPower = data.value;
+        this.soulPowerVisible = data.visible;
+        this.updateSoulPowerUI();
+    },
+
+    BecameCultistEvent(data) {
+        this.isCultist = true;
+        this.showCurseText();
+        // Darkness is removed for cultists inside updateMaskLight (uses isCultist).
+    },
+
+    CultistsRosterEvent(data) {
+        this.cultistIds = data.clientIds || [];
+        // Mark any already-spawned fellow cultists immediately.
+        for (const id of this.cultistIds) {
+            if (this.players[id]) {
+                this.players[id].showCultistMark();
             }
         }
     },

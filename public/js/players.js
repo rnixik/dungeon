@@ -11,6 +11,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
     initialTint = 0xffffff;
     _protectionGraphics = null;
     _speedBoostGraphics = null;
+    _cultistMark = null;
 
     constructor (kind, scene, statData)
     {
@@ -86,6 +87,11 @@ class Player extends Phaser.Physics.Arcade.Sprite
             this._speedBoostGraphics.y = this.y;
             this._speedBoostGraphics.setDepth(this.depth + 0.5);
         }
+        if (this._cultistMark) {
+            this._cultistMark.x = this.x;
+            this._cultistMark.y = this.y - 44;
+            this._cultistMark.setDepth(this.depth + 2);
+        }
     }
 
     updateStatAndPosition(statData)
@@ -135,6 +141,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
         }
         this.hideProtection();
         this.hideSpeedBoost();
+        this.hideCultistMark();
 
         this.setDepth(DEPTH_DEAD);
         this.disableBody();
@@ -302,6 +309,29 @@ class Player extends Phaser.Physics.Arcade.Sprite
         if (this._speedBoostGraphics) {
             this._speedBoostGraphics.destroy();
             this._speedBoostGraphics = null;
+        }
+    }
+
+    // Shown only to cultist viewers so they can identify fellow cultists.
+    showCultistMark()
+    {
+        if (this._cultistMark || this.isCorpse) {
+            return;
+        }
+        this._cultistMark = this.scene.add.text(this.x, this.y - 44, '☠ cultist', {
+            font: '9px Arial',
+            fill: '#cc33ff'
+        })
+            .setOrigin(0.5, 1)
+            .setDepth(DEPTH_PLAYER + 2)
+            .setMask(this.scene.mask);
+    }
+
+    hideCultistMark()
+    {
+        if (this._cultistMark) {
+            this._cultistMark.destroy();
+            this._cultistMark = null;
         }
     }
 
