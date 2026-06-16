@@ -56,6 +56,12 @@ func (g *Game) tickChest(obj *Object) {
 			g.revealPlayerUnsafe(player)
 			g.broadcastEventFunc(ChestOpenEvent{ObjectID: obj.ID})
 
+			// A chest may carry a loot item (Tiled "item" property). The opener
+			// receives one of that item. Unknown kinds are ignored.
+			if itemKind, ok := obj.PropertiesMap["item"].(string); ok && itemKind != "" {
+				g.giveItemToPlayerUnsafe(player, itemKind)
+			}
+
 			// A debug chest (alwaysCurse property) curses the opener with 100%
 			// chance and ignores the cultist cap. A normal chest curses by chance,
 			// only while the cap (a third of the players) is not reached.

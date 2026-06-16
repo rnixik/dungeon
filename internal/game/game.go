@@ -1372,6 +1372,24 @@ func (g *Game) respawnPlayer(clientID uint64) {
 	})
 }
 
+// giveItemToPlayerUnsafe adds one of the given item kind to the player's
+// inventory (stacking onto an existing entry) and pushes an inventory update.
+// Unknown kinds are ignored. Caller must hold g.mutex.
+func (g *Game) giveItemToPlayerUnsafe(p *Player, kind string) {
+	if _, ok := itemDefs[kind]; !ok {
+		return
+	}
+	for i := range p.inventory {
+		if p.inventory[i].Kind == kind {
+			p.inventory[i].Count++
+			g.sendInventoryUpdateUnsafe(p)
+			return
+		}
+	}
+	p.inventory = append(p.inventory, InventoryItem{Kind: kind, Count: 1})
+	g.sendInventoryUpdateUnsafe(p)
+}
+
 func (g *Game) sendInventoryUpdateUnsafe(p *Player) {
 	const cloakCooldown = 3 * time.Minute
 	items := make([]InventoryItem, len(p.inventory))

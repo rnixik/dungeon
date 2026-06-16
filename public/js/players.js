@@ -56,7 +56,7 @@ class Player extends Phaser.Physics.Arcade.Sprite
 
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
-        this.body.setSize(64, 34).setOffset(0, 30);
+        this.body.setSize(50, 34).setOffset(10, 30);
     }
 
     preUpdate(time, delta)

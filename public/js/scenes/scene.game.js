@@ -177,7 +177,10 @@ class Game extends Phaser.Scene {
         // --- Tilemap & layers ---
         // create tiled tilemap from server map data
         this.cache.tilemap.add('map', {format: 1, data: gameData.mapData});
-        this.map = this.make.tilemap({ key: 'map' });
+        // insertNull: empty (gid 0) cells become null instead of Tile objects, so
+        // large maps with lots of void around the rooms don't allocate millions of
+        // unused tiles. All tile access below is null-safe.
+        this.map = this.make.tilemap({ key: 'map', insertNull: true });
 
         const tiles = this.map.addTilesetImage('catacombs', 'tiles');
 
