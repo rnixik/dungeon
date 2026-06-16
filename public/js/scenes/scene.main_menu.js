@@ -23,6 +23,12 @@ class MainMenu extends Phaser.Scene
     colorsUnlocked = false;
 
     roomPlayersListText = null;
+    startingGame = false;
+    showingCountdown = false;
+    pendingGameData = null;
+    startButton = null;
+    countdownTimer = null;
+    countdownRemaining = 0;
 
     constructor ()
     {
@@ -208,7 +214,7 @@ class MainMenu extends Phaser.Scene
         this.displayColorSelection(centerX, startY + 150);
 
         // Start button
-        const startButton = this.make.text({
+        this.startButton = this.make.text({
             x: centerX,
             y: startY + 290,
             text: "START GAME",
@@ -222,20 +228,83 @@ class MainMenu extends Phaser.Scene
             },
             add: true
         }).setInteractive({useHandCursor: true});
-        
-        startButton.on('pointerdown', () => {
+
+        this.startButton.on('pointerdown', () => {
             this.wsConnection.send(JSON.stringify({type: 'room', subType: 'startGame'}));
-            startButton.setText('Starting...');
-            startButton.disableInteractive();
+            this.startingGame = true;
+            this.startButton.setText('Starting...');
+            this.startButton.disableInteractive();
             this.loadingSpinner.setPosition(centerX, startY + 360);
             this.loadingSpinner.setVisible(true);
         });
-        startButton.on('pointerover', () => {
-            startButton.setStyle({ color: '#ffffff' });
+        this.startButton.on('pointerover', () => {
+            this.startButton.setStyle({ color: '#ffffff' });
         });
-        startButton.on('pointerout', () => {
-            startButton.setStyle({ color: '#ffec99' });
+        this.startButton.on('pointerout', () => {
+            this.startButton.setStyle({ color: '#ffec99' });
         });
+
+        this.startButtonCenterX = centerX;
+        this.startButtonY = startY + 290;
+    }
+
+    displayGameCountdown()
+    {
+        const cx = this.startButtonCenterX;
+        const y = this.startButtonY;
+
+        this.startButton.setVisible(false);
+        this.loadingSpinner.setVisible(false);
+
+        this.countdownRemaining = 10;
+
+        this.countdownLabel = this.add.text(cx, y - 30, 'Game starting in 10...', {
+            fontFamily: 'Arial', fontSize: '22px', color: '#ffd43b',
+            stroke: '#000000', strokeThickness: 3
+        }).setOrigin(0.5, 0.5);
+
+        this.joinNowButton = this.add.text(cx, y + 20, 'JOIN NOW', {
+            fontFamily: 'Arial', fontSize: '28px', color: '#69db7c',
+            stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5, 0.5).setInteractive({ useHandCursor: true });
+
+        this.joinNowButton.on('pointerover', () => { this.joinNowButton.setStyle({ color: '#ffffff' }); });
+        this.joinNowButton.on('pointerout', () => { this.joinNowButton.setStyle({ color: '#69db7c' }); });
+        this.joinNowButton.on('pointerdown', () => { this.joinGame(); });
+
+        this.countdownTimer = this.time.addEvent({
+            delay: 1000,
+            callback: this.tickCountdown,
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+    tickCountdown()
+    {
+        this.countdownRemaining--;
+        if (this.countdownRemaining <= 0) {
+            this.joinGame();
+        } else {
+            this.countdownLabel.setText('Game starting in ' + this.countdownRemaining + '...');
+        }
+    }
+
+    joinGame()
+    {
+        if (this.countdownTimer) {
+            this.countdownTimer.remove();
+            this.countdownTimer = null;
+        }
+        this.showingCountdown = false;
+        if (this.joinNowButton) { this.joinNowButton.disableInteractive(); }
+        if (this.countdownLabel) { this.countdownLabel.setText('Joining...'); }
+
+        if (this.pendingGameData) {
+            this.startGame(this.pendingGameData);
+        } else {
+            this.wsConnection.send(JSON.stringify({type: 'room', subType: 'startGame'}));
+        }
     }
 
     selectCharacter(characterClass)
@@ -574,8 +643,23 @@ class MainMenu extends Phaser.Scene
 
             return;
         }
+        if (json.name === 'GameStartedEvent') {
+            if (!this.startingGame && this.startButton) {
+                this.showingCountdown = true;
+                this.displayGameCountdown();
+            }
+            return;
+        }
         if (json.name === 'JoinToStartedGameEvent') {
-            this.startGame(json.data.gameData);
+            if (this.showingCountdown) {
+                this.pendingGameData = json.data.gameData;
+            } else {
+                if (this.countdownTimer) {
+                    this.countdownTimer.remove();
+                    this.countdownTimer = null;
+                }
+                this.startGame(json.data.gameData);
+            }
             return;
         }
 

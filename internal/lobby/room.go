@@ -272,14 +272,7 @@ func (r *Room) OnStartGameCommand(c ClientPlayer) {
 		return
 	}
 
-	playersClients := make([]ClientPlayer, 0)
-	for rm := range r.members {
-		if rm.isPlayer {
-			playersClients = append(playersClients, rm.client)
-		}
-	}
-
-	r.game = r.lobby.newGameFunc(playersClients, r, func(event interface{}) {
+	r.game = r.lobby.newGameFunc([]ClientPlayer{c}, r, func(event interface{}) {
 		r.broadcastEvent(event, nil)
 	})
 	go r.game.StartMainLoop()
