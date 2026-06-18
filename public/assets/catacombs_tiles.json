@@ -1,0 +1,754 @@
+{
+  "_comment": "Named-tile catalog for catacombs.png, used to auto-generate maps. Each entry is a rectangular region of the tileset. Coordinates 'x','y' are the tile column/row of the TOP-LEFT tile (0-based); 'w','h' are the size in tiles. 'px','py' are the same in pixels (col*16). The matching .tmj tileset has firstgid=641, columns=64, so a tile's global id used in a Tiled layer is: gid = 641 + (y + row) * 64 + (x + col), iterating row in [0,h) and col in [0,w). NOTE: pre-assembled structures (walls/doors) are whole multi-tile stamps; small props are approximate bounding boxes and may need +/-1 tile tuning in an editor.",
+  "tileset": {
+    "image": "catacombs.png",
+    "imagewidth": 1024,
+    "imageheight": 640,
+    "tilewidth": 16,
+    "tileheight": 16,
+    "columns": 64,
+    "rows": 40,
+    "tilecount": 2560,
+    "firstgid": 641
+  },
+  "tiles": {
+    "north_wall_color1_type2": {
+      "x": 10,
+      "y": 7,
+      "w": 7,
+      "h": 5,
+      "px": 160,
+      "py": 112,
+      "desc": "Brick (color1) top wall, plain. Side pilasters + top beam + black void band above + clean brick face."
+    },
+    "north_wall_color1_type3": {
+      "x": 3,
+      "y": 12,
+      "w": 7,
+      "h": 5,
+      "px": 48,
+      "py": 192,
+      "desc": "Brick (color1) top wall decorated with hanging skeletons/chains and bones/skulls on the brick face."
+    },
+    "north_wall_color2_type1": {
+      "x": 3,
+      "y": 21,
+      "w": 7,
+      "h": 5,
+      "px": 48,
+      "py": 336,
+      "desc": "Cobblestone (color2) top wall, plain. Top beam + cornice + rounded-stone face (no void band)."
+    },
+    "north_wall_color2_type3": {
+      "x": 3,
+      "y": 26,
+      "w": 7,
+      "h": 5,
+      "px": 48,
+      "py": 416,
+      "desc": "Cobblestone (color2) top wall decorated with hanging skeletons/chains and bones."
+    },
+    "north_entrance": {
+      "x": 55,
+      "y": 0,
+      "w": 4,
+      "h": 7,
+      "px": 880,
+      "py": 0,
+      "desc": "Stone archway with a staircase going up inside it."
+    },
+    "floor_tiles_type1": {
+      "x": 46,
+      "y": 13,
+      "w": 2,
+      "h": 3,
+      "px": 736,
+      "py": 208,
+      "desc": "Smooth cracked floor, color1 (dark brown). Single tile repeatable; block is 2x3 variants."
+    },
+    "floor_tiles_type2": {
+      "x": 49,
+      "y": 13,
+      "w": 2,
+      "h": 3,
+      "px": 784,
+      "py": 208,
+      "desc": "Smooth cracked floor, color2 (red-brown)."
+    },
+    "floor_tiles_type3": {
+      "x": 52,
+      "y": 13,
+      "w": 2,
+      "h": 3,
+      "px": 832,
+      "py": 208,
+      "desc": "Smooth cracked floor, color3 (grey-teal)."
+    },
+    "floor_tiles_type4": {
+      "x": 55,
+      "y": 13,
+      "w": 2,
+      "h": 3,
+      "px": 880,
+      "py": 208,
+      "desc": "Smooth cracked floor, color4 (blue-teal)."
+    },
+    "floor_tiles_type5": {
+      "x": 58,
+      "y": 13,
+      "w": 2,
+      "h": 3,
+      "px": 928,
+      "py": 208,
+      "desc": "Smooth cracked floor, color5 (olive)."
+    },
+    "floor_tiles_type6": {
+      "x": 61,
+      "y": 13,
+      "w": 2,
+      "h": 3,
+      "px": 976,
+      "py": 208,
+      "desc": "Smooth cracked floor, color6 (green)."
+    },
+    "floor_cobble_type1": {
+      "x": 46,
+      "y": 17,
+      "w": 2,
+      "h": 2,
+      "px": 736,
+      "py": 272,
+      "desc": "Cobblestone/brick floor, color1 (brown)."
+    },
+    "floor_cobble_type2": {
+      "x": 49,
+      "y": 17,
+      "w": 2,
+      "h": 2,
+      "px": 784,
+      "py": 272,
+      "desc": "Cobblestone/brick floor, color2 (red-brown)."
+    },
+    "floor_cobble_type3": {
+      "x": 52,
+      "y": 17,
+      "w": 2,
+      "h": 2,
+      "px": 832,
+      "py": 272,
+      "desc": "Cobblestone/brick floor, color3 (grey-teal)."
+    },
+    "floor_cobble_type4": {
+      "x": 55,
+      "y": 17,
+      "w": 2,
+      "h": 2,
+      "px": 880,
+      "py": 272,
+      "desc": "Cobblestone/brick floor, color4 (blue-teal)."
+    },
+    "floor_cobble_type5": {
+      "x": 58,
+      "y": 17,
+      "w": 2,
+      "h": 2,
+      "px": 928,
+      "py": 272,
+      "desc": "Cobblestone/brick floor, color5 (olive)."
+    },
+    "floor_cobble_type6": {
+      "x": 61,
+      "y": 17,
+      "w": 2,
+      "h": 2,
+      "px": 976,
+      "py": 272,
+      "desc": "Cobblestone/brick floor, color6 (green)."
+    },
+    "pillar_type1": {
+      "x": 40,
+      "y": 7,
+      "w": 1,
+      "h": 5,
+      "px": 640,
+      "py": 112,
+      "desc": "Tall thin stone column/pillar (free-standing)."
+    },
+    "pillar_base_altar": {
+      "x": 37,
+      "y": 8,
+      "w": 2,
+      "h": 4,
+      "px": 592,
+      "py": 128,
+      "desc": "Stone altar / pillar base block."
+    },
+    "pedestal_small": {
+      "x": 42,
+      "y": 9,
+      "w": 1,
+      "h": 3,
+      "px": 672,
+      "py": 144,
+      "desc": "Small stone pedestal/plinth."
+    },
+    "altar_type2": {
+      "x": 44,
+      "y": 9,
+      "w": 2,
+      "h": 3,
+      "px": 704,
+      "py": 144,
+      "desc": "Stone altar variant 2."
+    },
+    "sarcophagus_1": {
+      "x": 19,
+      "y": 29,
+      "w": 3,
+      "h": 2,
+      "px": 304,
+      "py": 464,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "abyss_top_left": {
+      "x": 38,
+      "y": 16,
+      "w": 2,
+      "h": 3,
+      "px": 608,
+      "py": 256,
+      "desc": "Black square pit/pool with rounded edge bumps."
+    },
+    "brazier_lit": {
+      "x": 36,
+      "y": 34,
+      "w": 1,
+      "h": 1,
+      "px": 576,
+      "py": 544,
+      "desc": "Lit brazier with flame (animated-look fire)."
+    },
+    "hanging_chain_bowl_1": {
+      "x": 32,
+      "y": 36,
+      "w": 1,
+      "h": 2,
+      "px": 512,
+      "py": 576,
+      "desc": "Bowls/braziers hung from ceiling chains (one holds blue liquid)."
+    },
+    "hanging_chain_3": {
+      "x": 36,
+      "y": 36,
+      "w": 1,
+      "h": 2,
+      "px": 576,
+      "py": 576,
+      "desc": "Single ceiling chain."
+    },
+    "candles_1": {
+      "x": 37,
+      "y": 36,
+      "w": 1,
+      "h": 1,
+      "px": 592,
+      "py": 576,
+      "desc": "Small candles / floor torches (several 1-tile variants)."
+    },
+    "north_wall_color1_type1_common": {
+      "x": 3,
+      "y": 7,
+      "w": 7,
+      "h": 5,
+      "px": 48,
+      "py": 112,
+      "desc": ""
+    },
+    "north_wall_color1_type4": {
+      "x": 10,
+      "y": 12,
+      "w": 7,
+      "h": 5,
+      "px": 160,
+      "py": 192,
+      "desc": "Brick (color1) top wall decorated with hanging skeletons/chains and bones/skulls on the brick face."
+    },
+    "north_wall_color2_type2": {
+      "x": 10,
+      "y": 21,
+      "w": 7,
+      "h": 5,
+      "px": 160,
+      "py": 336,
+      "desc": "Cobblestone (color2) top wall, plain. Top beam + cornice + rounded-stone face (no void band)."
+    },
+    "north_wall_color2_type4": {
+      "x": 10,
+      "y": 26,
+      "w": 7,
+      "h": 5,
+      "px": 160,
+      "py": 416,
+      "desc": "Cobblestone (color2) top wall decorated with hanging skeletons/chains and bones."
+    },
+    "south_wall_1": {
+      "x": 5,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 80,
+      "py": 48,
+      "desc": ""
+    },
+    "south_wall_2": {
+      "x": 6,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 96,
+      "py": 48,
+      "desc": ""
+    },
+    "south_wall_3": {
+      "x": 7,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 112,
+      "py": 48,
+      "desc": ""
+    },
+    "south_wall_4": {
+      "x": 8,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 128,
+      "py": 48,
+      "desc": ""
+    },
+    "south_wall_5": {
+      "x": 11,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 176,
+      "py": 48,
+      "desc": ""
+    },
+    "south_wall_6": {
+      "x": 12,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 192,
+      "py": 48,
+      "desc": ""
+    },
+    "south_wall_7": {
+      "x": 13,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 208,
+      "py": 48,
+      "desc": ""
+    },
+    "south_wall_8": {
+      "x": 14,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 224,
+      "py": 48,
+      "desc": ""
+    },
+    "wall_vertical_right_joint": {
+      "x": 4,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 64,
+      "py": 48,
+      "desc": ""
+    },
+    "wall_vertical_left_joint": {
+      "x": 15,
+      "y": 3,
+      "w": 1,
+      "h": 1,
+      "px": 240,
+      "py": 48,
+      "desc": ""
+    },
+    "east_wall_1": {
+      "x": 4,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "px": 64,
+      "py": 64,
+      "desc": ""
+    },
+    "east_wall_2": {
+      "x": 4,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "px": 64,
+      "py": 80,
+      "desc": ""
+    },
+    "east_wall_3": {
+      "x": 4,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "px": 64,
+      "py": 96,
+      "desc": ""
+    },
+    "west_wall_1": {
+      "x": 15,
+      "y": 4,
+      "w": 1,
+      "h": 1,
+      "px": 240,
+      "py": 64,
+      "desc": ""
+    },
+    "west_wall_2": {
+      "x": 15,
+      "y": 5,
+      "w": 1,
+      "h": 1,
+      "px": 240,
+      "py": 80,
+      "desc": ""
+    },
+    "west_wall_3": {
+      "x": 15,
+      "y": 6,
+      "w": 1,
+      "h": 1,
+      "px": 240,
+      "py": 96,
+      "desc": ""
+    },
+    "arc_door_left": {
+      "x": 25,
+      "y": 1,
+      "w": 1,
+      "h": 6,
+      "px": 400,
+      "py": 16,
+      "desc": ""
+    },
+    "arc_door_right": {
+      "x": 29,
+      "y": 1,
+      "w": 1,
+      "h": 6,
+      "px": 464,
+      "py": 16,
+      "desc": ""
+    },
+    "arc_door_top_1": {
+      "x": 26,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "px": 416,
+      "py": 16,
+      "desc": ""
+    },
+    "arc_door_top_2": {
+      "x": 27,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "px": 432,
+      "py": 16,
+      "desc": ""
+    },
+    "arc_door_top_3": {
+      "x": 28,
+      "y": 1,
+      "w": 1,
+      "h": 1,
+      "px": 448,
+      "py": 16,
+      "desc": ""
+    },
+    "fence_left": {
+      "x": 32,
+      "y": 2,
+      "w": 1,
+      "h": 5,
+      "px": 512,
+      "py": 32,
+      "desc": ""
+    },
+    "fence_right": {
+      "x": 35,
+      "y": 2,
+      "w": 1,
+      "h": 5,
+      "px": 560,
+      "py": 32,
+      "desc": ""
+    },
+    "fence_middle_1": {
+      "x": 33,
+      "y": 2,
+      "w": 1,
+      "h": 5,
+      "px": 528,
+      "py": 32,
+      "desc": ""
+    },
+    "fence_middle_2": {
+      "x": 34,
+      "y": 2,
+      "w": 1,
+      "h": 5,
+      "px": 544,
+      "py": 32,
+      "desc": ""
+    },
+    "candles_2": {
+      "x": 38,
+      "y": 36,
+      "w": 1,
+      "h": 1,
+      "px": 608,
+      "py": 576,
+      "desc": "Small candles / floor torches (several 1-tile variants)."
+    },
+    "candles_3": {
+      "x": 39,
+      "y": 36,
+      "w": 1,
+      "h": 1,
+      "px": 624,
+      "py": 576,
+      "desc": "Small candles / floor torches (several 1-tile variants)."
+    },
+    "candles_4": {
+      "x": 40,
+      "y": 36,
+      "w": 1,
+      "h": 1,
+      "px": 640,
+      "py": 576,
+      "desc": "Small candles / floor torches (several 1-tile variants)."
+    },
+    "hanging_chain_bowl_2": {
+      "x": 33,
+      "y": 36,
+      "w": 1,
+      "h": 2,
+      "px": 528,
+      "py": 576,
+      "desc": "Bowls/braziers hung from ceiling chains (one holds blue liquid)."
+    },
+    "hanging_chain_1": {
+      "x": 34,
+      "y": 36,
+      "w": 1,
+      "h": 2,
+      "px": 544,
+      "py": 576,
+      "desc": "Bowls/braziers hung from ceiling chains (one holds blue liquid)."
+    },
+    "hanging_chain_2": {
+      "x": 35,
+      "y": 36,
+      "w": 1,
+      "h": 2,
+      "px": 560,
+      "py": 576,
+      "desc": "Bowls/braziers hung from ceiling chains (one holds blue liquid)."
+    },
+    "sarcophagus_2": {
+      "x": 22,
+      "y": 29,
+      "w": 3,
+      "h": 2,
+      "px": 352,
+      "py": 464,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "sarcophagus_3": {
+      "x": 19,
+      "y": 31,
+      "w": 3,
+      "h": 2,
+      "px": 304,
+      "py": 496,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "sarcophagus_4": {
+      "x": 22,
+      "y": 31,
+      "w": 3,
+      "h": 2,
+      "px": 352,
+      "py": 496,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "sarcophagus_5": {
+      "x": 19,
+      "y": 33,
+      "w": 3,
+      "h": 2,
+      "px": 304,
+      "py": 528,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "sarcophagus_6": {
+      "x": 22,
+      "y": 33,
+      "w": 3,
+      "h": 2,
+      "px": 352,
+      "py": 528,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "sarcophagus_vertical_2": {
+      "x": 27,
+      "y": 29,
+      "w": 2,
+      "h": 3,
+      "px": 432,
+      "py": 464,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "sarcophagus_vertical_1": {
+      "x": 25,
+      "y": 29,
+      "w": 2,
+      "h": 3,
+      "px": 400,
+      "py": 464,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "sarcophagus_vertical_3": {
+      "x": 27,
+      "y": 32,
+      "w": 2,
+      "h": 3,
+      "px": 432,
+      "py": 512,
+      "desc": "Closed stone sarcophagus / tomb (top-down), 2 color variants in this band."
+    },
+    "abyss_top_right": {
+      "x": 42,
+      "y": 16,
+      "w": 2,
+      "h": 3,
+      "px": 672,
+      "py": 256,
+      "desc": "Black square pit/pool with rounded edge bumps."
+    },
+    "abyss_top_middle": {
+      "x": 40,
+      "y": 16,
+      "w": 2,
+      "h": 3,
+      "px": 640,
+      "py": 256,
+      "desc": ""
+    },
+    "abyss_bottom_left": {
+      "x": 38,
+      "y": 20,
+      "w": 2,
+      "h": 2,
+      "px": 608,
+      "py": 320,
+      "desc": ""
+    },
+    "abyss_bottom_right": {
+      "x": 42,
+      "y": 20,
+      "w": 2,
+      "h": 2,
+      "px": 672,
+      "py": 320,
+      "desc": ""
+    },
+    "abyss_bottom_middle": {
+      "x": 40,
+      "y": 20,
+      "w": 2,
+      "h": 2,
+      "px": 640,
+      "py": 320,
+      "desc": ""
+    },
+    "abyss_left": {
+      "x": 38,
+      "y": 19,
+      "w": 1,
+      "h": 1,
+      "px": 608,
+      "py": 304,
+      "desc": ""
+    },
+    "abyss_right": {
+      "x": 43,
+      "y": 19,
+      "w": 1,
+      "h": 1,
+      "px": 688,
+      "py": 304,
+      "desc": ""
+    },
+    "floor_color1_type1": {
+      "x": 52,
+      "y": 23,
+      "w": 1,
+      "h": 1,
+      "px": 832,
+      "py": 368,
+      "desc": ""
+    },
+    "floor_color1_type2": {
+      "x": 53,
+      "y": 23,
+      "w": 1,
+      "h": 1,
+      "px": 848,
+      "py": 368,
+      "desc": ""
+    },
+    "floor_color1_type3": {
+      "x": 52,
+      "y": 24,
+      "w": 1,
+      "h": 1,
+      "px": 832,
+      "py": 384,
+      "desc": ""
+    },
+    "floor_color1_type4": {
+      "x": 53,
+      "y": 24,
+      "w": 1,
+      "h": 1,
+      "px": 848,
+      "py": 384,
+      "desc": ""
+    },
+    "sewers_complete": {
+      "x": 30,
+      "y": 12,
+      "w": 6,
+      "h": 6,
+      "px": 480,
+      "py": 192,
+      "desc": ""
+    }
+  }
+}

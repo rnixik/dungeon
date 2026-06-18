@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Catacombs Tile Region Editor</title>
+<style>
+  :root { --bg:#1e1f26; --panel:#2a2c36; --line:#3a3d4a; --accent:#5b9dff; --text:#dfe2ea; --muted:#9aa0ad; }
+  * { box-sizing: border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--text);
+    font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  #app { display:grid; grid-template-columns:1fr 380px; height:100vh; }
+  #left { display:flex; flex-direction:column; min-width:0; }
+  #toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    padding:8px 10px; background:var(--panel); border-bottom:1px solid var(--line); }
+  #toolbar label { color:var(--muted); }
+  #canvasWrap { flex:1; overflow:auto; background:#15161b;
+    background-image:linear-gradient(45deg,#1b1c22 25%,transparent 25%),
+      linear-gradient(-45deg,#1b1c22 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#1b1c22 75%),
+      linear-gradient(-45deg,transparent 75%,#1b1c22 75%);
+    background-size:20px 20px; background-position:0 0,0 10px,10px -10px,-10px 0; }
+  #stage { position:relative; }
+  canvas { display:block; image-rendering:pixelated; }
+  #right { background:var(--panel); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; min-width:0; }
+  .pane { padding:10px; border-bottom:1px solid var(--line); }
+  .pane h3 { margin:0 0 8px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  input,textarea,select,button { font:inherit; color:var(--text);
+    background:#1c1d24; border:1px solid var(--line); border-radius:4px; padding:5px 7px; }
+  input:focus,textarea:focus { outline:1px solid var(--accent); }
+  button { cursor:pointer; background:#34374a; border-color:#444862; }
+  button:hover { background:#3f4359; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#0a1020; font-weight:600; }
+  button.danger { background:#b6443b; border-color:#b6443b; }
+  .row { display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+  .row label { width:42px; color:var(--muted); }
+  .row input[type=number] { width:60px; }
+  .grow { flex:1; min-width:0; }
+  #list { flex:1; overflow:auto; }
+  .item { padding:6px 8px; border-bottom:1px solid #2f323d; cursor:pointer; display:flex; justify-content:space-between; gap:6px; }
+  .item:hover { background:#30333f; }
+  .item.sel { background:#39405a; }
+  .item .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .item .co { color:var(--muted); flex:none; }
+  textarea { width:100%; resize:vertical; }
+  #json { width:100%; height:100%; min-height:120px; white-space:pre; overflow:auto; }
+  #jsonPane { flex:1; display:flex; flex-direction:column; }
+  .hint { color:var(--muted); font-size:11px; }
+  .badge { display:inline-block; padding:1px 5px; border-radius:3px; background:#1c1d24; color:var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="left">
+    <div id="toolbar">
+      <button id="loadImgBtn">Load image…</button>
+      <input type="file" id="imgFile" accept="image/png" hidden>
+      <button id="loadJsonBtn">Load JSON…</button>
+      <input type="file" id="jsonFile" accept=".json,application/json" hidden>
+      <span class="badge" id="dims">—</span>
+      <label>zoom</label>
+      <select id="zoom">
+        <option value="1">1x</option>
+        <option value="2" selected>2x</option>
+        <option value="3">3x</option>
+        <option value="4">4x</option>
+        <option value="6">6x</option>
+        <option value="8">8x</option>
+      </select>
+      <label>tile</label>
+      <input type="number" id="tile" value="16" min="1" style="width:52px">
+      <label><input type="checkbox" id="snap" checked> snap</label>
+      <label><input type="checkbox" id="showGrid" checked> grid</label>
+      <label><input type="checkbox" id="showLabels" checked> labels</label>
+      <span class="grow"></span>
+      <span class="hint" id="cursorInfo">—</span>
+    </div>
+    <div id="canvasWrap">
+      <div id="stage">
+        <canvas id="cv"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="right">
+    <div class="pane">
+      <h3>Selected region</h3>
+      <div class="row"><label>name</label><input id="fName" class="grow" placeholder="north_wall_empty_color1"></div>
+      <div class="row">
+        <label>x</label><input id="fX" type="number">
+        <label>y</label><input id="fY" type="number">
+        <label>w</label><input id="fW" type="number" min="1">
+        <label>h</label><input id="fH" type="number" min="1">
+      </div>
+      <div class="row"><label>desc</label><textarea id="fDesc" class="grow" rows="2" placeholder="description…"></textarea></div>
+      <div class="row">
+        <button id="dupBtn">Duplicate</button>
+        <button id="delBtn" class="danger">Delete</button>
+        <span class="grow"></span>
+        <span class="hint" id="pxInfo">—</span>
+      </div>
+      <div class="hint">Draw: drag on empty area. Move: drag inside. Resize: drag a corner handle.
+        Hold <b>Alt</b> to draw a new rect even over an existing one.</div>
+    </div>
+
+    <div class="pane" style="padding:0; flex:1; display:flex; flex-direction:column; min-height:120px;">
+      <div style="padding:8px 10px;"><h3 style="margin:0;">Regions (<span id="count">0</span>)</h3></div>
+      <div id="list"></div>
+    </div>
+
+    <div class="pane" id="jsonPane" style="min-height:160px;">
+      <div class="row">
+        <h3 style="margin:0; flex:1;">catacombs_tiles.json</h3>
+        <button id="copyBtn">Copy</button>
+        <button id="dlBtn" class="primary">Download</button>
+      </div>
+      <textarea id="json" spellcheck="false" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+
+// ---- state ----
+let img = null;                 // HTMLImageElement of catacombs.png
+let regions = [];               // {name, x, y, w, h, desc}
+let selected = -1;
+let meta = defaultMeta();       // preserved _comment + tileset block
+let drag = null;                // active interaction
+
+function defaultMeta() {
+  return {
+    _comment: "Named-tile catalog for catacombs.png, used to auto-generate maps. Each entry is a rectangular region of the tileset. Coordinates 'x','y' are the tile column/row of the TOP-LEFT tile (0-based); 'w','h' are the size in tiles. 'px','py' are the same in pixels (col*tilesize). gid = firstgid + (y+row)*columns + (x+col).",
+    tileset: { image:"catacombs.png", imagewidth:1024, imageheight:640, tilewidth:16, tileheight:16, columns:64, rows:40, tilecount:2560, firstgid:641 }
+  };
+}
+
+function tileSize(){ return Math.max(1, parseInt($("tile").value)||16); }
+function zoom(){ return parseInt($("zoom").value)||2; }
+function snapOn(){ return $("snap").checked; }
+
+// ---- loading ----
+function setImage(image){
+  img = image;
+  meta.tileset.imagewidth = img.naturalWidth;
+  meta.tileset.imageheight = img.naturalHeight;
+  meta.tileset.columns = Math.floor(img.naturalWidth/tileSize());
+  meta.tileset.rows = Math.floor(img.naturalHeight/tileSize());
+  meta.tileset.tilecount = meta.tileset.columns*meta.tileset.rows;
+  $("dims").textContent = `${img.naturalWidth}×${img.naturalHeight}px · ${meta.tileset.columns}×${meta.tileset.rows} tiles`;
+  render();
+}
+
+function tryLoadDefaultImage(){
+  const i = new Image();
+  i.onload = ()=>setImage(i);
+  i.onerror = ()=>{ $("dims").textContent = "catacombs.png not found — use “Load image…”"; };
+  i.src = "catacombs.png?" + Date.now();
+}
+
+function tryLoadDefaultJson(){
+  fetch("catacombs_tiles.json?" + Date.now())
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(loadCatalog)
+    .catch(()=>{ updateJSON(); renderList(); });
+}
+
+function loadCatalog(obj){
+  if (obj._comment) meta._comment = obj._comment;
+  if (obj.tileset) meta.tileset = Object.assign(meta.tileset, obj.tileset);
+  regions = [];
+  const t = obj.tiles || {};
+  for (const name in t){
+    const e = t[name];
+    regions.push({ name, x:e.x|0, y:e.y|0, w:Math.max(1,e.w|0), h:Math.max(1,e.h|0), desc:e.desc||"" });
+  }
+  selected = -1;
+  $("tile").value = meta.tileset.tilewidth || 16;
+  syncForm(); renderList(); render(); updateJSON();
+}
+
+// ---- geometry helpers ----
+function snap(v){ return snapOn() ? Math.round(v) : v; }
+function pxToTile(px){ return px / tileSize(); }
+
+function regionAt(tx, ty){ // topmost region containing tile coords
+  for (let i=regions.length-1;i>=0;i--){
+    const r = regions[i];
+    if (tx>=r.x && tx<r.x+r.w && ty>=r.y && ty<r.y+r.h) return i;
+  }
+  return -1;
+}
+
+const HANDLE = 8; // px hit size for corner handles
+function cornerAt(r, mx, my){ // mx,my in canvas px; returns corner id or null
+  const z = zoom()*tileSize();
+  const corners = {
+    nw:[r.x*z, r.y*z], ne:[(r.x+r.w)*z, r.y*z],
+    sw:[r.x*z,(r.y+r.h)*z], se:[(r.x+r.w)*z,(r.y+r.h)*z]
+  };
+  for (const k in corners){
+    const [cx,cy]=corners[k];
+    if (Math.abs(mx-cx)<=HANDLE && Math.abs(my-cy)<=HANDLE) return k;
+  }
+  return null;
+}
+
+// ---- rendering ----
+function render(){
+  const ts = tileSize(), z = zoom();
+  const W = (img?img.naturalWidth:1024), H = (img?img.naturalHeight:640);
+  cv.width = W*z; cv.height = H*z;
+  $("stage").style.width = cv.width+"px";
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if (img) ctx.drawImage(img,0,0,cv.width,cv.height);
+
+  // grid
+  if ($("showGrid").checked){
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255,255,255,0.08)";
+    ctx.beginPath();
+    for (let x=0;x<=W;x+=ts){ const px=Math.round(x*z)+.5; ctx.moveTo(px,0); ctx.lineTo(px,cv.height); }
+    for (let y=0;y<=H;y+=ts){ const py=Math.round(y*z)+.5; ctx.moveTo(0,py); ctx.lineTo(cv.width,py); }
+    ctx.stroke();
+  }
+
+  // regions
+  const zz = z*ts;
+  regions.forEach((r,i)=>{
+    const x=r.x*zz, y=r.y*zz, w=r.w*zz, h=r.h*zz;
+    const sel = i===selected;
+    ctx.lineWidth = sel?2:1.5;
+    ctx.strokeStyle = sel? "#ffd24a" : "#5b9dff";
+    ctx.fillStyle = sel? "rgba(255,210,74,0.12)" : "rgba(91,157,255,0.08)";
+    ctx.fillRect(x,y,w,h);
+    ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+    if ($("showLabels").checked){
+      ctx.font = "11px ui-monospace,monospace";
+      const tw = ctx.measureText(r.name).width;
+      ctx.fillStyle = sel? "rgba(255,210,74,0.92)":"rgba(20,24,34,0.78)";
+      ctx.fillRect(x, y, tw+8, 14);
+      ctx.fillStyle = sel? "#1a1300":"#dfe7ff";
+      ctx.fillText(r.name, x+4, y+11);
+    }
+    if (sel){ // corner handles
+      ctx.fillStyle = "#ffd24a";
+      [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy])=>{
+        ctx.fillRect(cx-3,cy-3,6,6);
+      });
+    }
+  });
+
+  // live draw rect
+  if (drag && drag.mode==="draw" && drag.cur){
+    const a=drag.start, b=drag.cur;
+    const x=Math.min(a.tx,b.tx), y=Math.min(a.ty,b.ty);
+    const w=Math.abs(a.tx-b.tx), h=Math.abs(a.ty-b.ty);
+    ctx.lineWidth=2; ctx.strokeStyle="#7CFFB2";
+    ctx.fillStyle="rgba(124,255,178,0.12)";
+    ctx.fillRect(x*zz,y*zz,w*zz,h*zz);
+    ctx.strokeRect(x*zz+.5,y*zz+.5,w*zz-1,h*zz-1);
+  }
+}
+
+// ---- pointer interaction ----
+function evtTile(e){
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX-rect.left, my = e.clientY-rect.top;
+  const z = zoom()*tileSize();
+  return { mx, my, tx: mx/z, ty: my/z };
+}
+
+cv.addEventListener("mousedown", e=>{
+  if (!img) return;
+  const p = evtTile(e);
+  const tx=p.tx, ty=p.ty;
+  // resize handle on selected?
+  if (selected>=0 && !e.altKey){
+    const c = cornerAt(regions[selected], p.mx, p.my);
+    if (c){ drag={mode:"resize",corner:c,idx:selected,start:p,orig:{...regions[selected]}}; return; }
+  }
+  const hit = e.altKey ? -1 : regionAt(tx,ty);
+  if (hit>=0){
+    selected = hit; syncForm(); renderList();
+    drag = { mode:"move", idx:hit, start:{tx,ty}, orig:{...regions[hit]} };
+    render();
+    return;
+  }
+  // start drawing a new region
+  drag = { mode:"draw", start:{tx:snap(tx),ty:snap(ty)}, cur:{tx:snap(tx),ty:snap(ty)} };
+});
+
+window.addEventListener("mousemove", e=>{
+  if (!img) return;
+  const p = evtTile(e);
+  $("cursorInfo").textContent = `tile ${Math.floor(p.tx)},${Math.floor(p.ty)}  ·  px ${Math.floor(p.tx*tileSize())},${Math.floor(p.ty*tileSize())}`;
+  if (!drag) return;
+  if (drag.mode==="draw"){
+    drag.cur = { tx:snap(p.tx), ty:snap(p.ty) };
+    render();
+  } else if (drag.mode==="move"){
+    const dx = snap(p.tx - drag.start.tx), dy = snap(p.ty - drag.start.ty);
+    const r = regions[drag.idx];
+    r.x = Math.max(0, drag.orig.x + dx);
+    r.y = Math.max(0, drag.orig.y + dy);
+    syncForm(); render(); updateJSON();
+  } else if (drag.mode==="resize"){
+    resizeBy(p);
+  }
+});
+
+window.addEventListener("mouseup", e=>{
+  if (!drag) return;
+  if (drag.mode==="draw"){
+    const a=drag.start, b=drag.cur||drag.start;
+    let x=Math.min(a.tx,b.tx), y=Math.min(a.ty,b.ty);
+    let w=Math.abs(a.tx-b.tx), h=Math.abs(a.ty-b.ty);
+    if (snapOn()){ x=Math.round(x); y=Math.round(y); w=Math.round(w); h=Math.round(h); }
+    if (w>=1 && h>=1){
+      const name = uniqueName("region");
+      regions.push({ name, x, y, w, h, desc:"" });
+      selected = regions.length-1;
+      syncForm(); renderList();
+      $("fName").focus(); $("fName").select();
+    }
+  }
+  drag = null;
+  render(); updateJSON();
+});
+
+function resizeBy(p){
+  const r = regions[drag.idx], o = drag.orig;
+  let tx = snap(p.tx), ty = snap(p.ty);
+  let x1=o.x, y1=o.y, x2=o.x+o.w, y2=o.y+o.h;
+  if (drag.corner.includes("w")) x1=Math.min(tx, x2-1);
+  if (drag.corner.includes("e")) x2=Math.max(tx, x1+1);
+  if (drag.corner.includes("n")) y1=Math.min(ty, y2-1);
+  if (drag.corner.includes("s")) y2=Math.max(ty, y1+1);
+  r.x=Math.max(0,x1); r.y=Math.max(0,y1);
+  r.w=Math.max(1,x2-x1); r.h=Math.max(1,y2-y1);
+  syncForm(); render(); updateJSON();
+}
+
+cv.addEventListener("mousemove", e=>{
+  if (drag || selected<0){ cv.style.cursor="crosshair"; return; }
+  const p = evtTile(e);
+  const c = cornerAt(regions[selected], p.mx, p.my);
+  cv.style.cursor = c ? (c==="nw"||c==="se"?"nwse-resize":"nesw-resize")
+    : (regionAt(p.tx,p.ty)>=0 ? "move" : "crosshair");
+});
+
+// ---- form + list ----
+function syncForm(){
+  const r = selected>=0 ? regions[selected] : null;
+  $("fName").value = r?r.name:"";
+  $("fX").value = r?r.x:"";
+  $("fY").value = r?r.y:"";
+  $("fW").value = r?r.w:"";
+  $("fH").value = r?r.h:"";
+  $("fDesc").value = r?r.desc:"";
+  $("pxInfo").textContent = r ? `px ${r.x*tileSize()},${r.y*tileSize()}  ${r.w*tileSize()}×${r.h*tileSize()}` : "—";
+}
+
+function formToRegion(){
+  if (selected<0) return;
+  const r = regions[selected];
+  const nm = $("fName").value.trim();
+  if (nm) r.name = nm;
+  r.x = Math.max(0, parseInt($("fX").value)||0);
+  r.y = Math.max(0, parseInt($("fY").value)||0);
+  r.w = Math.max(1, parseInt($("fW").value)||1);
+  r.h = Math.max(1, parseInt($("fH").value)||1);
+  r.desc = $("fDesc").value;
+  renderList(); render(); updateJSON();
+}
+["fName","fX","fY","fW","fH","fDesc"].forEach(id=> $(id).addEventListener("input", formToRegion));
+
+function renderList(){
+  const list = $("list");
+  list.innerHTML = "";
+  regions.forEach((r,i)=>{
+    const d = document.createElement("div");
+    d.className = "item"+(i===selected?" sel":"");
+    d.innerHTML = `<span class="nm">${escapeHtml(r.name)}</span><span class="co">${r.x},${r.y} · ${r.w}×${r.h}</span>`;
+    d.onclick = ()=>{ selected=i; syncForm(); renderList(); render();
+      cv.scrollIntoView; };
+    list.appendChild(d);
+  });
+  $("count").textContent = regions.length;
+}
+
+function uniqueName(base){
+  let n=base, i=1;
+  const has = nm => regions.some(r=>r.name===nm);
+  while (has(n)) n = base+"_"+(i++);
+  return n;
+}
+
+// ---- JSON output ----
+function updateJSON(){
+  const tiles = {};
+  const ts = tileSize();
+  for (const r of regions){
+    tiles[r.name] = { x:r.x, y:r.y, w:r.w, h:r.h, px:r.x*ts, py:r.y*ts, desc:r.desc||"" };
+  }
+  const obj = { _comment: meta._comment, tileset: meta.tileset, tiles };
+  $("json").value = JSON.stringify(obj, null, 2);
+}
+
+// ---- buttons ----
+$("dupBtn").onclick = ()=>{
+  if (selected<0) return;
+  const r = regions[selected];
+  const copy = { ...r, name: uniqueName(r.name+"_copy"), x:r.x+1, y:r.y+1 };
+  regions.push(copy); selected=regions.length-1;
+  syncForm(); renderList(); render(); updateJSON();
+  $("fName").focus(); $("fName").select();
+};
+$("delBtn").onclick = ()=>{
+  if (selected<0) return;
+  regions.splice(selected,1); selected=-1;
+  syncForm(); renderList(); render(); updateJSON();
+};
+$("copyBtn").onclick = ()=>{
+  navigator.clipboard.writeText($("json").value).then(()=>{
+    $("copyBtn").textContent="Copied!"; setTimeout(()=>$("copyBtn").textContent="Copy",1000);
+  });
+};
+$("dlBtn").onclick = ()=>{
+  const blob = new Blob([$("json").value],{type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "catacombs_tiles.json";
+  a.click(); URL.revokeObjectURL(a.href);
+};
+
+$("loadImgBtn").onclick = ()=>$("imgFile").click();
+$("imgFile").onchange = e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const i=new Image(); i.onload=()=>setImage(i); i.src=URL.createObjectURL(f);
+};
+$("loadJsonBtn").onclick = ()=>$("jsonFile").click();
+$("jsonFile").onchange = e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{ loadCatalog(JSON.parse(rd.result)); }catch(err){ alert("Bad JSON: "+err); } };
+  rd.readAsText(f);
+};
+["zoom","tile","showGrid","showLabels","snap"].forEach(id=>{
+  $(id).addEventListener("change", ()=>{ render(); updateJSON(); });
+});
+
+// keyboard: Delete removes selected (when not typing)
+window.addEventListener("keydown", e=>{
+  if (/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  if ((e.key==="Delete"||e.key==="Backspace") && selected>=0){ e.preventDefault(); $("delBtn").click(); }
+});
+
+function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+// ---- boot ----
+tryLoadDefaultImage();
+tryLoadDefaultJson();
+</script>
+</body>
+</html>
