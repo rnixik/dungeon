@@ -85,7 +85,9 @@ type Map struct {
 	visibilityColliders []Rectangle
 }
 
-func LoadMap(filename string) (*Map, error) {
+// parseMap unmarshals a raw Tiled .tmj file without running any of the
+// derived post-processing (collision rects, blocked grid, etc.).
+func parseMap(filename string) (*Map, error) {
 	var m Map
 	content, err := os.ReadFile(filename)
 	if err != nil {
@@ -97,18 +99,60 @@ func LoadMap(filename string) (*Map, error) {
 		return nil, err
 	}
 
+	return &m, nil
+}
+
+// postProcess builds all derived data structures (tile property hash, collision
+// rectangles, blocked grid, visibility colliders) from the raw tile layers. It
+// must be called after the map's tile layers are final, whether the map was
+// loaded directly from disk or assembled by the generator.
+func (m *Map) postProcess() error {
 	m.fillTilesPropertiesHash()
 
-	err = m.addLayerWithCollisionRectangles()
-	if err != nil {
-		return nil, err
+	if err := m.addLayerWithCollisionRectangles(); err != nil {
+		return err
 	}
 
 	m.buildAreaOptimizedCollisionRects()
 	m.buildBlockedGrid()
 	m.buildVisibilityColliders()
 
-	return &m, err
+	return nil
+}
+
+func LoadMap(filename string) (*Map, error) {
+	m, err := parseMap(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := m.postProcess(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+
+// LoadGeneratedMap parses the given template map (which must contain the
+// predefined room/entrance objects) and assembles a fresh map of numRooms rooms
+// connected by corridors. seed makes generation reproducible; pass 0 to derive a
+// seed from the current time.
+func LoadGeneratedMap(filename string, numRooms int, seed int64) (*Map, error) {
+	template, err := parseMap(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := generateMap(template, numRooms, seed)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := m.postProcess(); err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 func (m *Map) fillTilesPropertiesHash() {

@@ -19,6 +19,9 @@ import (
 var addr = flag.String("addr", "127.0.0.1:9001", "http service address")
 var serveFiles = flag.Bool("serveFiles", true, "use this app to serve static files (js, css, images)")
 var appEnv = flag.String("env", "local", "application environment: local, production")
+var mapPath = flag.String("map", "./public/assets/dungeon1.tmj", "path to the .tmj map (or room-template map when --rooms > 0) to load")
+var numRooms = flag.Int("rooms", 10, "number of rooms to assemble from the template's predefined rooms; 0 loads the map as-is")
+var mapSeed = flag.Int64("seed", 0, "random seed for map generation; 0 derives one from the current time")
 
 var indexPageContent []byte
 
@@ -119,7 +122,12 @@ func main() {
 	indexPageContent = bytes.Replace(indexPageContentRaw, []byte("%APP_ENV%"), []byte(*appEnv), 1)
 	indexPageContent = bytes.Replace(indexPageContent, []byte("%APP_VERSION%"), bytes.TrimSpace([]byte(version)), 2)
 
-	gameMap, err := game.LoadMap("./public/assets/dungeon1.tmj")
+	var gameMap *game.Map
+	if *numRooms > 0 {
+		gameMap, err = game.LoadGeneratedMap(*mapPath, *numRooms, *mapSeed)
+	} else {
+		gameMap, err = game.LoadMap(*mapPath)
+	}
 	if err != nil {
 		log.Fatal("Load map error: ", err)
 	}
