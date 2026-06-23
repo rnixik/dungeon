@@ -255,9 +255,12 @@ type Game struct {
 }
 
 func NewGame(playersClients []lobby.ClientPlayer, room *lobby.Room, broadcastEventFunc func(event interface{}), gameMap *Map, debug bool) *Game {
+	spawnX, spawnY := gameMap.PlayerSpawn()
 	players := make(map[uint64]*Player, len(playersClients))
 	for _, client := range playersClients {
-		players[client.ID()] = newPlayer(client)
+		p := newPlayer(client)
+		p.x, p.y = spawnX, spawnY
+		players[client.ID()] = p
 	}
 
 	log.Printf("new game created by %s\n", playersClients[0].Nickname())
@@ -390,6 +393,7 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 	log.Printf("client '%s' joined game\n", client.Nickname())
 	g.mutex.Lock()
 	p := newPlayer(client)
+	p.x, p.y = g.gameMap.PlayerSpawn()
 	if g.demonWasSpawned {
 		// Anyone joining or rejoining after the boss is revealed cannot play; they
 		// join as a spectator who can watch the battlemap.
@@ -1360,8 +1364,7 @@ func (g *Game) respawnPlayer(clientID uint64) {
 	}
 
 	p.hp = p.maxHp
-	p.x = 120
-	p.y = 140
+	p.x, p.y = g.gameMap.PlayerSpawn()
 	p.direction = "right"
 	p.isMoving = false
 

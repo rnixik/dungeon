@@ -49,51 +49,63 @@ func mustTemplates(t *testing.T, template *Map) []roomTemplate {
 	return tmpls
 }
 
-// placedRoomCenters recomputes where each placed room interior centre lands,
+// placedRoomCenters recomputes each placed room interior centre (tiles),
 // mirroring generateMap's layout math.
 func placedRoomCenters(templates []roomTemplate, pass passageSet, n int, rng *rand.Rand) (centers [][2]int, demonCount int) {
 	place := chooseRooms(templates, n, rng)
 	cols, rows := gridDims(n)
-	cell := assignCells(place, cols, rows)
-	gapX, gapY := pass.cr.tw, pass.cr.th
+	gapW, gapH := pass.piece("vertical").tw, pass.piece("horizontal").th
 	colWidth := make([]int, cols)
 	rowHeight := make([]int, rows)
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			if pi := cell[r*cols+c]; pi >= 0 {
-				if place[pi].tw > colWidth[c] {
-					colWidth[c] = place[pi].tw
-				}
-				if place[pi].th > rowHeight[r] {
-					rowHeight[r] = place[pi].th
-				}
-			}
+	for i, t := range place {
+		r, c := i/cols, i%cols
+		if t.tw > colWidth[c] {
+			colWidth[c] = t.tw
 		}
-	}
-	roomX := make([]int, cols)
-	roomY := make([]int, rows)
-	roomX[0] = genMargin
-	for c := 1; c < cols; c++ {
-		roomX[c] = roomX[c-1] + colWidth[c-1] + gapX
-	}
-	roomY[0] = genMargin
-	for r := 1; r < rows; r++ {
-		roomY[r] = roomY[r-1] + rowHeight[r-1] + gapY
-	}
-	for _, t := range place {
+		if t.th > rowHeight[r] {
+			rowHeight[r] = t.th
+		}
 		if t.isDemon {
 			demonCount++
 		}
 	}
+	vGapX := make([]int, cols+1)
+	hGapY := make([]int, rows+1)
+	roomX := make([]int, cols)
+	roomY := make([]int, rows)
+	vGapX[0] = genMargin
+	for c := 0; c < cols; c++ {
+		roomX[c] = vGapX[c] + gapW
+		vGapX[c+1] = roomX[c] + colWidth[c]
+	}
+	hGapY[0] = genMargin
 	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			pi := cell[r*cols+c]
-			if pi < 0 {
-				continue
+		roomY[r] = hGapY[r] + gapH
+		hGapY[r+1] = roomY[r] + rowHeight[r]
+	}
+	for i, t := range place {
+		r, c := i/cols, i%cols
+		ox, oy := roomX[c], roomY[r]
+		var hasN, hasS, hasE, hasW bool
+		for _, e := range t.entrances {
+			switch e.side {
+			case sideNorth:
+				hasN = true
+			case sideSouth:
+				hasS = true
+			case sideEast:
+				hasE = true
+			case sideWest:
+				hasW = true
 			}
-			t := place[pi]
-			centers = append(centers, [2]int{roomX[c] + t.tw/2, roomY[r] + t.th/2})
 		}
+		if hasE && !hasW {
+			ox = vGapX[c+1] - t.tw
+		}
+		if hasS && !hasN {
+			oy = hGapY[r+1] - t.th
+		}
+		centers = append(centers, [2]int{ox + t.tw/2, oy + t.th/2})
 	}
 	return centers, demonCount
 }
@@ -115,10 +127,10 @@ func TestGenerateMapConnectivity(t *testing.T) {
 			if err != nil {
 				t.Fatalf("generate (n=%d seed=%d): %v", n, seed, err)
 			}
-			spawnTX, spawnTY := 120/m.TileWidth, 140/m.TileHeight
-			reach := reachableFloor(m, spawnTX, spawnTY)
+			sx, sy := m.PlayerSpawn()
+			reach := reachableFloor(m, sx/m.TileWidth, sy/m.TileHeight)
 			if len(reach) == 0 {
-				t.Fatalf("n=%d seed=%d: spawn (%d,%d) not on open floor", n, seed, spawnTX, spawnTY)
+				t.Fatalf("n=%d seed=%d: spawn (%d,%d)px not on open floor", n, seed, sx, sy)
 			}
 			centers, demonCount := placedRoomCenters(tmpls, pass, n, newSeededRng(seed))
 			for _, c := range centers {

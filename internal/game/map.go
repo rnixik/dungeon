@@ -83,6 +83,18 @@ type Map struct {
 	gridWidth           int
 	gridHeight          int
 	visibilityColliders []Rectangle
+	spawnX              int
+	spawnY              int
+}
+
+// PlayerSpawn returns the pixel position where players start. Generated maps set
+// it to the centre of the start room; otherwise it falls back to the historical
+// fixed spawn.
+func (m *Map) PlayerSpawn() (int, int) {
+	if m != nil && (m.spawnX != 0 || m.spawnY != 0) {
+		return m.spawnX, m.spawnY
+	}
+	return 120, 140
 }
 
 // parseMap unmarshals a raw Tiled .tmj file without running any of the

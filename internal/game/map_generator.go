@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"sort"
 	"time"
 )
 
@@ -12,20 +11,21 @@ import (
 // template .tmj file:
 //
 //   - Rooms (class="room") are blocks with thick walls and one or more
-//     class="entrance" openings (matched by name). Two rooms are special:
-//     "room_start" (where players spawn) and the room containing the demon boss
-//     spawn ("room_boss").
+//     class="entrance" openings (matched by name). Two are special: "room_start"
+//     (where players spawn) and the room containing the demon boss spawn.
 //   - Passages (class="passage") are whole corridor tile pieces: "horizontal"
-//     and "vertical" straights, four "turn_*" L-bends, and a 4-way "crossroad".
+//     and "vertical" straights, four "turn_*" L-bends, a 4-way "crossroad" and
+//     four "t_cross_*" T-junctions.
 //
-// Rooms are laid out on a grid with variable column widths and row heights (so
-// large rooms do not bloat every cell). Between adjacent room columns runs a
-// full-height vertical street and between adjacent rows a full-width horizontal
-// street; they cross at crossroads. Streets are rendered by stamping the whole
-// straight passage pieces end to end (never copying single tiles), and the
-// crossroad piece is stamped at each intersection. Every room is connected to
-// the street grid through its existing entrances only. A final pass turns void
-// tiles touching floor into walls.
+// Rooms are laid out on a grid with variable column widths and row heights. A
+// street runs in every gap between rooms AND around the whole grid (a perimeter
+// ring), so every room is bordered by streets on all four sides. Streets are
+// rendered by stamping the whole straight passage pieces end to end (never
+// copying single tiles). At each street intersection the matching junction piece
+// is stamped: a crossroad in the interior, a t_cross_* where an interior street
+// meets the perimeter, and a turn at the four perimeter corners. Rooms are
+// connected to the streets through their existing entrances only. A final pass
+// turns void tiles touching floor into walls.
 
 const (
 	genMargin = 2 // void border around the whole map
@@ -43,12 +43,10 @@ const (
 
 type entrance struct {
 	side    roomSide
-	off     int // tile offset of the opening along its edge
+	off     int
 	openLen int
 }
 
-// roomTemplate describes one predefined room. Coordinates are tiles relative to
-// the template map.
 type roomTemplate struct {
 	name           string
 	tx, ty, tw, th int
@@ -57,23 +55,27 @@ type roomTemplate struct {
 	isDemon        bool
 }
 
-// passageSet holds the corridor pieces and their detected channel geometry.
-type passageSet struct {
-	h  passagePiece // horizontal straight
-	v  passagePiece // vertical straight
-	cr passagePiece // crossroad
-
-	hFloorTop  int // first open row of the horizontal channel in the straight
-	hChannel   int // horizontal channel height
-	vFloorLeft int // first open col of the vertical channel in the straight
-	vChannel   int // vertical channel width
-	cVOff      int // first open col of the crossroad's vertical channel
-	cHOff      int // first open row of the crossroad's horizontal channel
-}
-
+// passagePiece is a corridor tile block plus the detected offsets (within the
+// block) of its open channels: vChanOff is the column where the vertical
+// (N/S) channel starts, hChanOff the row where the horizontal (W/E) channel
+// starts.
 type passagePiece struct {
-	tx, ty, tw, th int
+	tx, ty, tw, th     int
+	vChanOff, hChanOff int
 }
+
+type passageSet struct {
+	pieces map[string]passagePiece
+
+	hFloorTop  int // first open row of the horizontal straight's channel
+	hChannel   int // horizontal channel height
+	vFloorLeft int // first open col of the vertical straight's channel
+	vChannel   int // vertical channel width
+	cVOff      int // crossroad vertical-channel column offset (canonical gap offset)
+	cHOff      int // crossroad horizontal-channel row offset
+}
+
+func (p passageSet) piece(name string) passagePiece { return p.pieces[name] }
 
 func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	if numRooms < 1 {
@@ -92,48 +94,53 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	if err != nil {
 		return nil, err
 	}
-	floorGid, wallGid, err := pickCorridorGids(template, templates)
+	floorGid, wallGid, err := pickCorridorGids(template, pass)
 	if err != nil {
 		return nil, err
 	}
 
 	place := chooseRooms(templates, numRooms, rng)
 	cols, rows := gridDims(numRooms)
-	cell := assignCells(place, cols, rows) // cell[r*cols+c] = index into place, or -1
 
-	// Variable column widths and row heights from the assigned rooms.
-	gapX, gapY := pass.cr.tw, pass.cr.th
+	// Variable column widths and row heights (cell i in row-major order). The gap
+	// between rooms is exactly one corridor lane wide: a vertical lane is as wide
+	// as the vertical straight piece, a horizontal lane as tall as the horizontal
+	// straight piece. The larger crossroad/T/turn pieces stamped at intersections
+	// overhang into the rooms, but their void corners are skipped so nothing is
+	// erased.
+	gapW, gapH := pass.piece("vertical").tw, pass.piece("horizontal").th
 	colWidth := make([]int, cols)
 	rowHeight := make([]int, rows)
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			if pi := cell[r*cols+c]; pi >= 0 {
-				colWidth[c] = max(colWidth[c], place[pi].tw)
-				rowHeight[r] = max(rowHeight[r], place[pi].th)
-			}
-		}
+	for i, t := range place {
+		r, c := i/cols, i%cols
+		colWidth[c] = max(colWidth[c], t.tw)
+		rowHeight[r] = max(rowHeight[r], t.th)
 	}
 
+	// Gaps surround every room (perimeter ring): cols+1 vertical gaps, rows+1
+	// horizontal gaps. vGapX[g] is the left edge of vertical gap g.
+	vGapX := make([]int, cols+1)
+	hGapY := make([]int, rows+1)
 	roomX := make([]int, cols)
 	roomY := make([]int, rows)
-	roomX[0] = genMargin
-	for c := 1; c < cols; c++ {
-		roomX[c] = roomX[c-1] + colWidth[c-1] + gapX
+	vGapX[0] = genMargin
+	for c := 0; c < cols; c++ {
+		roomX[c] = vGapX[c] + gapW
+		vGapX[c+1] = roomX[c] + colWidth[c]
 	}
-	roomY[0] = genMargin
-	for r := 1; r < rows; r++ {
-		roomY[r] = roomY[r-1] + rowHeight[r-1] + gapY
+	hGapY[0] = genMargin
+	for r := 0; r < rows; r++ {
+		roomY[r] = hGapY[r] + gapH
+		hGapY[r+1] = roomY[r] + rowHeight[r]
 	}
-	canvasW := roomX[cols-1] + colWidth[cols-1] + genMargin
-	canvasH := roomY[rows-1] + rowHeight[rows-1] + genMargin
+	canvasW := vGapX[cols] + gapW + genMargin
+	canvasH := hGapY[rows] + gapH + genMargin
 
-	// Street channel positions.
-	vGapStart := func(c int) int { return roomX[c] + colWidth[c] }    // left of the gap after column c
-	hGapStart := func(r int) int { return roomY[r] + rowHeight[r] }   // top of the gap after row r
-	vChanLeft := func(c int) int { return vGapStart(c) + pass.cVOff } // vertical street channel left col
-	hChanTop := func(r int) int { return hGapStart(r) + pass.cHOff }  // horizontal street channel top row
-	gridTop, gridBottom := roomY[0], roomY[rows-1]+rowHeight[rows-1]
-	gridLeft, gridRight := roomX[0], roomX[cols-1]+colWidth[cols-1]
+	// Channel position of a lane: aligned to the straight piece's own channel
+	// within the (narrow) gap. Junction pieces are placed so their channels line
+	// up with this.
+	vChanLeft := func(g int) int { return vGapX[g] + pass.vFloorLeft }
+	hChanTop := func(g int) int { return hGapY[g] + pass.hFloorTop }
 
 	out := newBlankMap(template, canvasW, canvasH)
 	floor := out.tileLayerData("floor")
@@ -141,6 +148,9 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	if floor == nil || walls == nil {
 		return nil, fmt.Errorf("template map is missing a floor or walls layer")
 	}
+	// carve opens a connector corridor: it clears walls and fills only empty
+	// tiles with the corridor floor, leaving existing room/passage floor intact so
+	// textures are preserved.
 	carve := func(x0, x1, y0, y1 int) {
 		if x0 > x1 {
 			x0, x1 = x1, x0
@@ -150,10 +160,43 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 		}
 		for y := max(0, y0); y <= min(canvasH-1, y1); y++ {
 			for x := max(0, x0); x <= min(canvasW-1, x1); x++ {
-				floor[x+y*canvasW] = floorGid
-				walls[x+y*canvasW] = 0
+				i := x + y*canvasW
+				walls[i] = 0
+				if floor[i] == 0 {
+					floor[i] = floorGid
+				}
 			}
 		}
+	}
+
+	// originOf places a room within its cell flush against the lane(s) its
+	// entrances face, so the entrance meets the corridor directly (no gap). Rooms
+	// default to the top-left of the cell; an east-only entrance pushes it right,
+	// a south-only entrance pushes it down.
+	originOf := func(i int) (int, int) {
+		t := place[i]
+		r, c := i/cols, i%cols
+		ox, oy := roomX[c], roomY[r]
+		var hasN, hasS, hasE, hasW bool
+		for _, e := range t.entrances {
+			switch e.side {
+			case sideNorth:
+				hasN = true
+			case sideSouth:
+				hasS = true
+			case sideEast:
+				hasE = true
+			case sideWest:
+				hasW = true
+			}
+		}
+		if hasE && !hasW {
+			ox = vGapX[c+1] - t.tw
+		}
+		if hasS && !hasN {
+			oy = hGapY[r+1] - t.th
+		}
+		return ox, oy
 	}
 
 	objects := make([]MapObject, 0)
@@ -161,61 +204,107 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	nextID := 1
 
 	// --- Stamp rooms ---
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			pi := cell[r*cols+c]
-			if pi < 0 {
-				continue
-			}
-			t := place[pi]
-			ox, oy := roomX[c], roomY[r]
-			stampRoom(out, template, t, ox, oy)
-			objects = appendRoomObjects(objects, template, t, ox, oy, &nextID)
-			spawns = appendRoomSpawns(spawns, template, t, ox, oy, &nextID)
+	for i, t := range place {
+		ox, oy := originOf(i)
+		stampRoom(out, template, t, ox, oy)
+		objects = appendRoomObjects(objects, template, t, ox, oy, &nextID)
+		spawns = appendRoomSpawns(spawns, template, t, ox, oy, &nextID)
+		if t.isStart {
+			out.spawnX = (ox + t.tw/2) * out.TileWidth
+			out.spawnY = (oy + t.th/2) * out.TileHeight
 		}
 	}
 
-	// --- Streets from whole passage pieces ---
-	for c := 0; c < cols-1; c++ {
-		extrudeVertical(out, template, pass, vChanLeft(c), gridTop, gridBottom)
-	}
-	for r := 0; r < rows-1; r++ {
-		extrudeHorizontal(out, template, pass, hChanTop(r), gridLeft, gridRight)
-	}
-	for r := 0; r < rows-1; r++ {
-		for c := 0; c < cols-1; c++ {
-			copyBlock(out, template, pass.cr.tx, pass.cr.ty, pass.cr.tw, pass.cr.th, vGapStart(c), hGapStart(r))
-		}
+	stamp := func(name string, x, y int) {
+		pc := pass.piece(name)
+		copyBlock(out, template, pc.tx, pc.ty, pc.tw, pc.th, x, y)
 	}
 
-	// --- Connect every room to the streets through its existing entrances ---
-	hasStreet := func(r, c int, s roomSide) bool {
-		switch s {
-		case sideNorth:
-			return r > 0
-		case sideSouth:
-			return r < rows-1
-		case sideWest:
-			return c > 0
-		case sideEast:
-			return c < cols-1
+	// --- Stamp a T-junction branching off the street toward each entrance. This
+	// happens BEFORE the streets are laid so that re-stamping the streets and
+	// junctions afterwards repairs any street tiles a T overlapped; the branch
+	// stub toward the room survives. A T is only placed where it fits between the
+	// room's bounding streets. ---
+	for i, t := range place {
+		r, c := i/cols, i%cols
+		ox, oy := originOf(i)
+		fitsCols := func(x0, w int) bool {
+			return x0 > vChanLeft(c)+pass.vChannel-1 && x0+w-1 < vChanLeft(c+1)
 		}
-		return false
-	}
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			pi := cell[r*cols+c]
-			if pi < 0 {
-				continue
-			}
-			t := place[pi]
-			ox, oy := roomX[c], roomY[r]
-			for _, e := range t.entrances {
-				if hasStreet(r, c, e.side) {
-					connectStraight(carve, pass, t, ox, oy, e, r, c, vChanLeft, hChanTop)
-				} else {
-					connectElbow(carve, pass, t, ox, oy, e, r, c, cols, rows, vChanLeft, hChanTop)
+		fitsRows := func(y0, h int) bool {
+			return y0 > hChanTop(r)+pass.hChannel-1 && y0+h-1 < hChanTop(r+1)
+		}
+		for _, e := range t.entrances {
+			centerX := ox + e.off + e.openLen/2
+			centerY := oy + e.off + e.openLen/2
+			switch e.side {
+			case sideNorth:
+				td := pass.piece("t_cross_down")
+				if tx := centerX - (td.vChanOff + pass.vChannel/2); fitsCols(tx, td.tw) {
+					stamp("t_cross_down", tx, hChanTop(r)-td.hChanOff)
 				}
+			case sideSouth:
+				tu := pass.piece("t_cross_up")
+				if tx := centerX - (tu.vChanOff + pass.vChannel/2); fitsCols(tx, tu.tw) {
+					stamp("t_cross_up", tx, hChanTop(r+1)-tu.hChanOff)
+				}
+			case sideEast:
+				tl := pass.piece("t_cross_left")
+				if ty := centerY - (tl.hChanOff + pass.hChannel/2); fitsRows(ty, tl.th) {
+					stamp("t_cross_left", vChanLeft(c+1)-tl.vChanOff, ty)
+				}
+			case sideWest:
+				tr := pass.piece("t_cross_right")
+				if ty := centerY - (tr.hChanOff + pass.hChannel/2); fitsRows(ty, tr.th) {
+					stamp("t_cross_right", vChanLeft(c)-tr.vChanOff, ty)
+				}
+			}
+		}
+	}
+
+	// --- Streets from whole passage pieces, spanning the perimeter bounds ---
+	streetX0, streetX1 := vChanLeft(0), vChanLeft(cols)+pass.vChannel-1
+	streetY0, streetY1 := hChanTop(0), hChanTop(rows)+pass.hChannel-1
+	for g := 0; g <= cols; g++ {
+		extrudeVertical(out, template, pass, vChanLeft(g), streetY0, streetY1)
+	}
+	for g := 0; g <= rows; g++ {
+		extrudeHorizontal(out, template, pass, hChanTop(g), streetX0, streetX1)
+	}
+
+	// --- Junction piece at every street intersection ---
+	for gr := 0; gr <= rows; gr++ {
+		for gc := 0; gc <= cols; gc++ {
+			pc := pass.piece(junctionName(gc, gr, cols, rows))
+			copyBlock(out, template, pc.tx, pc.ty, pc.tw, pc.th,
+				vChanLeft(gc)-pc.vChanOff, hChanTop(gr)-pc.hChanOff)
+		}
+	}
+
+	// --- Carve the branch from each entrance to its street. The carve clears
+	// walls and fills only empty tiles (preserving room/passage floor), and
+	// always runs so connectivity holds regardless of the T placement. ---
+	for i, t := range place {
+		r, c := i/cols, i%cols
+		ox, oy := originOf(i)
+		for _, e := range t.entrances {
+			a, b := ox+e.off, ox+e.off+e.openLen-1
+			ay, by := oy+e.off, oy+e.off+e.openLen-1
+			centerX := ox + e.off + e.openLen/2
+			centerY := oy + e.off + e.openLen/2
+			vLo := min(a, centerX-pass.vChannel/2)
+			vHi := max(b, centerX-pass.vChannel/2+pass.vChannel-1)
+			hLo := min(ay, centerY-pass.hChannel/2)
+			hHi := max(by, centerY-pass.hChannel/2+pass.hChannel-1)
+			switch e.side {
+			case sideNorth:
+				carve(vLo, vHi, hChanTop(r), oy+genReach)
+			case sideSouth:
+				carve(vLo, vHi, oy+t.th-genReach, hChanTop(r+1)+pass.hChannel-1)
+			case sideEast:
+				carve(ox+t.tw-genReach, vChanLeft(c+1)+pass.vChannel-1, hLo, hHi)
+			case sideWest:
+				carve(vChanLeft(c), ox+genReach, hLo, hHi)
 			}
 		}
 	}
@@ -228,59 +317,31 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	return out, nil
 }
 
-// connectStraight carves a corridor from one entrance straight to the street on
-// that entrance's side.
-func connectStraight(carve func(x0, x1, y0, y1 int), p passageSet, t roomTemplate, ox, oy int, e entrance, r, c int, vChanLeft, hChanTop func(int) int) {
-	a := e.off
-	b := e.off + e.openLen - 1
-	switch e.side {
-	case sideSouth:
-		carve(ox+a, ox+b, oy+t.th-genReach, hChanTop(r)+p.hChannel-1)
-	case sideNorth:
-		carve(ox+a, ox+b, hChanTop(r-1), oy+genReach)
-	case sideEast:
-		carve(ox+t.tw-genReach, vChanLeft(c)+p.vChannel-1, oy+a, oy+b)
-	case sideWest:
-		carve(vChanLeft(c-1), ox+genReach, oy+a, oy+b)
-	}
-}
-
-// connectElbow handles an entrance whose own side has no street (an outward edge
-// entrance): it pokes out of the entrance, then turns to a perpendicular street.
-func connectElbow(carve func(x0, x1, y0, y1 int), p passageSet, t roomTemplate, ox, oy int, e entrance, r, c, cols, rows int, vChanLeft, hChanTop func(int) int) {
-	a := e.off
-	b := e.off + e.openLen - 1
-	const out = 4
-	switch e.side {
-	case sideNorth, sideSouth:
-		// Poke vertically into the margin, then run horizontally to E or W street.
-		var bandY0, bandY1 int
-		if e.side == sideNorth {
-			bandY0, bandY1 = oy-out, oy+genReach
-		} else {
-			bandY0, bandY1 = oy+t.th-genReach, oy+t.th+out
-		}
-		carve(ox+a, ox+b, bandY0, bandY1)
-		bandTop := min(bandY0, bandY1)
-		if c < cols-1 { // east street
-			carve(ox+a, vChanLeft(c)+p.vChannel-1, bandTop, bandTop+p.vChannel-1)
-		} else if c > 0 { // west street
-			carve(vChanLeft(c-1), ox+b, bandTop, bandTop+p.vChannel-1)
-		}
-	case sideEast, sideWest:
-		var bandX0, bandX1 int
-		if e.side == sideEast {
-			bandX0, bandX1 = ox+t.tw-genReach, ox+t.tw+out
-		} else {
-			bandX0, bandX1 = ox-out, ox+genReach
-		}
-		carve(bandX0, bandX1, oy+a, oy+b)
-		bandLeft := min(bandX0, bandX1)
-		if r < rows-1 { // south street
-			carve(bandLeft, bandLeft+p.hChannel-1, oy+a, hChanTop(r)+p.hChannel-1)
-		} else if r > 0 { // north street
-			carve(bandLeft, bandLeft+p.hChannel-1, hChanTop(r-1), oy+b)
-		}
+// junctionName returns which passage piece sits at street intersection (gc,gr):
+// turns at the four corners, t_cross_* where an interior street meets the
+// perimeter, and a crossroad in the interior.
+func junctionName(gc, gr, cols, rows int) string {
+	left, right := gc == 0, gc == cols
+	top, bottom := gr == 0, gr == rows
+	switch {
+	case left && top:
+		return "turn_left_upper" // opens E,S
+	case right && top:
+		return "turn_right_upper" // opens W,S
+	case left && bottom:
+		return "turn_left_bottom" // opens E,N
+	case right && bottom:
+		return "turn_right_bottom" // opens W,N
+	case top:
+		return "t_cross_down" // opens W,E,S
+	case bottom:
+		return "t_cross_up" // opens W,E,N
+	case left:
+		return "t_cross_right" // opens N,S,E
+	case right:
+		return "t_cross_left" // opens N,S,W
+	default:
+		return "crossroad"
 	}
 }
 
@@ -307,7 +368,7 @@ func chooseRooms(templates []roomTemplate, n int, rng *rand.Rand) []roomTemplate
 			normal = append(normal, templates[i])
 		}
 	}
-	if start == nil { // fall back to any room as the spawn room
+	if start == nil {
 		start = &templates[0]
 		normal = templates[1:]
 	}
@@ -330,134 +391,8 @@ func chooseRooms(templates []roomTemplate, n int, rng *rand.Rand) []roomTemplate
 	return out
 }
 
-// assignCells maps the rooms in place onto the first len(place) grid cells so
-// that each room has at least one entrance facing an interior street where
-// possible. cell[0] is always room_start; the demon room is kept off the top
-// row. Returns cell -> place index (or -1 for empty cells).
-func assignCells(place []roomTemplate, cols, rows int) []int {
-	n := len(place)
-	cell := make([]int, cols*rows)
-	for i := range cell {
-		cell[i] = -1
-	}
-	streetSides := func(idx int) map[roomSide]bool {
-		r, c := idx/cols, idx%cols
-		s := map[roomSide]bool{}
-		if r > 0 {
-			s[sideNorth] = true
-		}
-		if r < rows-1 {
-			s[sideSouth] = true
-		}
-		if c > 0 {
-			s[sideWest] = true
-		}
-		if c < cols-1 {
-			s[sideEast] = true
-		}
-		return s
-	}
-	fits := func(t roomTemplate, idx int) bool {
-		sides := streetSides(idx)
-		for _, e := range t.entrances {
-			if sides[e.side] {
-				return true
-			}
-		}
-		return false
-	}
-
-	free := make([]bool, cols*rows)
-	for i := 0; i < n; i++ {
-		free[i] = true
-	}
-	take := func(pi, idx int) {
-		cell[idx] = pi
-		free[idx] = false
-	}
-
-	// room_start at cell 0 (top-left, contains the player spawn).
-	startPi := -1
-	for i := range place {
-		if place[i].isStart {
-			startPi = i
-			break
-		}
-	}
-	if startPi < 0 {
-		startPi = 0
-	}
-	take(startPi, 0)
-
-	// demon room on a fitting, non-top-row cell (prefer the last cell).
-	demonPi := -1
-	for i := range place {
-		if place[i].isDemon {
-			demonPi = i
-			break
-		}
-	}
-	if demonPi >= 0 {
-		placed := false
-		for idx := cols * rows; idx > 0; idx-- {
-			i := idx - 1
-			if i < n && free[i] && i/cols > 0 && fits(place[demonPi], i) {
-				take(demonPi, i)
-				placed = true
-				break
-			}
-		}
-		if !placed {
-			for i := 0; i < n; i++ {
-				if free[i] {
-					take(demonPi, i)
-					break
-				}
-			}
-		}
-	}
-
-	// Remaining rooms, most-constrained first.
-	type rem struct{ pi, opts int }
-	var rems []rem
-	for i := range place {
-		if i == startPi || i == demonPi {
-			continue
-		}
-		opts := 0
-		for idx := 0; idx < n; idx++ {
-			if free[idx] && fits(place[i], idx) {
-				opts++
-			}
-		}
-		rems = append(rems, rem{i, opts})
-	}
-	sort.Slice(rems, func(a, b int) bool { return rems[a].opts < rems[b].opts })
-	for _, rm := range rems {
-		best := -1
-		for idx := 0; idx < n; idx++ {
-			if free[idx] && fits(place[rm.pi], idx) {
-				best = idx
-				break
-			}
-		}
-		if best < 0 { // no fitting cell; take any free one (elbow connectors cope)
-			for idx := 0; idx < n; idx++ {
-				if free[idx] {
-					best = idx
-					break
-				}
-			}
-		}
-		if best >= 0 {
-			take(rm.pi, best)
-		}
-	}
-	return cell
-}
-
-// extractRoomTemplates reads every class="room" object, its class="entrance"
-// openings, and whether it is the start room or contains the demon spawn.
+// extractRoomTemplates reads every class="room", its class="entrance" openings,
+// and whether it is the start room or contains the demon spawn.
 func extractRoomTemplates(template *Map) ([]roomTemplate, error) {
 	objectsLayer := template.objectLayer("objects")
 	if objectsLayer == nil {
@@ -528,26 +463,12 @@ func extractRoomTemplates(template *Map) ([]roomTemplate, error) {
 	return templates, nil
 }
 
-// extractPassages reads the corridor pieces and detects channel geometry.
+// extractPassages reads every corridor piece and detects its channel geometry.
 func extractPassages(template *Map) (passageSet, error) {
 	objectsLayer := template.objectLayer("objects")
 	if objectsLayer == nil {
 		return passageSet{}, fmt.Errorf("template map has no objects layer")
 	}
-	ts := template.TileWidth
-	pieces := make(map[string]passagePiece)
-	for _, o := range objectsLayer.Objects {
-		if o.Type == "passage" {
-			pieces[o.Name] = passagePiece{int(o.X) / ts, int(o.Y) / ts, int(o.Width) / ts, int(o.Height) / ts}
-		}
-	}
-	need := []string{"horizontal", "vertical", "crossroad"}
-	for _, name := range need {
-		if _, ok := pieces[name]; !ok {
-			return passageSet{}, fmt.Errorf("template map is missing passage %q", name)
-		}
-	}
-
 	walls := template.tileLayerData("walls")
 	floor := template.tileLayerData("floor")
 	if walls == nil || floor == nil {
@@ -568,12 +489,43 @@ func extractPassages(template *Map) (passageSet, error) {
 		return
 	}
 
-	h, v, cr := pieces["horizontal"], pieces["vertical"], pieces["crossroad"]
-	ps := passageSet{h: h, v: v, cr: cr}
+	ts := template.TileWidth
+	ps := passageSet{pieces: make(map[string]passagePiece)}
+	for _, o := range objectsLayer.Objects {
+		if o.Type != "passage" {
+			continue
+		}
+		pc := passagePiece{tx: int(o.X) / ts, ty: int(o.Y) / ts, tw: int(o.Width) / ts, th: int(o.Height) / ts}
+		// Vertical channel: an open run on the top edge, else the bottom edge.
+		if off, n := firstRun(func(i int) bool { return open(pc.tx+i, pc.ty) }, pc.tw); n > 0 {
+			pc.vChanOff = off
+		} else if off, n := firstRun(func(i int) bool { return open(pc.tx+i, pc.ty+pc.th-1) }, pc.tw); n > 0 {
+			pc.vChanOff = off
+		}
+		// Horizontal channel: an open run on the left edge, else the right edge.
+		if off, n := firstRun(func(i int) bool { return open(pc.tx, pc.ty+i) }, pc.th); n > 0 {
+			pc.hChanOff = off
+		} else if off, n := firstRun(func(i int) bool { return open(pc.tx+pc.tw-1, pc.ty+i) }, pc.th); n > 0 {
+			pc.hChanOff = off
+		}
+		ps.pieces[o.Name] = pc
+	}
+
+	need := []string{"horizontal", "vertical", "crossroad",
+		"turn_right_upper", "turn_right_bottom", "turn_left_upper", "turn_left_bottom",
+		"t_cross_down", "t_cross_up", "t_cross_left", "t_cross_right"}
+	for _, name := range need {
+		if _, ok := ps.pieces[name]; !ok {
+			return passageSet{}, fmt.Errorf("template map is missing passage %q", name)
+		}
+	}
+
+	h := ps.pieces["horizontal"]
+	v := ps.pieces["vertical"]
+	cr := ps.pieces["crossroad"]
 	ps.hFloorTop, ps.hChannel = firstRun(func(i int) bool { return open(h.tx+h.tw/2, h.ty+i) }, h.th)
 	ps.vFloorLeft, ps.vChannel = firstRun(func(i int) bool { return open(v.tx+i, v.ty+v.th/2) }, v.tw)
-	ps.cVOff, _ = firstRun(func(i int) bool { return open(cr.tx+i, cr.ty) }, cr.tw)
-	ps.cHOff, _ = firstRun(func(i int) bool { return open(cr.tx, cr.ty+i) }, cr.th)
+	ps.cVOff, ps.cHOff = cr.vChanOff, cr.hChanOff
 	if ps.hChannel == 0 || ps.vChannel == 0 {
 		return passageSet{}, fmt.Errorf("could not detect passage channels")
 	}
@@ -581,46 +533,69 @@ func extractPassages(template *Map) (passageSet, error) {
 }
 
 // extrudeHorizontal stamps whole horizontal straight pieces end to end along a
-// run, aligning the channel to rows [channelTop, channelTop+hChannel).
+// run, aligning the channel to rows starting at channelTop.
 func extrudeHorizontal(out, template *Map, p passageSet, channelTop, x0, x1 int) {
+	h := p.piece("horizontal")
 	dstTop := channelTop - p.hFloorTop
-	for x := x0; x <= x1; x += p.h.tw {
-		copyBlock(out, template, p.h.tx, p.h.ty, min(p.h.tw, x1-x+1), p.h.th, x, dstTop)
+	for x := x0; x <= x1; x += h.tw {
+		copyBlock(out, template, h.tx, h.ty, min(h.tw, x1-x+1), h.th, x, dstTop)
 	}
 }
 
 // extrudeVertical stamps whole vertical straight pieces end to end along a run,
-// aligning the channel to cols [channelLeft, channelLeft+vChannel).
+// aligning the channel to cols starting at channelLeft.
 func extrudeVertical(out, template *Map, p passageSet, channelLeft, y0, y1 int) {
+	v := p.piece("vertical")
 	dstLeft := channelLeft - p.vFloorLeft
-	for y := y0; y <= y1; y += p.v.th {
-		copyBlock(out, template, p.v.tx, p.v.ty, p.v.tw, min(p.v.th, y1-y+1), dstLeft, y)
+	for y := y0; y <= y1; y += v.th {
+		copyBlock(out, template, v.tx, v.ty, v.tw, min(v.th, y1-y+1), dstLeft, y)
 	}
 }
 
 // copyBlock copies a w x h tile block from the template into the output map at
-// the given tile offset, across every tile layer.
+// the given tile offset, across every tile layer. Void (empty) source tiles are
+// skipped so a piece's transparent areas (e.g. a crossroad's void corners) never
+// erase tiles already placed underneath (e.g. a room corner nestled into them).
 func copyBlock(out, template *Map, srcX, srcY, w, h, dstX, dstY int) {
+	type layerPair struct {
+		dst []int
+		src []int
+	}
+	pairs := make([]layerPair, 0, len(out.Layers))
 	for li := range out.Layers {
-		dst := &out.Layers[li]
-		if dst.Type != "tilelayer" {
+		l := &out.Layers[li]
+		if l.Type != "tilelayer" {
 			continue
 		}
-		src := template.tileLayerData(dst.Name)
-		if src == nil {
+		if src := template.tileLayerData(l.Name); src != nil {
+			pairs = append(pairs, layerPair{dst: l.Data, src: src})
+		}
+	}
+	for dy := 0; dy < h; dy++ {
+		ny, sy := dstY+dy, srcY+dy
+		if ny < 0 || ny >= out.Height || sy < 0 || sy >= template.Height {
 			continue
 		}
-		for dy := 0; dy < h; dy++ {
-			ny, sy := dstY+dy, srcY+dy
-			if ny < 0 || ny >= out.Height || sy < 0 || sy >= template.Height {
+		for dx := 0; dx < w; dx++ {
+			nx, sx := dstX+dx, srcX+dx
+			if nx < 0 || nx >= out.Width || sx < 0 || sx >= template.Width {
 				continue
 			}
-			for dx := 0; dx < w; dx++ {
-				nx, sx := dstX+dx, srcX+dx
-				if nx < 0 || nx >= out.Width || sx < 0 || sx >= template.Width {
-					continue
+			// A tile occupies the cell if any layer has a non-void tile there;
+			// only copy the cell when the source actually has content, and within
+			// the cell copy every layer (so multi-layer tiles stay aligned).
+			occupied := false
+			for _, p := range pairs {
+				if p.src[sx+sy*template.Width] != 0 {
+					occupied = true
+					break
 				}
-				dst.Data[nx+ny*out.Width] = src[sx+sy*template.Width]
+			}
+			if !occupied {
+				continue
+			}
+			for _, p := range pairs {
+				p.dst[nx+ny*out.Width] = p.src[sx+sy*template.Width]
 			}
 		}
 	}
@@ -666,10 +641,11 @@ func appendTranslatedObjects(dst []MapObject, template *Map, layerName string, t
 	return dst
 }
 
-// pickCorridorGids chooses the floor tile for connector corridors (sampled from a
-// room interior) and the wall tile to seal them (the most common light-absorbing
-// wall tile).
-func pickCorridorGids(template *Map, templates []roomTemplate) (floorGid, wallGid int, err error) {
+// pickCorridorGids chooses the floor and wall tiles used for the carved entrance
+// connectors. Both are sampled from the passage pieces so connectors match the
+// corridors they join: the most common floor tile and the most common
+// light-absorbing (collidable) wall tile within the passage blocks.
+func pickCorridorGids(template *Map, pass passageSet) (floorGid, wallGid int, err error) {
 	absorbs := make(map[int]bool)
 	for _, set := range template.Tilesets {
 		for _, tile := range set.Tiles {
@@ -687,25 +663,38 @@ func pickCorridorGids(template *Map, templates []roomTemplate) (floorGid, wallGi
 	if floorLayer == nil || wallLayer == nil {
 		return 0, 0, fmt.Errorf("template map is missing a floor or walls layer")
 	}
-	t := templates[0]
-	floorGid = floorLayer[(t.tx+t.tw/2)+(t.ty+t.th/2)*template.Width]
-	if floorGid == 0 {
-		return 0, 0, fmt.Errorf("could not sample a floor tile from room %q", t.name)
-	}
-	counts := make(map[int]int)
-	for _, g := range wallLayer {
-		if absorbs[g] {
-			counts[g]++
+
+	floorCounts := make(map[int]int)
+	wallCounts := make(map[int]int)
+	for _, pc := range pass.pieces {
+		for y := pc.ty; y < pc.ty+pc.th; y++ {
+			for x := pc.tx; x < pc.tx+pc.tw; x++ {
+				i := x + y*template.Width
+				if g := floorLayer[i]; g != 0 {
+					floorCounts[g]++
+				}
+				if g := wallLayer[i]; absorbs[g] {
+					wallCounts[g]++
+				}
+			}
 		}
 	}
-	best := 0
-	for g, ct := range counts {
-		if ct > best {
-			best, wallGid = ct, g
+	mostCommon := func(m map[int]int) (gid, n int) {
+		for g, c := range m {
+			if c > n {
+				gid, n = g, c
+			}
 		}
+		return
 	}
-	if best == 0 {
-		return 0, 0, fmt.Errorf("template walls layer has no light-absorbing tiles")
+	var fn, wn int
+	floorGid, fn = mostCommon(floorCounts)
+	wallGid, wn = mostCommon(wallCounts)
+	if fn == 0 {
+		return 0, 0, fmt.Errorf("no floor tiles found in passage pieces")
+	}
+	if wn == 0 {
+		return 0, 0, fmt.Errorf("no light-absorbing wall tiles found in passage pieces")
 	}
 	return floorGid, wallGid, nil
 }
