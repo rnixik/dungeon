@@ -85,6 +85,8 @@ type Map struct {
 	visibilityColliders []Rectangle
 	spawnX              int
 	spawnY              int
+	roomCenters         [][2]int // interior centre (tiles) of each placed room
+	demonRoomCount      int      // number of placed rooms containing the demon spawn
 }
 
 // PlayerSpawn returns the pixel position where players start. Generated maps set
