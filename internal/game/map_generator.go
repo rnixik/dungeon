@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -16,9 +17,9 @@ import (
 //     and "vertical" straights, four "turn_*" L-bends, a 4-way "crossroad" and
 //     four "t_cross_*" T-junctions.
 //
-// Layout is a single horizontal "spine" corridor with rooms branching off it,
-// not a grid. The spine is tiled from whole horizontal straight pieces. Each room
-// hangs off the spine through one of its real entrances:
+// Layout is a ladder of horizontal "spine" corridors, not a grid. Rooms are
+// split into rows; each row gets one spine, tiled from whole horizontal straight
+// pieces, with its rooms branching off through their real entrances:
 //
 //   - a north door -> room sits below the spine, reached by a t_cross_down + a
 //     vertical riser straight into the room's top;
@@ -27,12 +28,20 @@ import (
 //   - an east/west door -> a vertical riser drops off the spine and a turn piece
 //     bends it horizontally into the room's side.
 //
-// The spine's two ends are capped with turn pieces (so no channel mouth is left
-// open to the void); interior branches use t_cross pieces. Every piece carries
-// its own walls, so corridors are self-sealing and there is no fill/auto-wall
-// step: any door not used by a corridor is closed with the corridor wall tile.
-// Piece stamping skips void tiles so a piece's transparent corners never erase a
-// neighbour.
+// The spines are joined at both ends by vertical "trunk" corridors (turn pieces
+// at the top/bottom spine, t_cross pieces where a trunk passes a middle spine).
+// The two trunks plus the spines form loops, so most rooms have more than one
+// route between them. A single-row layout instead caps its spine ends with turns
+// that reach the first/last room.
+//
+// Every door of every placed room is connected, never sealed: extra doors on the
+// same side each get their own riser, and a door facing away from the room's spine
+// (a south door on a below-the-spine room) is wired back to that spine with a
+// U-shaped detour that runs under the room — another loop. Only a lone room (no
+// network to join) has its doors closed with the corridor wall tile. Every piece
+// carries its own walls, so corridors are self-sealing and there is no
+// fill/auto-wall step; piece stamping skips void tiles so a piece's transparent
+// corners never erase a neighbour.
 
 const (
 	genMargin    = 2  // void border around the whole map
@@ -42,6 +51,7 @@ const (
 	genStub      = 3  // short horizontal stub into an east/west room
 	genTRight    = 18 // how far a spine junction reaches right of its channel
 	genReach     = 10 // how far a connected door is carved through the room wall
+	genGapRows   = 6  // vertical gap between one row's rooms and the next row
 )
 
 type roomSide byte
@@ -87,8 +97,8 @@ type passageSet struct {
 
 func (p passageSet) piece(name string) passagePiece { return p.pieces[name] }
 
-// slot is a placed room plus the geometry of the single corridor branch that
-// connects it to the spine.
+// slot is a placed room plus the geometry of the corridor branches that connect
+// its doors to the spine.
 type slot struct {
 	t          roomTemplate
 	pe         entrance // the entrance the corridor uses
@@ -100,6 +110,7 @@ type slot struct {
 	goWest     bool   // east door: corridor bends west into the room
 	cornerName string // turn piece used for the east/west bend
 	ry         int    // row of the horizontal stub's channel (east/west only)
+	awayLaneCx int    // column of the return lane for a south door facing away (0 = none)
 }
 
 func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
@@ -127,14 +138,8 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	place := chooseRooms(templates, numRooms, rng)
 	n := len(place)
 
-	// --- Pass 1: horizontal layout. Walk left to right assigning each room an x
-	// position and the column of its branch's vertical channel. ---
+	// Classify every room by the door its corridor will use.
 	slots := make([]slot, n)
-	curX := genMargin + genGap
-	// Consecutive branch junctions must be at least a t_cross apart so their
-	// pieces never overlap and sever the spine.
-	minGap := pass.piece("t_cross_down").tw
-	prevCx := 0
 	for i, t := range place {
 		pe := primaryEntrance(t)
 		s := slot{t: t, pe: pe}
@@ -148,64 +153,124 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 		case sideWest:
 			s.dir, s.ew, s.goWest, s.cornerName = 'D', true, false, "turn_left_bottom"
 		}
+		slots[i] = s
+	}
 
-		switch {
-		case !s.ew:
-			s.roomX = curX
-			s.cx = s.roomX + pe.off - (pass.vChannel-pe.openLen)/2
-			right := max(s.roomX+t.tw, s.cx+genTRight)
-			curX = right + genGap
-		case s.goWest: // east door: room first, riser to its right
-			s.roomX = curX
-			cornerX := s.roomX + t.tw + genStub
-			s.cx = cornerX + pass.piece(s.cornerName).vChanOff
-			curX = s.cx + genTRight + genGap
-		default: // west door: riser first, room to its right
-			s.cx = curX + genTRight
-			corner := pass.piece(s.cornerName)
-			cornerX := s.cx - corner.vChanOff
-			s.roomX = cornerX + corner.tw + genStub
-			curX = s.roomX + t.tw + genGap
-		}
-		if i > 0 {
+	if n == 1 {
+		return generateSingleRoom(template, &slots[0], wallGid)
+	}
+
+	// Split rooms into rows so the map folds into a compact rectangle instead of
+	// one very long spine.
+	perRow := max(1, int(math.Ceil(math.Sqrt(float64(n)))))
+	var rows [][]int
+	for i := 0; i < n; i += perRow {
+		rows = append(rows, indexRange(i, min(i+perRow, n)))
+	}
+	R := len(rows)
+
+	// Consecutive branch junctions must be at least a t_cross apart so their
+	// pieces never overlap and sever a spine.
+	minGap := pass.piece("t_cross_down").tw
+	trunkLeftX := genMargin + 2
+
+	// --- Horizontal layout: lay each row left to right, assigning every room an x
+	// position and the column of its branch's vertical channel. Rooms start right
+	// of the left trunk's widest junction so the trunk never cuts into one. ---
+	startX := trunkLeftX + pass.piece("t_cross_right").tw + genGap
+	maxRight := 0
+	for _, ri := range rows {
+		curX := startX
+		prevCx := trunkLeftX
+		for _, i := range ri {
+			s := &slots[i]
+			t := s.t
+			switch {
+			case !s.ew:
+				s.roomX = curX
+				s.cx = s.roomX + s.pe.off - (pass.vChannel-s.pe.openLen)/2
+			case s.goWest: // east door: room first, riser to its right
+				s.roomX = curX
+				cornerX := s.roomX + t.tw + genStub
+				s.cx = cornerX + pass.piece(s.cornerName).vChanOff
+			default: // west door: riser first, room to its right
+				s.cx = curX + genTRight
+				corner := pass.piece(s.cornerName)
+				s.roomX = s.cx - corner.vChanOff + corner.tw + genStub
+			}
+			// shift right so this room's first tap clears the previous room
 			if d := prevCx + minGap - s.cx; d > 0 {
 				s.roomX += d
 				s.cx += d
-				curX += d
+			}
+			// rightmost feature column: every door that taps this room's spine,
+			// plus the return lane for a south door that faces away from it.
+			rightTap := s.cx
+			if !s.ew {
+				for _, e := range t.entrances {
+					if (s.dir == 'D' && e.side == sideNorth) || (s.dir == 'U' && e.side == sideSouth) {
+						rightTap = max(rightTap, s.roomX+e.off-(pass.vChannel-e.openLen)/2)
+					}
+				}
+				if s.dir == 'D' && hasSide(t, sideSouth) {
+					s.awayLaneCx = rightTap + minGap
+					rightTap = s.awayLaneCx
+				}
+			}
+			prevCx = rightTap
+			rightExtent := max(s.roomX+t.tw, rightTap+genTRight)
+			curX = rightExtent + genGap
+			maxRight = max(maxRight, rightExtent)
+		}
+	}
+	// The right trunk sits clear of the widest room edge and every branch tap.
+	trunkRightX := maxRight + pass.piece("t_cross_left").vChanOff + genGap
+	canvasW := trunkRightX + genTRight + genMargin
+
+	// --- Vertical layout: stack the rows, each with a band of rooms above and
+	// below its spine. ---
+	tDown := pass.piece("t_cross_down")
+	tDownBelow := tDown.th - tDown.hChanOff // rows a t_cross_down reaches below the spine
+	detourDepth := pass.piece("turn_right_bottom").th
+	spineY := make([]int, R)
+	belowTop := make([]int, R)
+	y := genMargin
+	for k, ri := range rows {
+		aboveH, belowH := 0, 0
+		for _, i := range ri {
+			s := slots[i]
+			if s.dir == 'U' {
+				aboveH = max(aboveH, s.t.th)
+			} else {
+				h := s.t.th
+				if s.ew {
+					h = max(h, 28)
+				}
+				if s.awayLaneCx != 0 {
+					h += detourDepth // the south-door detour runs below the room
+				}
+				belowH = max(belowH, h)
 			}
 		}
-		prevCx = s.cx
-		slots[i] = s
+		spineY[k] = y + aboveH + genUpRiser
+		belowTop[k] = spineY[k] + tDownBelow + genDownRiser
+		y = belowTop[k] + belowH + genGapRows
 	}
-	canvasW := curX + genMargin
+	canvasH := y - genGapRows + genMargin
 
-	// --- Pass 2: vertical layout. Bands above and below the spine. ---
-	aboveMaxH := 0
-	for _, s := range slots {
-		if s.dir == 'U' {
-			aboveMaxH = max(aboveMaxH, s.t.th)
+	for k, ri := range rows {
+		for _, i := range ri {
+			s := &slots[i]
+			if s.dir == 'U' {
+				s.roomY = spineY[k] - genUpRiser - s.t.th
+			} else {
+				s.roomY = belowTop[k]
+				if s.ew {
+					s.ry = s.roomY + s.pe.off - (pass.hChannel-s.pe.openLen)/2
+				}
+			}
 		}
 	}
-	aboveBandBottom := genMargin + aboveMaxH
-	spineY := aboveBandBottom + genUpRiser
-	belowBandTop := spineY + pass.piece("t_cross_down").th + genDownRiser
-
-	maxBottom := belowBandTop
-	for i := range slots {
-		s := &slots[i]
-		if s.dir == 'U' {
-			s.roomY = aboveBandBottom - s.t.th
-			continue
-		}
-		s.roomY = belowBandTop
-		maxBottom = max(maxBottom, s.roomY+s.t.th)
-		if s.ew {
-			s.ry = s.roomY + s.pe.off - (pass.hChannel-s.pe.openLen)/2
-			corner := pass.piece(s.cornerName)
-			maxBottom = max(maxBottom, s.ry-corner.hChanOff+corner.th)
-		}
-	}
-	canvasH := maxBottom + genMargin
 
 	out := newBlankMap(template, canvasW, canvasH)
 	floor := out.tileLayerData("floor")
@@ -246,13 +311,17 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 			copyBlock(out, template, h.tx, h.ty, min(h.tw, x1-x+1), h.th, x, dstY)
 		}
 	}
-	// carveThroat opens a connected door inward through the room's wall ring: a
-	// template room's door is a stub walled off from its interior, so clearing the
-	// wall (the floor already exists underneath) joins the door to the room.
+	// carveThroat opens a connected door inward through the room's wall ring by
+	// clearing only collidable wall tiles (the floor already exists underneath).
+	// Decorative tiles - door arches, jambs, pillars - are left in place.
+	absorb := lightAbsorbingGids(template)
 	carveThroat := func(rx, ry int, t roomTemplate, e entrance) {
 		clear := func(x, y int) {
 			if x >= 0 && x < canvasW && y >= 0 && y < canvasH {
 				i := x + y*canvasW
+				if !absorb[walls[i]] {
+					return
+				}
 				walls[i] = 0
 				if floor[i] == 0 {
 					floor[i] = floorGid
@@ -274,39 +343,82 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 			}
 		}
 	}
-	seal := func(rx, ry int, t roomTemplate, e entrance) {
-		set := func(x, y int) {
-			if x >= 0 && x < canvasW && y >= 0 && y < canvasH {
-				walls[x+y*canvasW] = wallGid
+	// renderAway connects a south door that faces away from the room's spine with a
+	// U-shaped detour: a riser drops off the spine in a return lane to the right,
+	// turns under the room and rises back up into the door. This forms a loop.
+	renderAway := func(s *slot, sy int) {
+		var sDoor entrance
+		for _, e := range s.t.entrances {
+			if e.side == sideSouth {
+				sDoor = e
+				break
 			}
 		}
-		switch e.side {
-		case sideNorth:
-			for k := 0; k < e.openLen; k++ {
-				set(rx+e.off+k, ry)
+		sCx := s.roomX + sDoor.off - (pass.vChannel-sDoor.openLen)/2
+		roomBottom := s.roomY + s.t.th
+		c1 := pass.piece("turn_right_bottom") // lane corner: down -> west
+		c2 := pass.piece("turn_left_bottom")  // door corner: east -> up
+		uy := roomBottom + c1.hChanOff        // under-room channel row
+		c1x, c1y := s.awayLaneCx-c1.vChanOff, uy-c1.hChanOff
+		c2x, c2y := sCx-c2.vChanOff, uy-c2.hChanOff
+		tp := stampJunction("t_cross_down", s.awayLaneCx, sy)
+		tileV(s.awayLaneCx, sy-tp.hChanOff+tp.th, c1y-1)
+		stamp("turn_right_bottom", c1x, c1y)
+		stamp("turn_left_bottom", c2x, c2y)
+		tileH(uy, c2x+c2.tw, c1x-1)
+		tileV(sCx, roomBottom, c2y-1)
+	}
+
+	// renderRoomCorridors connects every door of one room to its spine. North/south
+	// doors that face the spine get a straight riser; an east/west door bends in via
+	// a turn; a south door facing away takes the return-lane detour.
+	renderRoomCorridors := func(s *slot, sy int, primaryJname string) {
+		switch {
+		case s.ew:
+			jp := stampJunction(primaryJname, s.cx, sy)
+			corner := pass.piece(s.cornerName)
+			cornerX := s.cx - corner.vChanOff
+			cornerY := s.ry - corner.hChanOff
+			tileV(s.cx, sy-jp.hChanOff+jp.th, cornerY-1)
+			stamp(s.cornerName, cornerX, cornerY)
+			if s.goWest {
+				tileH(s.ry, s.roomX+s.t.tw, cornerX-1)
+			} else {
+				tileH(s.ry, cornerX+corner.tw, s.roomX-1)
 			}
-		case sideSouth:
-			for k := 0; k < e.openLen; k++ {
-				set(rx+e.off+k, ry+t.th-1)
+		case s.dir == 'U':
+			jp := stampJunction(primaryJname, s.cx, sy)
+			tileV(s.cx, s.roomY+s.t.th, sy-jp.hChanOff-1)
+		default: // below the spine: every north door rises into it
+			for _, e := range s.t.entrances {
+				if e.side != sideNorth {
+					continue
+				}
+				col := s.roomX + e.off - (pass.vChannel-e.openLen)/2
+				jname := "t_cross_down"
+				if e == s.pe {
+					jname = primaryJname
+				}
+				jp := stampJunction(jname, col, sy)
+				tileV(col, sy-jp.hChanOff+jp.th, s.roomY-1)
 			}
-		case sideWest:
-			for k := 0; k < e.openLen; k++ {
-				set(rx, ry+e.off+k)
-			}
-		case sideEast:
-			for k := 0; k < e.openLen; k++ {
-				set(rx+t.tw-1, ry+e.off+k)
+			if s.awayLaneCx != 0 {
+				renderAway(s, sy)
 			}
 		}
 	}
-
-	// --- Spine straights between the two end caps ---
-	if n >= 2 {
-		lp := pass.piece(junctionName(slots[0].dir, 0, n))
-		rp := pass.piece(junctionName(slots[n-1].dir, n-1, n))
-		spineX0 := slots[0].cx - lp.vChanOff + lp.tw
-		spineX1 := slots[n-1].cx - rp.vChanOff
-		tileH(spineY, spineX0, spineX1-1)
+	// renderTrunk stamps the junction at each spine along a vertical trunk and
+	// tiles straight pieces between them.
+	renderTrunk := func(trunkX int, nameFn func(k, R int) string) {
+		prevBottom := -1
+		for k := 0; k < R; k++ {
+			jp := stampJunction(nameFn(k, R), trunkX, spineY[k])
+			top := spineY[k] - jp.hChanOff
+			if prevBottom >= 0 {
+				tileV(trunkX, prevBottom+1, top-1)
+			}
+			prevBottom = top + jp.th - 1
+		}
 	}
 
 	objects := make([]MapObject, 0)
@@ -326,45 +438,152 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 		if s.t.isDemon {
 			out.demonRoomCount++
 		}
-
-		// A lone room has no spine: just seal all its doors.
-		if n >= 2 {
-			carveThroat(s.roomX, s.roomY, s.t, s.pe)
-			jp := stampJunction(junctionName(s.dir, i, n), s.cx, spineY)
-			switch {
-			case s.dir == 'U':
-				top := spineY - jp.hChanOff
-				tileV(s.cx, s.roomY+s.t.th, top-1)
-			case s.ew:
-				below := spineY - jp.hChanOff + jp.th
-				corner := pass.piece(s.cornerName)
-				cornerX := s.cx - corner.vChanOff
-				cornerY := s.ry - corner.hChanOff
-				tileV(s.cx, below, cornerY-1)
-				stamp(s.cornerName, cornerX, cornerY)
-				if s.goWest {
-					tileH(s.ry, s.roomX+s.t.tw, cornerX-1)
-				} else {
-					tileH(s.ry, cornerX+corner.tw, s.roomX-1)
-				}
-			default: // 'D' north door
-				below := spineY - jp.hChanOff + jp.th
-				tileV(s.cx, below, s.roomY-1)
-			}
-		}
-
 		for _, e := range s.t.entrances {
-			if n >= 2 && e == s.pe {
-				continue
-			}
-			seal(s.roomX, s.roomY, s.t, e)
+			carveThroat(s.roomX, s.roomY, s.t, e)
 		}
+	}
+
+	// --- Spines + room taps ---
+	for k, ri := range rows {
+		var leftEnd, rightEnd int
+		if R == 1 {
+			rl := len(ri)
+			lc := pass.piece(junctionName(slots[ri[0]].dir, 0, rl))
+			rc := pass.piece(junctionName(slots[ri[rl-1]].dir, rl-1, rl))
+			leftEnd = slots[ri[0]].cx - lc.vChanOff + lc.tw
+			rightEnd = slots[ri[rl-1]].cx - rc.vChanOff
+		} else {
+			lj := pass.piece(leftJunctionName(k, R))
+			rj := pass.piece(rightJunctionName(k, R))
+			leftEnd = trunkLeftX - lj.vChanOff + lj.tw
+			rightEnd = trunkRightX - rj.vChanOff
+		}
+		tileH(spineY[k], leftEnd, rightEnd-1)
+		for idx, i := range ri {
+			s := &slots[i]
+			var jname string
+			switch {
+			case R == 1:
+				jname = junctionName(s.dir, idx, len(ri))
+			case s.dir == 'U':
+				jname = "t_cross_up"
+			default:
+				jname = "t_cross_down"
+			}
+			renderRoomCorridors(s, spineY[k], jname)
+		}
+	}
+
+	// --- Trunks join the spines into a ladder (loops) ---
+	if R >= 2 {
+		renderTrunk(trunkLeftX, leftJunctionName)
+		renderTrunk(trunkRightX, rightJunctionName)
 	}
 
 	out.setObjectLayer("objects", objects)
 	out.setObjectLayer("spawns", spawns)
 
 	return out, nil
+}
+
+// generateSingleRoom builds a map holding just one room (all doors sealed).
+func generateSingleRoom(template *Map, s *slot, wallGid int) (*Map, error) {
+	t := s.t
+	out := newBlankMap(template, t.tw+2*genMargin, t.th+2*genMargin)
+	walls := out.tileLayerData("walls")
+	if walls == nil {
+		return nil, fmt.Errorf("template map is missing a walls layer")
+	}
+	ox, oy := genMargin, genMargin
+	stampRoom(out, template, t, ox, oy)
+	objects := appendRoomObjects(nil, template, t, ox, oy, new(int))
+	spawns := appendRoomSpawns(nil, template, t, ox, oy, new(int))
+	out.roomCenters = [][2]int{{ox + t.tw/2, oy + t.th/2}}
+	out.spawnX = (ox + t.tw/2) * out.TileWidth
+	out.spawnY = (oy + t.th/2) * out.TileHeight
+	if t.isDemon {
+		out.demonRoomCount++
+	}
+	for _, e := range t.entrances {
+		for k := 0; k < e.openLen; k++ {
+			set := func(x, y int) { walls[x+y*out.Width] = wallGid }
+			switch e.side {
+			case sideNorth:
+				set(ox+e.off+k, oy)
+			case sideSouth:
+				set(ox+e.off+k, oy+t.th-1)
+			case sideWest:
+				set(ox, oy+e.off+k)
+			case sideEast:
+				set(ox+t.tw-1, oy+e.off+k)
+			}
+		}
+	}
+	out.setObjectLayer("objects", objects)
+	out.setObjectLayer("spawns", spawns)
+	return out, nil
+}
+
+// indexRange returns the slice [lo, lo+1, ..., hi-1].
+func indexRange(lo, hi int) []int {
+	out := make([]int, 0, hi-lo)
+	for i := lo; i < hi; i++ {
+		out = append(out, i)
+	}
+	return out
+}
+
+// leftJunctionName / rightJunctionName name the piece where a vertical trunk meets
+// spine k of R: a turn at the top and bottom spine, a t_cross in between.
+func leftJunctionName(k, R int) string {
+	switch {
+	case k == 0:
+		return "turn_left_upper"
+	case k == R-1:
+		return "turn_left_bottom"
+	default:
+		return "t_cross_right"
+	}
+}
+
+func rightJunctionName(k, R int) string {
+	switch {
+	case k == 0:
+		return "turn_right_upper"
+	case k == R-1:
+		return "turn_right_bottom"
+	default:
+		return "t_cross_left"
+	}
+}
+
+// lightAbsorbingGids returns the set of tile gids flagged absorbs_light, i.e. the
+// tiles that actually block movement and sight. Other wall-layer tiles (door
+// arches, jambs, pillars) are decorative and passable.
+func lightAbsorbingGids(m *Map) map[int]bool {
+	absorbs := make(map[int]bool)
+	for _, set := range m.Tilesets {
+		for _, tile := range set.Tiles {
+			for _, pr := range tile.Properties {
+				if pr.Name == "absorbs_light" {
+					if v, ok := pr.Value.(bool); ok && v {
+						absorbs[set.Firstgid+tile.Id] = true
+					}
+				}
+			}
+		}
+	}
+	return absorbs
+}
+
+// hasSide reports whether the room has at least one door on the given side.
+func hasSide(t roomTemplate, side roomSide) bool {
+	for _, e := range t.entrances {
+		if e.side == side {
+			return true
+		}
+	}
+	return false
 }
 
 // primaryEntrance picks the door a room hangs from, preferring vertical doors
@@ -676,18 +895,7 @@ func appendTranslatedObjects(dst []MapObject, template *Map, layerName string, t
 // common light-absorbing (collidable) wall tile within the passage blocks. The
 // wall tile is used to seal unused room doors.
 func pickCorridorGids(template *Map, pass passageSet) (floorGid, wallGid int, err error) {
-	absorbs := make(map[int]bool)
-	for _, set := range template.Tilesets {
-		for _, tile := range set.Tiles {
-			for _, pr := range tile.Properties {
-				if pr.Name == "absorbs_light" {
-					if v, ok := pr.Value.(bool); ok && v {
-						absorbs[set.Firstgid+tile.Id] = true
-					}
-				}
-			}
-		}
-	}
+	absorbs := lightAbsorbingGids(template)
 	floorLayer := template.tileLayerData("floor")
 	wallLayer := template.tileLayerData("walls")
 	if floorLayer == nil || wallLayer == nil {

@@ -6,15 +6,18 @@ import "testing"
 func reachableFloor(m *Map, startX, startY int) map[int]bool {
 	floor := m.tileLayerData("floor")
 	walls := m.tileLayerData("walls")
+	absorb := lightAbsorbingGids(m)
 	w, h := m.Width, m.Height
 	seen := make(map[int]bool)
 	idx := func(x, y int) int { return x + y*w }
+	// A tile is walkable if it has floor and no light-absorbing (collidable) wall,
+	// matching the game's collision model; decorative wall tiles are passable.
 	open := func(x, y int) bool {
 		if x < 0 || x >= w || y < 0 || y >= h {
 			return false
 		}
 		i := idx(x, y)
-		return floor[i] != 0 && walls[i] == 0
+		return floor[i] != 0 && !absorb[walls[i]]
 	}
 	if !open(startX, startY) {
 		return seen
