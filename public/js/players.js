@@ -166,6 +166,18 @@ class Player extends Phaser.Physics.Arcade.Sprite
         this.setTint(0xffffff);
     }
 
+    // teleport snaps a living player to a new position. It resets the Arcade
+    // body (not just the sprite transform); otherwise the unchanged body would
+    // be written back over the sprite on the next physics step, undoing the move.
+    teleport(x, y)
+    {
+        if (this.body) {
+            this.body.reset(x, y);
+        } else {
+            this.setPosition(x, y);
+        }
+    }
+
     updatePosition(posData)
     {
         if (this.isCorpse) {

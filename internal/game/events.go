@@ -217,6 +217,15 @@ type PlayerRespawnEvent struct {
 	Y        int    `json:"y"`
 }
 
+// PlayerTeleportEvent snaps a living player to a new position without the
+// death/respawn flow. It is broadcast when the boss phase begins to move
+// everyone onto the boss stage.
+type PlayerTeleportEvent struct {
+	ClientID uint64 `json:"clientId"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+}
+
 // Reasons a respawn or rejoin can be refused.
 const (
 	respawnDeniedEliminated  = "eliminated"

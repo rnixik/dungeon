@@ -85,8 +85,13 @@ type Map struct {
 	visibilityColliders []Rectangle
 	spawnX              int
 	spawnY              int
-	roomCenters         [][2]int // interior centre (tiles) of each placed room
-	demonRoomCount      int      // number of placed rooms containing the demon spawn
+	bossSpawnX          int
+	bossSpawnY          int
+	hasBossSpawn        bool      // true when the map defines a spawn_boss point
+	bossStage           Rectangle // boss arena bounds (only valid when hasBossStage)
+	hasBossStage        bool      // true when the map defines a boss_stage object
+	roomCenters         [][2]int  // interior centre (tiles) of each placed room
+	demonRoomCount      int       // number of placed rooms containing the demon spawn
 }
 
 // PlayerSpawn returns the pixel position where players start. Generated maps set
@@ -97,6 +102,24 @@ func (m *Map) PlayerSpawn() (int, int) {
 		return m.spawnX, m.spawnY
 	}
 	return 120, 140
+}
+
+// BossSpawn returns the pixel position where players (re)spawn once the boss
+// phase has begun, and whether the map defines such a point. Maps without a
+// spawn_boss object report ok=false so callers can fall back to PlayerSpawn.
+func (m *Map) BossSpawn() (x int, y int, ok bool) {
+	if m == nil || !m.hasBossSpawn {
+		return 0, 0, false
+	}
+	return m.bossSpawnX, m.bossSpawnY, true
+}
+
+// BossStage returns the boss arena rectangle and whether the map defines one.
+func (m *Map) BossStage() (Rectangle, bool) {
+	if m == nil || !m.hasBossStage {
+		return Rectangle{}, false
+	}
+	return m.bossStage, true
 }
 
 // parseMap unmarshals a raw Tiled .tmj file without running any of the
@@ -122,6 +145,7 @@ func parseMap(filename string) (*Map, error) {
 // loaded directly from disk or assembled by the generator.
 func (m *Map) postProcess() error {
 	m.fillTilesPropertiesHash()
+	m.loadSpawnObjects()
 
 	if err := m.addLayerWithCollisionRectangles(); err != nil {
 		return err
@@ -167,6 +191,33 @@ func LoadGeneratedMap(filename string, numRooms int, seed int64) (*Map, error) {
 	}
 
 	return m, nil
+}
+
+// loadSpawnObjects reads the named markers from the "objects" layer that drive
+// the boss phase: spawn_start sets the initial player spawn, spawn_boss the
+// spawn used once the boss is revealed, and the boss_stage object delimits the
+// boss arena. Each is optional; absent markers leave the existing defaults (and
+// the generator-computed spawn) untouched. Spawn points use the marker centre.
+func (m *Map) loadSpawnObjects() {
+	layer := m.getLayerByName("objects")
+	if layer == nil {
+		return
+	}
+
+	for _, obj := range layer.Objects {
+		switch {
+		case obj.Type == "spawn" && obj.Name == "spawn_start":
+			m.spawnX = int(obj.X + obj.Width/2)
+			m.spawnY = int(obj.Y + obj.Height/2)
+		case obj.Type == "spawn" && obj.Name == "spawn_boss":
+			m.bossSpawnX = int(obj.X + obj.Width/2)
+			m.bossSpawnY = int(obj.Y + obj.Height/2)
+			m.hasBossSpawn = true
+		case obj.Type == "boss_stage":
+			m.bossStage = Rectangle{X: int(obj.X), Y: int(obj.Y), Width: int(obj.Width), Height: int(obj.Height)}
+			m.hasBossStage = true
+		}
+	}
 }
 
 func (m *Map) fillTilesPropertiesHash() {

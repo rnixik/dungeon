@@ -393,7 +393,7 @@ func (g *Game) OnClientJoined(client lobby.ClientPlayer) {
 	log.Printf("client '%s' joined game\n", client.Nickname())
 	g.mutex.Lock()
 	p := newPlayer(client)
-	p.x, p.y = g.gameMap.PlayerSpawn()
+	p.x, p.y = g.playerSpawn()
 	if g.demonWasSpawned {
 		// Anyone joining or rejoining after the boss is revealed cannot play; they
 		// join as a spectator who can watch the battlemap.
@@ -1311,7 +1311,31 @@ func (g *Game) spawnDemonUnsafe() {
 	}
 
 	g.demonWasSpawned = true
+	g.moveLivingPlayersToBossStageUnsafe()
 	g.broadcastEventFunc(BossRevealedEvent{})
+}
+
+// moveLivingPlayersToBossStageUnsafe teleports every living player into the boss
+// arena when the boss phase begins, so the fight takes place on the boss stage.
+// It is a no-op for maps that do not define a spawn_boss point.
+func (g *Game) moveLivingPlayersToBossStageUnsafe() {
+	x, y, ok := g.gameMap.BossSpawn()
+	if !ok {
+		return
+	}
+
+	for clientID, p := range g.players {
+		if p.isSpectator || p.hp <= 0 {
+			continue
+		}
+		p.x, p.y = x, y
+		p.isMoving = false
+		g.broadcastEventFunc(PlayerTeleportEvent{
+			ClientID: clientID,
+			X:        x,
+			Y:        y,
+		})
+	}
 }
 
 func getVectorFromDirection(direction string) (float64, float64) {
@@ -1332,6 +1356,18 @@ func getVectorFromDirection(direction string) (float64, float64) {
 func (g *Game) isSwordAttackHit(attackerX, attackerY, attackLineX, attackLineY, targetX, targetY, targetRadius int) bool {
 	return lineIntersectsRect(attackerX, attackerY, attackLineX, attackLineY, targetX-targetRadius, targetY-targetRadius, 2*targetRadius, 2*targetRadius) &&
 		g.isVisible(attackerX, attackerY, targetX, targetY)
+}
+
+// playerSpawn returns the spawn position for the current phase: the boss spawn
+// once the boss has been revealed (when the map defines a spawn_boss), otherwise
+// the normal start spawn.
+func (g *Game) playerSpawn() (int, int) {
+	if g.demonWasSpawned {
+		if x, y, ok := g.gameMap.BossSpawn(); ok {
+			return x, y
+		}
+	}
+	return g.gameMap.PlayerSpawn()
 }
 
 func (g *Game) respawnPlayer(clientID uint64) {
@@ -1364,7 +1400,7 @@ func (g *Game) respawnPlayer(clientID uint64) {
 	}
 
 	p.hp = p.maxHp
-	p.x, p.y = g.gameMap.PlayerSpawn()
+	p.x, p.y = g.playerSpawn()
 	p.direction = "right"
 	p.isMoving = false
 

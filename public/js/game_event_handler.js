@@ -172,6 +172,19 @@ const GameEventHandler = {
         }
     },
 
+    PlayerTeleportEvent(data) {
+        if (data.clientId === this.myClientId) {
+            if (this.player) {
+                this.player.teleport(data.x, data.y);
+            }
+        } else {
+            const p = this.players[data.clientId];
+            if (p) {
+                p.teleport(data.x, data.y);
+            }
+        }
+    },
+
     RespawnDeniedEvent(data) {
         if (this.respawnButton) {
             this.respawnButton.destroy();

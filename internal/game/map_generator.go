@@ -11,8 +11,12 @@ import (
 // template .tmj file:
 //
 //   - Rooms (class="room") are blocks with thick walls and one or more
-//     class="entrance" openings (matched by name). Two are special: "room_start"
-//     (where players spawn) and the room containing the demon boss spawn.
+//     class="entrance" openings (matched by name). "room_start" is special: it is
+//     where players spawn.
+//   - The boss arena (a "boss_stage" object) is a self-contained sealed room
+//     holding the demon spawn and the boss-phase player spawn. It is stamped onto
+//     the map but never connected to the corridor network, so it is reachable
+//     only via the boss-phase teleport.
 //   - Passages (class="passage") are whole corridor tile pieces: "horizontal"
 //     and "vertical" straights, four "turn_*" L-bends, a 4-way "crossroad" and
 //     four "t_cross_*" T-junctions.
@@ -75,6 +79,7 @@ type roomTemplate struct {
 	entrances      []entrance
 	isStart        bool
 	isDemon        bool
+	isBoss         bool
 }
 
 // passagePiece is a corridor tile block plus the detected offsets (within the
@@ -122,7 +127,7 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	}
 	rng := rand.New(rand.NewSource(seed))
 
-	templates, err := extractRoomTemplates(template)
+	templates, boss, err := extractRoomTemplates(template)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +162,7 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	}
 
 	if n == 1 {
-		return generateSingleRoom(template, &slots[0], wallGid)
+		return generateSingleRoom(template, &slots[0], wallGid, boss)
 	}
 
 	// Split rooms into rows so the map folds into a compact rectangle instead of
@@ -275,6 +280,13 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 				}
 			}
 		}
+	}
+
+	// The boss arena is stamped below the connected network with a gap, so it
+	// occupies its own space and no corridor ever reaches it.
+	bossOX, bossOY := 0, 0
+	if boss != nil {
+		bossOX, bossOY, canvasW, canvasH = bossOrigin(boss, canvasW, canvasH)
 	}
 
 	out := newBlankMap(template, canvasW, canvasH)
@@ -468,6 +480,10 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 		}
 	}
 
+	if boss != nil {
+		objects, spawns = stampBossRoom(out, template, boss, bossOX, bossOY, objects, spawns, &nextID)
+	}
+
 	// --- Spines + room taps ---
 	for k, ri := range rows {
 		var leftEnd, rightEnd int
@@ -514,17 +530,23 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 }
 
 // generateSingleRoom builds a map holding just one room (all doors sealed).
-func generateSingleRoom(template *Map, s *slot, wallGid int) (*Map, error) {
+func generateSingleRoom(template *Map, s *slot, wallGid int, boss *roomTemplate) (*Map, error) {
 	t := s.t
-	out := newBlankMap(template, t.tw+2*genMargin, t.th+2*genMargin)
+	canvasW, canvasH := t.tw+2*genMargin, t.th+2*genMargin
+	bossOX, bossOY := 0, 0
+	if boss != nil {
+		bossOX, bossOY, canvasW, canvasH = bossOrigin(boss, canvasW, canvasH)
+	}
+	out := newBlankMap(template, canvasW, canvasH)
 	walls := out.tileLayerData("walls")
 	if walls == nil {
 		return nil, fmt.Errorf("template map is missing a walls layer")
 	}
 	ox, oy := genMargin, genMargin
+	nextID := 1
 	stampRoom(out, template, t, ox, oy)
-	objects := appendRoomObjects(nil, template, t, ox, oy, new(int))
-	spawns := appendRoomSpawns(nil, template, t, ox, oy, new(int))
+	objects := appendRoomObjects(nil, template, t, ox, oy, &nextID)
+	spawns := appendRoomSpawns(nil, template, t, ox, oy, &nextID)
 	out.roomCenters = [][2]int{{ox + t.tw/2, oy + t.th/2}}
 	out.spawnX = (ox + t.tw/2) * out.TileWidth
 	out.spawnY = (oy + t.th/2) * out.TileHeight
@@ -545,6 +567,9 @@ func generateSingleRoom(template *Map, s *slot, wallGid int) (*Map, error) {
 				set(ox+t.tw-1, oy+e.off+k)
 			}
 		}
+	}
+	if boss != nil {
+		objects, spawns = stampBossRoom(out, template, boss, bossOX, bossOY, objects, spawns, &nextID)
 	}
 	out.setObjectLayer("objects", objects)
 	out.setObjectLayer("spawns", spawns)
@@ -760,27 +785,39 @@ func chooseRooms(templates []roomTemplate, n int, rng *rand.Rand) []roomTemplate
 }
 
 // extractRoomTemplates reads every class="room", its class="entrance" openings,
-// and whether it is the start room or contains the demon spawn.
-func extractRoomTemplates(template *Map) ([]roomTemplate, error) {
+// and whether it is the start room or contains the demon spawn. It also returns
+// the boss arena (a "boss_stage" object), if present, as a sealed room with no
+// entrances - the generator stamps it isolated from the corridor network.
+func extractRoomTemplates(template *Map) ([]roomTemplate, *roomTemplate, error) {
 	objectsLayer := template.objectLayer("objects")
 	if objectsLayer == nil {
-		return nil, fmt.Errorf("template map has no objects layer")
+		return nil, nil, fmt.Errorf("template map has no objects layer")
 	}
 	spawnLayer := template.objectLayer("spawns")
 	ts := template.TileWidth
 
 	entrancesByName := make(map[string][]MapObject)
 	var rooms []MapObject
+	var boss *roomTemplate
 	for _, o := range objectsLayer.Objects {
 		switch o.Type {
 		case "room":
 			rooms = append(rooms, o)
 		case "entrance":
 			entrancesByName[o.Name] = append(entrancesByName[o.Name], o)
+		case "boss_stage":
+			boss = &roomTemplate{
+				name:   o.Name,
+				tx:     int(o.X) / ts,
+				ty:     int(o.Y) / ts,
+				tw:     int(o.Width) / ts,
+				th:     int(o.Height) / ts,
+				isBoss: true,
+			}
 		}
 	}
 	if len(rooms) == 0 {
-		return nil, fmt.Errorf("template map has no class=room objects")
+		return nil, nil, fmt.Errorf("template map has no class=room objects")
 	}
 
 	var templates []roomTemplate
@@ -810,7 +847,7 @@ func extractRoomTemplates(template *Map) ([]roomTemplate, error) {
 			rt.entrances = append(rt.entrances, en)
 		}
 		if len(rt.entrances) == 0 {
-			return nil, fmt.Errorf("room %q has no entrance objects", r.Name)
+			return nil, nil, fmt.Errorf("room %q has no entrance objects", r.Name)
 		}
 		if spawnLayer != nil {
 			rx0, ry0 := float64(rt.tx*ts), float64(rt.ty*ts)
@@ -828,7 +865,7 @@ func extractRoomTemplates(template *Map) ([]roomTemplate, error) {
 		}
 		templates = append(templates, rt)
 	}
-	return templates, nil
+	return templates, boss, nil
 }
 
 // extractPassages reads every corridor piece and detects its channel geometry.
@@ -949,6 +986,29 @@ func copyBlock(out, template *Map, srcX, srcY, w, h, dstX, dstY int) {
 
 func stampRoom(out, template *Map, t roomTemplate, ox, oy int) {
 	copyBlock(out, template, t.tx, t.ty, t.tw, t.th, ox, oy)
+}
+
+// bossOrigin returns where the isolated boss arena is stamped given the network
+// canvas size, and the canvas grown to contain it. The arena sits below the
+// connected network with a gap so no corridor ever reaches it.
+func bossOrigin(boss *roomTemplate, canvasW, canvasH int) (ox, oy, newW, newH int) {
+	ox = genMargin
+	oy = canvasH + genGapRows
+	newW = max(canvasW, ox+boss.tw+genMargin)
+	newH = oy + boss.th + genMargin
+	return
+}
+
+// stampBossRoom places the sealed boss arena and copies its demon spawn and
+// boss-phase objects (spawn_boss, the boss_stage marker). It is deliberately
+// never wired into the corridor network nor added to roomCenters, so it stays
+// reachable only via the boss-phase teleport.
+func stampBossRoom(out, template *Map, boss *roomTemplate, ox, oy int, objects, spawns []MapObject, nextID *int) ([]MapObject, []MapObject) {
+	stampRoom(out, template, *boss, ox, oy)
+	objects = appendRoomObjects(objects, template, *boss, ox, oy, nextID)
+	spawns = appendRoomSpawns(spawns, template, *boss, ox, oy, nextID)
+	out.demonRoomCount++
+	return objects, spawns
 }
 
 func appendRoomObjects(dst []MapObject, template *Map, t roomTemplate, ox, oy int, nextID *int) []MapObject {
