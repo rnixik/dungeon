@@ -1325,7 +1325,7 @@ func (g *Game) moveLivingPlayersToBossStageUnsafe() {
 	}
 
 	for clientID, p := range g.players {
-		if p.isSpectator || p.hp <= 0 {
+		if p.hp <= 0 {
 			continue
 		}
 		p.x, p.y = x, y

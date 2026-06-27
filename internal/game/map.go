@@ -145,9 +145,12 @@ func parseMap(filename string) (*Map, error) {
 // loaded directly from disk or assembled by the generator.
 func (m *Map) postProcess() error {
 	m.fillTilesPropertiesHash()
-	m.loadSpawnObjects()
+	err := m.loadSpawnObjects()
+	if err != nil {
+		return err
+	}
 
-	if err := m.addLayerWithCollisionRectangles(); err != nil {
+	if err = m.addLayerWithCollisionRectangles(); err != nil {
 		return err
 	}
 
@@ -198,10 +201,10 @@ func LoadGeneratedMap(filename string, numRooms int, seed int64) (*Map, error) {
 // spawn used once the boss is revealed, and the boss_stage object delimits the
 // boss arena. Each is optional; absent markers leave the existing defaults (and
 // the generator-computed spawn) untouched. Spawn points use the marker centre.
-func (m *Map) loadSpawnObjects() {
+func (m *Map) loadSpawnObjects() error {
 	layer := m.getLayerByName("objects")
 	if layer == nil {
-		return
+		return fmt.Errorf("no objects layer on map")
 	}
 
 	for _, obj := range layer.Objects {
@@ -218,6 +221,20 @@ func (m *Map) loadSpawnObjects() {
 			m.hasBossStage = true
 		}
 	}
+
+	if !m.hasBossSpawn {
+		return fmt.Errorf("no boss spawn on map")
+	}
+
+	if !m.hasBossStage {
+		return fmt.Errorf("no boss stage on map")
+	}
+
+	if m.spawnX == 0 && m.spawnY == 0 {
+		return fmt.Errorf("no spawn point on map")
+	}
+
+	return nil
 }
 
 func (m *Map) fillTilesPropertiesHash() {
