@@ -213,7 +213,12 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 					}
 				}
 				if s.dir == 'D' && hasSide(t, sideSouth) {
-					s.awayLaneCx = rightTap + minGap
+					// The return lane runs vertically alongside the room's right
+					// side, so it must clear the room's right wall entirely -
+					// otherwise it carves a channel through the room itself.
+					v := pass.piece("vertical")
+					laneMin := s.roomX + t.tw + v.vChanOff
+					s.awayLaneCx = max(rightTap+minGap, laneMin)
 					rightTap = s.awayLaneCx
 				}
 			}
@@ -279,9 +284,26 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 		return nil, fmt.Errorf("template map is missing a floor or walls layer")
 	}
 
+	// corridorMask marks every tile written by a corridor piece (not a room) so
+	// the pillar-pairing repair only touches corridors.
+	corridorMask := make([]bool, canvasW*canvasH)
+	mark := func(dstX, dstY, w, h int) {
+		for y := dstY; y < dstY+h; y++ {
+			if y < 0 || y >= canvasH {
+				continue
+			}
+			for x := dstX; x < dstX+w; x++ {
+				if x >= 0 && x < canvasW {
+					corridorMask[x+y*canvasW] = true
+				}
+			}
+		}
+	}
+
 	stamp := func(name string, dstX, dstY int) passagePiece {
 		p := pass.piece(name)
 		copyBlock(out, template, p.tx, p.ty, p.tw, p.th, dstX, dstY)
+		mark(dstX, dstY, p.tw, p.th)
 		return p
 	}
 	// stampJunction places a piece aligning its vertical channel to column cx and
@@ -289,6 +311,7 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 	stampJunction := func(name string, cx, ry int) passagePiece {
 		p := pass.piece(name)
 		copyBlock(out, template, p.tx, p.ty, p.tw, p.th, cx-p.vChanOff, ry-p.hChanOff)
+		mark(cx-p.vChanOff, ry-p.hChanOff, p.tw, p.th)
 		return p
 	}
 	tileV := func(cx, y0, y1 int) {
@@ -299,6 +322,7 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 		dstX := cx - v.vChanOff
 		for y := y0; y <= y1; y += v.th {
 			copyBlock(out, template, v.tx, v.ty, v.tw, min(v.th, y1-y+1), dstX, y)
+			mark(dstX, y, v.tw, min(v.th, y1-y+1))
 		}
 	}
 	tileH := func(ry, x0, x1 int) {
@@ -309,6 +333,7 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 		dstY := ry - h.hChanOff
 		for x := x0; x <= x1; x += h.tw {
 			copyBlock(out, template, h.tx, h.ty, min(h.tw, x1-x+1), h.th, x, dstY)
+			mark(x, dstY, min(h.tw, x1-x+1), h.th)
 		}
 	}
 	// carveThroat opens a connected door inward through the room's wall ring by
@@ -480,6 +505,8 @@ func generateMap(template *Map, numRooms int, seed int64) (*Map, error) {
 		renderTrunk(trunkRightX, rightJunctionName)
 	}
 
+	repairCorridorPillars(out, template, pass, corridorMask)
+
 	out.setObjectLayer("objects", objects)
 	out.setObjectLayer("spawns", spawns)
 
@@ -574,6 +601,76 @@ func lightAbsorbingGids(m *Map) map[int]bool {
 		}
 	}
 	return absorbs
+}
+
+// repairCorridorPillars removes orphaned wall pillars from corridors. The
+// horizontal corridor pieces carry a decorative pillar on their left and right
+// edge, so abutting two pieces (or a piece and a junction) forms a pillar PAIR
+// at the seam. But junction pieces are not a whole number of pillar-periods
+// wide, so wherever the tiled run's phase fails to line up with a junction a
+// single, unpaired pillar is left behind. This pass scans the tiles written by
+// corridors and turns any pillar that has lost its partner back into plain wall
+// by copying an adjacent panel tile over it.
+func repairCorridorPillars(out, template *Map, pass passageSet, mask []bool) {
+	walls := out.tileLayerData("walls")
+	src := template.tileLayerData("walls")
+	if walls == nil || src == nil {
+		return
+	}
+	h := pass.piece("horizontal")
+	// A left/right pillar tile is the left/right-most wall column of the
+	// horizontal piece, in the rows where it differs from the panel interior.
+	left := map[int]bool{}
+	right := map[int]bool{}
+	for y := 0; y < h.th; y++ {
+		c0 := src[h.tx+(h.ty+y)*template.Width]
+		mid := src[h.tx+2+(h.ty+y)*template.Width]
+		cR := src[h.tx+h.tw-1+(h.ty+y)*template.Width]
+		if c0 != 0 && c0 != mid {
+			left[c0] = true
+		}
+		if cR != 0 && cR != mid {
+			right[cR] = true
+		}
+	}
+	W, H := out.Width, out.Height
+	pillar := func(g int) bool { return left[g] || right[g] }
+	// panelTile finds an adjacent non-pillar wall tile to overwrite a lone pillar.
+	panelTile := func(x, y int) (int, bool) {
+		for _, nx := range []int{x + 1, x - 1} {
+			if nx < 0 || nx >= W {
+				continue
+			}
+			if g := walls[nx+y*W]; g != 0 && !pillar(g) {
+				return g, true
+			}
+		}
+		return 0, false
+	}
+	for y := 0; y < H; y++ {
+		for x := 0; x < W; x++ {
+			i := x + y*W
+			if !mask[i] {
+				continue
+			}
+			g := walls[i]
+			paired := false
+			switch {
+			case left[g]: // a left pillar pairs with a right pillar on its left
+				paired = x > 0 && right[walls[i-1]]
+			case right[g]: // a right pillar pairs with a left pillar on its right
+				paired = x+1 < W && left[walls[i+1]]
+			default:
+				continue
+			}
+			if paired {
+				continue
+			}
+			if ng, ok := panelTile(x, y); ok {
+				walls[i] = ng
+			}
+		}
+	}
 }
 
 // hasSide reports whether the room has at least one door on the given side.
