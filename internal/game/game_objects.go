@@ -66,10 +66,10 @@ func (g *Game) tickChest(obj *Object) {
 			g.revealPlayerUnsafe(player)
 			g.broadcastEventFunc(ChestOpenEvent{ObjectID: obj.ID})
 
-			// A chest may carry a loot item (Tiled "item" property). The opener
-			// receives one of that item. Unknown kinds are ignored.
-			if itemKind, ok := obj.PropertiesMap["item"].(string); ok && itemKind != "" {
-				g.giveItemToPlayerUnsafe(player, itemKind)
+			// The chest's loot (distributed across all chests at game start) goes
+			// to the opener. Unknown kinds are ignored.
+			for _, loot := range obj.Loot {
+				g.giveItemToPlayerUnsafe(player, loot.Kind, loot.Count)
 			}
 
 			// A debug chest (alwaysCurse property) curses the opener with 100%
@@ -85,13 +85,16 @@ func (g *Game) tickChest(obj *Object) {
 				}
 			}
 
-			// Each chest yields the next uncollected key. With more chests than
-			// keys, opening any full set of chests collects every key.
-			for _, number := range []string{"1", "2", "3"} {
-				if !g.keysCollected[number] {
-					g.keysCollected[number] = true
-					g.broadcastEventFunc(KeyCollectedEvent{Number: number})
-					break
+			// Only key-chests (three of them, assigned at game start) yield a key.
+			// Each yields the next uncollected key, so opening all three collects
+			// every key regardless of order.
+			if obj.HasKey {
+				for _, number := range []string{"1", "2", "3"} {
+					if !g.keysCollected[number] {
+						g.keysCollected[number] = true
+						g.broadcastEventFunc(KeyCollectedEvent{Number: number})
+						break
+					}
 				}
 			}
 

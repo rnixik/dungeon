@@ -172,6 +172,17 @@ type Object struct {
 	Height        int                    `json:"height"`
 	State         string                 `json:"state"`
 	PropertiesMap map[string]interface{} `json:"-"`
+	// HasKey marks a chest that yields one of the three mandatory keys when
+	// opened. Loot lists the items the opener receives. Both are populated at
+	// game start by distributeChestLootUnsafe.
+	HasKey bool       `json:"-"`
+	Loot   []LootItem `json:"-"`
+}
+
+// LootItem is a quantity of a given item kind placed inside a chest.
+type LootItem struct {
+	Kind  string
+	Count int
 }
 
 func newPlayer(client lobby.ClientPlayer) *Player {
@@ -1285,6 +1296,70 @@ func (g *Game) spawnInitialObjects() {
 			PropertiesMap: propsMap,
 		}
 	}
+
+	g.distributeChestLootUnsafe()
+}
+
+// chestLootSpec defines the inclusive count range placed into a single chest for
+// an optional item kind. Items with min == max always yield that fixed amount.
+type chestLootSpec struct {
+	kind     string
+	minCount int
+	maxCount int
+}
+
+var chestLootSpecs = []chestLootSpec{
+	{itemHealingPotion, 1, 5},
+	{itemScrollOfXP, 1, 2},
+	{itemScrollOfFootprints, 1, 1},
+	{itemBootsOfHaste, 1, 1},
+	{itemScrollOfProtection, 1, 3},
+	{itemSpikes, 3, 15},
+	{itemCloakOfInvisibility, 1, 1},
+}
+
+// distributeChestLootUnsafe spreads the game's loot across all chests on the map
+// at game start. The three keys are mandatory; every other item kind is optional
+// and placed into a separate chest where possible. Caller must hold g.mutex (or
+// run during single-goroutine setup).
+func (g *Game) distributeChestLootUnsafe() {
+	chests := make([]*Object, 0, len(g.objects))
+	for _, obj := range g.objects {
+		if obj.Kind == objectKindChest {
+			chests = append(chests, obj)
+		}
+	}
+	if len(chests) == 0 {
+		return
+	}
+
+	rand.Shuffle(len(chests), func(i, j int) {
+		chests[i], chests[j] = chests[j], chests[i]
+	})
+
+	// Hand out loot to distinct chests in shuffled order, wrapping around only if
+	// there are fewer chests than loot bundles.
+	next := 0
+	assign := func(fn func(c *Object)) {
+		fn(chests[next%len(chests)])
+		next++
+	}
+
+	// Three keys are mandatory.
+	for i := 0; i < 3; i++ {
+		assign(func(c *Object) { c.HasKey = true })
+	}
+
+	// Optional items, one kind per chest.
+	for _, spec := range chestLootSpecs {
+		count := spec.minCount
+		if spec.maxCount > spec.minCount {
+			count += rand.Intn(spec.maxCount - spec.minCount + 1)
+		}
+		assign(func(c *Object) {
+			c.Loot = append(c.Loot, LootItem{Kind: spec.kind, Count: count})
+		})
+	}
 }
 
 func (g *Game) spawnDemonUnsafe() {
@@ -1411,21 +1486,21 @@ func (g *Game) respawnPlayer(clientID uint64) {
 	})
 }
 
-// giveItemToPlayerUnsafe adds one of the given item kind to the player's
+// giveItemToPlayerUnsafe adds count of the given item kind to the player's
 // inventory (stacking onto an existing entry) and pushes an inventory update.
-// Unknown kinds are ignored. Caller must hold g.mutex.
-func (g *Game) giveItemToPlayerUnsafe(p *Player, kind string) {
-	if _, ok := itemDefs[kind]; !ok {
+// Unknown kinds and non-positive counts are ignored. Caller must hold g.mutex.
+func (g *Game) giveItemToPlayerUnsafe(p *Player, kind string, count int) {
+	if _, ok := itemDefs[kind]; !ok || count <= 0 {
 		return
 	}
 	for i := range p.inventory {
 		if p.inventory[i].Kind == kind {
-			p.inventory[i].Count++
+			p.inventory[i].Count += count
 			g.sendInventoryUpdateUnsafe(p)
 			return
 		}
 	}
-	p.inventory = append(p.inventory, InventoryItem{Kind: kind, Count: 1})
+	p.inventory = append(p.inventory, InventoryItem{Kind: kind, Count: count})
 	g.sendInventoryUpdateUnsafe(p)
 }
 
