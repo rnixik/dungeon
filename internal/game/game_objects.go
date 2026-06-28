@@ -8,6 +8,10 @@ import (
 const objectsPeriod = time.Second / 10
 const trapSize = 64
 
+// chestMonsterRange is how close a living monster must be (to the opener or the
+// chest) to block the chest from being opened.
+const chestMonsterRange = tileSize * 3
+
 func (g *Game) startObjectsLoop() {
 	ticker := time.NewTicker(objectsPeriod)
 	defer ticker.Stop()
@@ -52,6 +56,12 @@ func (g *Game) tickChest(obj *Object) {
 
 		distance := getDistance(obj.X, obj.Y, player.x, player.y)
 		if distance <= tileSize*3 && g.isVisible(obj.X, obj.Y, player.x, player.y) {
+			// A chest cannot be opened while a living monster is near the
+			// opener or near the chest itself.
+			if g.monsterNearUnsafe(player.x, player.y) || g.monsterNearUnsafe(obj.X, obj.Y) {
+				continue
+			}
+
 			obj.State = "open"
 			g.revealPlayerUnsafe(player)
 			g.broadcastEventFunc(ChestOpenEvent{ObjectID: obj.ID})
@@ -95,6 +105,20 @@ func (g *Game) tickChest(obj *Object) {
 			return
 		}
 	}
+}
+
+// monsterNearUnsafe reports whether a living monster is within chestMonsterRange
+// of the given point. Caller must hold g.mutex.
+func (g *Game) monsterNearUnsafe(x, y int) bool {
+	for _, mon := range g.monsters {
+		if mon.hp <= 0 {
+			continue
+		}
+		if getDistance(x, y, mon.x, mon.y) <= chestMonsterRange {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Game) tickTrigger(obj *Object) {
