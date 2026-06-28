@@ -315,6 +315,7 @@ class Game extends Phaser.Scene {
 
         // Curse / cultist + soul power
         this.isCultist = !!gameData.isCultist;
+        this.navArrows = new NavArrows(this);
         this.soulPower = gameData.soulPower || 0;
         this.soulPowerVisible = !!gameData.soulPowerVisible;
         this.updateSoulPowerUI();
@@ -472,6 +473,9 @@ class Game extends Phaser.Scene {
 
         // Raycast dynamic shadows
         this.updateMaskRaycast();
+
+        // Cultist hunting radar: arrows toward off-screen players
+        this.navArrows?.update();
 
         // Spectators may roam locally to look around, but their movement is never
         // sent to the server (it is ignored there anyway).

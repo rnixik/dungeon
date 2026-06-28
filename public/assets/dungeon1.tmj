@@ -7532,6 +7532,24 @@
                  "width":64,
                  "x":6358,
                  "y":226.666666666667
+                }, 
+                {
+                 "height":0,
+                 "id":428,
+                 "name":"chest",
+                 "point":true,
+                 "properties":[
+                        {
+                         "name":"alwaysCurse",
+                         "type":"bool",
+                         "value":true
+                        }],
+                 "rotation":0,
+                 "type":"chest",
+                 "visible":true,
+                 "width":0,
+                 "x":6643,
+                 "y":215
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -9242,7 +9260,7 @@
          "y":0
         }],
  "nextlayerid":10,
- "nextobjectid":428,
+ "nextobjectid":429,
  "orientation":"orthogonal",
  "renderorder":"left-up",
  "tiledversion":"1.11.2",
