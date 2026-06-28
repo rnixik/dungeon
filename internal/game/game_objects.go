@@ -88,15 +88,24 @@ func (g *Game) tickChest(obj *Object) {
 			// Only key-chests (three of them, assigned at game start) yield a key.
 			// Each yields the next uncollected key, so opening all three collects
 			// every key regardless of order.
+			keyFound := false
 			if obj.HasKey {
 				for _, number := range []string{"1", "2", "3"} {
 					if !g.keysCollected[number] {
 						g.keysCollected[number] = true
 						g.broadcastEventFunc(KeyCollectedEvent{Number: number})
+						keyFound = true
 						break
 					}
 				}
 			}
+
+			// Tell the opener what they got, so the client can display it.
+			lootItems := make([]InventoryItem, 0, len(obj.Loot))
+			for _, loot := range obj.Loot {
+				lootItems = append(lootItems, InventoryItem{Kind: loot.Kind, Count: loot.Count})
+			}
+			player.client.SendEvent(ChestLootEvent{Items: lootItems, KeyFound: keyFound})
 
 			allKeysCollected := g.keysCollected["1"] && g.keysCollected["2"] && g.keysCollected["3"]
 

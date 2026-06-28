@@ -485,6 +485,59 @@ const GameEventHandler = {
         this.addKeysIcons();
     },
 
+    ChestLootEvent(data) {
+        const labels = {
+            healing_potion: 'Healing Potion',
+            scroll_of_xp: 'Scroll of XP',
+            scroll_of_footprints: 'Scroll of Footprints',
+            boots_of_haste: 'Boots of Haste',
+            scroll_of_protection: 'Scroll of Protection',
+            spikes: 'Spikes',
+            cloak_of_invisibility: 'Cloak of Invisibility',
+        };
+
+        const lines = [];
+        if (data.keyFound) {
+            lines.push('🔑 Key!');
+        }
+        for (const item of (data.items || [])) {
+            const name = labels[item.kind] || item.kind;
+            lines.push(`+${item.count} ${name}`);
+        }
+
+        if (lines.length === 0) {
+            lines.push('Empty chest');
+        }
+
+        this._showLootText(lines);
+    },
+
+    _showLootText(lines) {
+        const x = this.player ? this.player.x : this.scale.width / 2;
+        const y = this.player ? this.player.y - 30 : this.scale.height / 2;
+        const text = this.add.text(x, y, lines.join('\n'), {
+            font: '15px Arial',
+            fill: '#ffd34d',
+            stroke: '#000000',
+            strokeThickness: 3,
+            align: 'center',
+            lineSpacing: 4
+        })
+        .setDepth(DEPTH_UI)
+        .setOrigin(0.5, 1);
+
+        this.tweens.add({
+            targets: text,
+            y: y - 60,
+            alpha: 0,
+            duration: 2200,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                text.destroy();
+            }
+        });
+    },
+
     UpdateTilesEvent(data) {
         for (const t of data.tiles) {
             this.layerFloor.putTileAtWorldXY(t.tileId, t.x, t.y, false);

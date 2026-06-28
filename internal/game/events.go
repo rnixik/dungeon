@@ -200,6 +200,14 @@ type KeyCollectedEvent struct {
 	Number string `json:"number"`
 }
 
+// ChestLootEvent is sent only to the player who opened a chest, describing what
+// they received so the client can show it. KeyFound is true when the chest also
+// yielded a key.
+type ChestLootEvent struct {
+	Items    []InventoryItem `json:"items"`
+	KeyFound bool            `json:"keyFound"`
+}
+
 type TileData struct {
 	X      int `json:"x"`
 	Y      int `json:"y"`
