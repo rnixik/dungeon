@@ -3,6 +3,7 @@ package game
 import (
 	"dungeon/internal/lobby"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
@@ -1209,9 +1210,12 @@ func (g *Game) spawnInitialObjects() {
 			tileX := (int(obj.X) / tileSize) * tileSize
 			tileY := (int(obj.Y) / tileSize) * tileSize
 
-			trapID := obj.Name
-			if trapID == "" {
-				trapID = "trap_" + string(rune(len(g.traps)+1))
+			// Use the Tiled object id to keep trap IDs globally unique;
+			// names like "spike0" are reused across many traps and would
+			// otherwise collide in g.traps (overwriting each other).
+			trapID := fmt.Sprintf("%s_%d", obj.Name, obj.Id)
+			if obj.Name == "" {
+				trapID = fmt.Sprintf("trap_%d", obj.Id)
 			}
 
 			// Default trap parameters (percent-based timing)
